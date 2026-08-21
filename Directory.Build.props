@@ -1,0 +1,16 @@
+<Project>
+    <ItemGroup>
+        <!-- Pinned to match the official .NET SDK install's actual runtime
+             (10.0.8, per DOTNET_NATIVEAOT_ROOT in scripts/publish-*-nativeaot.sh)
+             - NuGet otherwise floats this SDK-implicit package to whatever's
+             newest on nuget.org (10.0.10 as of this pin), and ILLink's own
+             task host then refuses to run because that runtime isn't
+             installed locally, failing every NativeAOT/trimmed publish with
+             NETSDK1144. VersionOverride (not Directory.Packages.props) is
+             required here - Central Package Management rejects a
+             PackageVersion entry for an SDK-implicit reference. Bump this
+             only after also updating the local official SDK install to a
+             matching runtime. -->
+        <PackageReference Include="Microsoft.NET.ILLink.Tasks" VersionOverride="10.0.8" />
+    </ItemGroup>
+</Project>

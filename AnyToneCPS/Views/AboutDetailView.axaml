@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.AboutDetailView"
+             x:DataType="vm:MainViewModel">
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <ScrollViewer>
+            <Border Classes="Panel" MaxWidth="560" HorizontalAlignment="Center">
+                <StackPanel Spacing="14" HorizontalAlignment="Center">
+                    <Image Source="avares://AnyToneCPS/Assets/Icon.png"
+                           Width="96" Height="96"
+                           HorizontalAlignment="Center" />
+
+                    <TextBlock Text="AnyToneCPS"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center" />
+
+                    <TextBlock Text="{Binding AppVersion, StringFormat='Version {0}'}"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center" />
+
+                    <TextBlock Text="Open-source codeplug editor for the AnyTone D890UV DMR radio."
+                               TextWrapping="Wrap"
+                               TextAlignment="Center" />
+
+                    <Border BorderBrush="{DynamicResource AppHeaderBorderBrush}"
+                            BorderThickness="0,1,0,0"
+                            Margin="0,4,0,0" />
+
+                    <TextBlock Text="License" FontWeight="SemiBold" />
+                    <TextBlock Text="AnyToneCPS is licensed under the MIT License."
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="Copyright (c) 2026 Etherghost"
+                               Foreground="{DynamicResource AppMutedTextBrush}"
+                               TextWrapping="Wrap" />
+
+                    <TextBlock Text="Source" FontWeight="SemiBold" />
+                    <SelectableTextBlock Text="https://github.com/EtherGhost/AnyToneCPS"
+                                         Foreground="{DynamicResource AppMutedTextBrush}"
+                                         TextWrapping="Wrap" />
+
+                    <TextBlock Text="Disclaimer" FontWeight="SemiBold" />
+                    <TextBlock Text="AnyToneCPS is not affiliated with, endorsed by, or sponsored by AnyTone Tech Co., Ltd. or the AnyTone brand. AnyTone is a trademark of its respective owner. This project was built by reverse-engineering the radio's own USB protocol against real hardware."
+                               Foreground="{DynamicResource AppMutedTextBrush}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

@@ -1,0 +1,120 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:models="using:AnyToneCPS.Models"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.DigitalContactsDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Digital Contacts list stays in
+         MainView.axaml, IsDigitalContactsViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8" Margin="4">
+                <TextBlock Text="Only populated if 'Include Digital Contact List' was checked on the Radio tab before reading - this list can be very large (real DMR-ID database imports can be 100,000+ entries), so it is opt-in and not read by default. Select a row below to edit it." TextWrapping="Wrap" />
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                    <Button Classes="InfoIconButton">
+                        <Button.Flyout>
+                            <Flyout>
+                                <Border Classes="Panel" Padding="8" MaxWidth="360">
+                                    <TextBlock Text="The whole list is rewritten together on every Write to Radio. Multi-block writes are supported (live-confirmed crossing into a second block) up to 500 blocks - covers the vendor's own claimed 500,000-entry capacity." TextWrapping="Wrap" />
+                                </Border>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <TextBlock Text="Filter:" VerticalAlignment="Center" />
+                    <TextBox Text="{Binding DigitalContactFilterText}" Width="240" PlaceholderText="name, callsign, city, country, or radio ID" />
+                    <CheckBox Content="Friends only" IsChecked="{Binding DigitalContactFriendsOnly}" />
+                    <TextBlock Text="{Binding DigitalContacts.Count, StringFormat='{}{0} total'}" VerticalAlignment="Center" />
+                    <Button Classes="ToolbarButton" Command="{Binding AddDigitalContactCommand}" Content="+" />
+                    <Button Classes="ToolbarButton" Command="{Binding RemoveDigitalContactCommand}" Content="Del" />
+                </StackPanel>
+                <Grid Grid.Row="2" ColumnDefinitions="2*,Auto,*" ColumnSpacing="12">
+                    <ListBox ItemsSource="{Binding FilteredDigitalContacts}"
+                             SelectedItem="{Binding SelectedDigitalContact}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:DigitalContactEntry">
+                                <Grid ColumnDefinitions="70,110,*,90,*,70,70,90,*" ColumnSpacing="6" Margin="2">
+                                    <TextBlock Text="{Binding RadioId}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Callsign}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="3" Text="{Binding City}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="4" Text="{Binding State}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="5" Text="{Binding Country}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="6" Text="{Binding CallTypeText}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="7" Text="{Binding CallAlert}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="8" Text="{Binding Remarks}" VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Border Grid.Column="1" Width="1" Background="{DynamicResource AppPanelBorderBrush}" />
+
+                    <ScrollViewer Grid.Column="2">
+                        <StackPanel Spacing="10">
+                            <TextBlock Classes="SectionTitle" Text="Digital contact details" />
+                            <HeaderedContentControl Header="Name">
+                                <TextBox Text="{Binding SelectedDigitalContact.Name}"
+                                         MaxLength="16"
+                                         views:AsciiTextInput.Enabled="True" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Header="Call Type">
+                                <ComboBox ItemsSource="{Binding SelectedDigitalContact.CallTypeOptions}"
+                                          SelectedItem="{Binding SelectedDigitalContact.CallTypeText}"
+                                          HorizontalAlignment="Stretch" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Header="TG/DMR ID">
+                                <TextBox Text="{Binding SelectedDigitalContact.RadioIdText}"
+                                         MaxLength="8"
+                                         views:DigitOnlyInput.Enabled="True"
+                                         IsEnabled="{Binding SelectedDigitalContact.IsAllCallFieldsEditable}" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Header="Call Alert">
+                                <ComboBox ItemsSource="{Binding SelectedDigitalContact.CallAlertOptions}"
+                                          SelectedItem="{Binding SelectedDigitalContact.CallAlert}"
+                                          IsEnabled="{Binding SelectedDigitalContact.IsAllCallFieldsEditable}"
+                                          HorizontalAlignment="Stretch" />
+                            </HeaderedContentControl>
+                            <CheckBox Content="Friend" IsChecked="{Binding SelectedDigitalContact.IsFriend}" />
+                            <HeaderedContentControl Header="City">
+                                <TextBox Text="{Binding SelectedDigitalContact.City}"
+                                         MaxLength="15"
+                                         views:AsciiTextInput.Enabled="True" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Header="Callsign">
+                                <TextBox Text="{Binding SelectedDigitalContact.Callsign}"
+                                         MaxLength="8"
+                                         views:AsciiTextInput.Enabled="True" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Header="State/Prov">
+                                <TextBox Text="{Binding SelectedDigitalContact.State}"
+                                         MaxLength="15"
+                                         views:AsciiTextInput.Enabled="True" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Header="Country">
+                                <TextBox Text="{Binding SelectedDigitalContact.Country}"
+                                         MaxLength="15"
+                                         views:AsciiTextInput.Enabled="True" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Header="Remarks">
+                                <TextBox Text="{Binding SelectedDigitalContact.Remarks}"
+                                         MaxLength="15"
+                                         views:AsciiTextInput.Enabled="True" />
+                            </HeaderedContentControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

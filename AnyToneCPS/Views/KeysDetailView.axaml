@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.KeysDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Keys list stays in
+         MainView.axaml, one IsVisible section per kind (see below) - this
+         file used to hold that same full editable list inline, but every
+         other list entity in the app uses a read-only sidebar row +
+         single-selected-item detail editor here instead (e.g.
+         RadioIdListDetailView), so 2026-08-15 Keys was converted to match:
+         Number stays read-only (it's a real fixed radio slot address, not
+         user-editable - see EncryptionKeyEntry's own class doc comment). -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel" IsVisible="{Binding IsDigitalKeysViewSelected}">
+            <StackPanel Spacing="12">
+                <TextBlock Classes="SectionTitle" Text="Digital key details" />
+                <HeaderedContentControl Header="Number">
+                    <TextBox Text="{Binding SelectedEncryptionKey.Number}" IsReadOnly="True" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Key">
+                    <TextBox Text="{Binding SelectedEncryptionKey.EncryptionKeyText}" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="ID">
+                    <TextBox Text="{Binding SelectedEncryptionKey.EncryptionIdText}"
+                             MaxLength="4"
+                             views:DigitOnlyInput.Enabled="True"
+                             ToolTip.Tip="Exactly 4 decimal digits" />
+                </HeaderedContentControl>
+            </StackPanel>
+        </Border>
+        <Border Classes="Panel" IsVisible="{Binding IsArc4KeysViewSelected}">
+            <StackPanel Spacing="12">
+                <TextBlock Classes="SectionTitle" Text="ARC4 key details" />
+                <HeaderedContentControl Header="Number">
+                    <TextBox Text="{Binding SelectedArc4EncryptionKey.Number}" IsReadOnly="True" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="ID">
+                    <TextBox Text="{Binding SelectedArc4EncryptionKey.EncryptionIdText}" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Key">
+                    <TextBox Text="{Binding SelectedArc4EncryptionKey.EncryptionKeyText}"
+                             MaxLength="10"
+                             views:HexDigitInput.Enabled="True"
+                             ToolTip.Tip="Up to 5 hex bytes (1-10 hex characters), or 'Off' - a shorter key is left-zero-padded to 5 bytes on write (confirmed 2026-07-20)." />
+                </HeaderedContentControl>
+            </StackPanel>
+        </Border>
+        <Border Classes="Panel" IsVisible="{Binding IsAesKeysViewSelected}">
+            <StackPanel Spacing="12">
+                <TextBlock Classes="SectionTitle" Text="AES key details" />
+                <HeaderedContentControl Header="Number">
+                    <TextBox Text="{Binding SelectedAesEncryptionKey.Number}" IsReadOnly="True" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Key">
+                    <TextBox Text="{Binding SelectedAesEncryptionKey.EncryptionKeyText}" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="ID">
+                    <TextBox Text="{Binding SelectedAesEncryptionKey.EncryptionIdText}"
+                             MaxLength="64"
+                             views:HexDigitInput.Enabled="True"
+                             ToolTip.Tip="Exactly 64 hex characters, or 'Off'" />
+                </HeaderedContentControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

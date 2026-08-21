@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.AnalogQuickCallDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Analog Quick Call list stays in
+         MainView.axaml, IsAnalogQuickCallViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <StackPanel Spacing="12" MaxWidth="360">
+                <TextBlock Classes="SectionTitle" Text="Analog quick call details" />
+                <HeaderedContentControl Header="No">
+                    <TextBox Text="{Binding SelectedAnalogQuickCall.Number}"
+                             views:DigitOnlyInput.Enabled="True"
+                             views:DigitOnlyInput.MaxValue="4"
+                             Classes="PinDigits" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Operation Type">
+                    <ComboBox ItemsSource="{Binding AnalogQuickCallOperationTypeOptions}"
+                              SelectedItem="{Binding SelectedAnalogQuickCall.OperationTypeText}"
+                              HorizontalAlignment="Stretch" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Call ID" IsEnabled="{Binding SelectedAnalogQuickCall.IsCallIdEnabled}">
+                    <ComboBox ItemsSource="{Binding AnalogQuickCallCallIdOptions}"
+                              SelectedItem="{Binding AnalogQuickCallCallIdSelection}"
+                              HorizontalAlignment="Stretch" />
+                </HeaderedContentControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

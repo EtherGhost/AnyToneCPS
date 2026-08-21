@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:models="using:AnyToneCPS.Models"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.RoamingChannelsDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Roaming Channels list stays in
+         MainView.axaml, IsRoamingChannelsViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <StackPanel Spacing="12">
+                <TextBlock Classes="SectionTitle" Text="Roaming channel details" />
+                <HeaderedContentControl Header="Number">
+                    <TextBox Text="{Binding SelectedRoamingChannel.Number}"
+                             views:DigitOnlyInput.Enabled="True"
+                             views:DigitOnlyInput.MaxValue="250" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Fast select" ToolTip.Tip="Copies Name/RX/TX from one of your repeater-style channels (RX differs from TX) - doesn't touch Color Code/Slot.">
+                    <ComboBox ItemsSource="{Binding RoamingChannelFastSelectOptions}"
+                              SelectedItem="{Binding RoamingChannelFastSelect}"
+                              PlaceholderText="Pick a channel...">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:ChannelEntry">
+                                <TextBlock Text="{Binding DisplayLabel}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Name">
+                    <TextBox Text="{Binding SelectedRoamingChannel.Name}"
+                             MaxLength="16"
+                             views:AsciiTextInput.Enabled="True" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="RX Frequency (MHz)">
+                    <TextBox Text="{Binding SelectedRoamingChannel.RxFrequencyMhzText}"
+                             MaxLength="9"
+                             views:DigitOnlyInput.Enabled="True"
+                             views:DigitOnlyInput.AllowDecimalPoint="True"
+                             views:DigitOnlyInput.MaxValue="480" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="TX Frequency (MHz)">
+                    <TextBox Text="{Binding SelectedRoamingChannel.TxFrequencyMhzText}"
+                             MaxLength="9"
+                             views:DigitOnlyInput.Enabled="True"
+                             views:DigitOnlyInput.AllowDecimalPoint="True"
+                             views:DigitOnlyInput.MaxValue="480" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Color Code">
+                    <ComboBox ItemsSource="{Binding SelectedRoamingChannel.ColorCodeOptions}"
+                              SelectedItem="{Binding SelectedRoamingChannel.ColorCodeSelection}" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Slot">
+                    <ComboBox ItemsSource="{Binding SelectedRoamingChannel.SlotOptions}"
+                              SelectedItem="{Binding SelectedRoamingChannel.SlotSelection}" />
+                </HeaderedContentControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

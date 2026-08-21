@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.HotKeyDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Hot Key list stays in
+         MainView.axaml, IsHotKeyViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <StackPanel Spacing="12" MaxWidth="360">
+                <TextBlock Classes="SectionTitle" Text="{Binding SelectedHotKey.Key, StringFormat='{}{0} details'}" />
+                <HeaderedContentControl Header="Mode">
+                    <ComboBox ItemsSource="{Binding HotKeyModeOptions}"
+                              SelectedItem="{Binding SelectedHotKey.ModeText}"
+                              HorizontalAlignment="Stretch" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Menu" IsEnabled="{Binding SelectedHotKey.IsMenuEnabled}">
+                    <ComboBox ItemsSource="{Binding HotKeyMenuOptions}"
+                              SelectedItem="{Binding SelectedHotKey.MenuText}"
+                              HorizontalAlignment="Stretch" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Call Type" IsEnabled="{Binding SelectedHotKey.IsCallTypeEnabled}">
+                    <ComboBox ItemsSource="{Binding HotKeyCallTypeOptions}"
+                              SelectedItem="{Binding SelectedHotKey.CallTypeText}"
+                              HorizontalAlignment="Stretch" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Call Object" IsEnabled="{Binding SelectedHotKey.IsCallObjectEnabled}">
+                    <ComboBox ItemsSource="{Binding HotKeyCallObjectOptions}"
+                              SelectedItem="{Binding HotKeyCallObjectSelection}"
+                              HorizontalAlignment="Stretch" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Digi Call Type" IsEnabled="{Binding SelectedHotKey.IsDigiCallTypeEnabled}">
+                    <ComboBox ItemsSource="{Binding HotKeyDigiCallTypeOptions}"
+                              SelectedItem="{Binding SelectedHotKey.DigiCallTypeText}"
+                              HorizontalAlignment="Stretch" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Content" IsEnabled="{Binding SelectedHotKey.IsContentEnabled}">
+                    <ComboBox ItemsSource="{Binding HotKeyContentOptions}"
+                              SelectedItem="{Binding HotKeyContentSelection}"
+                              HorizontalAlignment="Stretch" />
+                </HeaderedContentControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

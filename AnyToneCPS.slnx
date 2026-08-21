@@ -1,0 +1,12 @@
+﻿<Solution>
+  <Project Path="AnyToneCPS.Android/AnyToneCPS.Android.csproj">
+    <Deploy />
+  </Project>
+  <Project Path="AnyToneCPS.Browser/AnyToneCPS.Browser.csproj" />
+  <Project Path="AnyToneCPS.Desktop/AnyToneCPS.Desktop.csproj" />
+  <Project Path="AnyToneCPS.Tests/AnyToneCPS.Tests.csproj" />
+  <Project Path="AnyToneCPS.iOS/AnyToneCPS.iOS.csproj">
+    <Deploy />
+  </Project>
+  <Project Path="AnyToneCPS/AnyToneCPS.csproj" />
+</Solution>

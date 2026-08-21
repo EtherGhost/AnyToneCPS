@@ -1,0 +1,261 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:models="using:AnyToneCPS.Models"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.AprsSettingsDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact APRS Settings list stays in
+         MainView.axaml, IsAprsSettingsViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*">
+        <Border Background="{DynamicResource AppInfoBadgeBackgroundBrush}"
+                BorderBrush="{DynamicResource AppInfoBadgeBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10,6"
+                Margin="4,4,4,0">
+            <TextBlock Text="Not yet writable to the radio - edits here are saved to the project file only." TextWrapping="Wrap" />
+        </Border>
+        <Border Grid.Row="1" Classes="Panel">
+            <ScrollViewer>
+                <StackPanel Margin="8" Spacing="10" MaxWidth="480">
+                    <TextBlock Classes="Label"
+                               TextWrapping="Wrap"
+                               Text="Callsign/path fields are narrow ASCII, not the UTF-16LE used elsewhere. Most raw-byte fields' exact enum meaning is not confirmed - see Field_Reference.md §16 and the codec's doc comments." />
+
+                    <TextBlock Classes="SectionTitle" Text="TX Settings" />
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <HeaderedContentControl Header="TX Freq 1 (MHz)">
+                            <TextBox Text="{Binding AprsSettings.TxFreq1MhzText}"
+                                     MaxLength="9"
+                                     views:DigitOnlyInput.Enabled="True"
+                                     views:DigitOnlyInput.AllowDecimalPoint="True"
+                                     views:DigitOnlyInput.MaxValue="480" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="TX Delay [ms]">
+                            <ComboBox ItemsSource="{Binding AprsSettings.TxDelayOptions}" SelectedItem="{Binding AprsSettings.TxDelayText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="2" Header="TX Power">
+                            <ComboBox ItemsSource="{Binding AprsSettings.TxPowerOptions}" SelectedItem="{Binding AprsSettings.TxPowerText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <HeaderedContentControl Header="Send Subtone">
+                            <ComboBox ItemsSource="{Binding AprsSettings.SendSubtoneOptions}" SelectedItem="{Binding AprsSettings.SendSubtoneText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="CTCSS">
+                            <ComboBox ItemsSource="{Binding AprsSettings.CtcssOptions}" SelectedItem="{Binding AprsSettings.CtcssText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="2" Header="DCS">
+                            <ComboBox ItemsSource="{Binding AprsSettings.DcsOptions}" SelectedItem="{Binding AprsSettings.DcsText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <HeaderedContentControl Header="Manual TX Interval [s]">
+                            <TextBox Text="{Binding AprsSettings.ManualTxInterval}"
+                                     MaxLength="3"
+                                     views:DigitOnlyInput.Enabled="True"
+                                     views:DigitOnlyInput.MaxValue="255" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="Auto TX Interval [s]">
+                            <ComboBox ItemsSource="{Binding AprsSettings.AutoTxIntervalOptions}" SelectedItem="{Binding AprsSettings.AutoTxIntervalText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="2" Header="TX Tone">
+                            <ComboBox ItemsSource="{Binding AprsSettings.TxToneOptions}" SelectedItem="{Binding AprsSettings.TxToneText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <HeaderedContentControl Header="Prewave Time [ms]">
+                            <ComboBox ItemsSource="{Binding AprsSettings.PrewaveTimeOptions}" SelectedItem="{Binding AprsSettings.PrewaveTimeText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="Fixed Location Beacon">
+                            <ComboBox ItemsSource="{Binding AprsSettings.FixedLocationBeaconOptions}" SelectedItem="{Binding AprsSettings.FixedLocationBeaconText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                    </Grid>
+
+                    <TextBlock Classes="SectionTitle" Text="Fix 1 (Home Position)" />
+                    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+                        <HeaderedContentControl Header="Latitude">
+                            <TextBox Text="{Binding AprsSettings.Fix1LatText}" MaxLength="8" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.AllowDecimalPoint="True" views:DigitOnlyInput.MaxValue="90" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="N/S">
+                            <ComboBox ItemsSource="{Binding AprsSettings.NsOptions}" SelectedItem="{Binding AprsSettings.Fix1NsText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="2" Header="Longitude">
+                            <TextBox Text="{Binding AprsSettings.Fix1LngText}" MaxLength="9" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.AllowDecimalPoint="True" views:DigitOnlyInput.MaxValue="180" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="3" Header="E/W">
+                            <ComboBox ItemsSource="{Binding AprsSettings.EwOptions}" SelectedItem="{Binding AprsSettings.Fix1EwText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                    </Grid>
+                    <!-- "Sate Fix PointName 1" (per-fix display name, ASCII,
+                         max 16 chars, confirmed 2026-08-15 via the real
+                         vendor CPS) is NOT yet in this model - no confirmed
+                         byte offset for it at all, unlike every other field
+                         on this page. Not implemented until that's found. -->
+
+                    <TextBlock Classes="SectionTitle" Text="Callsigns / Path" />
+                    <Grid ColumnDefinitions="*,60,*,60" ColumnSpacing="8">
+                        <HeaderedContentControl Header="To Call">
+                            <TextBox Text="{Binding AprsSettings.ToCall}" MaxLength="6" views:AsciiTextInput.Enabled="True" views:CallsignInput.Enabled="True" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="SSID">
+                            <ComboBox ItemsSource="{Binding AprsSettings.SsidOptions}" SelectedItem="{Binding AprsSettings.ToCallSsidText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="2" Header="Your Call">
+                            <TextBox Text="{Binding AprsSettings.YourCall}" MaxLength="6" views:AsciiTextInput.Enabled="True" views:CallsignInput.Enabled="True" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="3" Header="SSID">
+                            <ComboBox ItemsSource="{Binding AprsSettings.SsidOptions}" SelectedItem="{Binding AprsSettings.YourCallSsidText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                    </Grid>
+                    <HeaderedContentControl Header="Digipeater Path">
+                        <TextBox Text="{Binding AprsSettings.DigipeaterPath}" MaxLength="56" views:AsciiTextInput.Enabled="True" />
+                    </HeaderedContentControl>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <HeaderedContentControl Header="APRS Symbol">
+                            <TextBox Text="{Binding AprsSettings.AprsSymbol}" MaxLength="1" views:AsciiTextInput.Enabled="True" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="Map Icon">
+                            <TextBox Text="{Binding AprsSettings.MapIcon}" MaxLength="1" views:AsciiTextInput.Enabled="True" />
+                        </HeaderedContentControl>
+                    </Grid>
+                    <HeaderedContentControl Header="Sending Text">
+                        <TextBox Text="{Binding AprsSettings.SendingText}"
+                                 MaxLength="60"
+                                 views:AsciiTextInput.Enabled="True"
+                                 ToolTip.Tip="Vendor CPS UI limit is 60 characters, confirmed 2026-08-15 - doesn't neatly match the codec's own 0x60 (96-byte) UTF-16LE slice, worth rechecking during the live-capture pass." />
+                    </HeaderedContentControl>
+
+                    <TextBlock Classes="SectionTitle" Text="Misc" />
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <HeaderedContentControl Header="Roaming Support">
+                            <ComboBox ItemsSource="{Binding AprsSettings.RoamingSupportOptions}" SelectedItem="{Binding AprsSettings.RoamingSupportText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="Repeater Activation Delay [ms]">
+                            <ComboBox ItemsSource="{Binding AprsSettings.RepeaterActivationDelayOptions}" SelectedItem="{Binding AprsSettings.RepeaterActivationDelayText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="2" Header="APRSDisTime [s]">
+                            <ComboBox ItemsSource="{Binding AprsSettings.DisTimeOptions}" SelectedItem="{Binding AprsSettings.DisTimeText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <HeaderedContentControl Header="Altitude (raw)" ToolTip.Tip="Vendor CPS shows a Meter/Feet unit selector alongside this value, not yet modeled - unconfirmed, do not trust this field's range yet.">
+                            <TextBox Text="{Binding AprsSettings.Altitude}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="Ana APRSTx">
+                            <ComboBox ItemsSource="{Binding AprsSettings.AnalogTxModeOptions}" SelectedItem="{Binding AprsSettings.AnalogTxModeText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="2" Header="Pass All">
+                            <ComboBox ItemsSource="{Binding AprsSettings.PassAllOptions}" SelectedItem="{Binding AprsSettings.PassAllText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                    </Grid>
+
+                    <TextBlock Classes="SectionTitle" Text="TX Frequencies 2-8 (MHz)" />
+                    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="6" RowDefinitions="Auto,Auto" RowSpacing="6">
+                        <TextBox Text="{Binding AprsSettings.TxFreq2MhzText}" MaxLength="9" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.AllowDecimalPoint="True" views:DigitOnlyInput.MaxValue="480" />
+                        <TextBox Grid.Column="1" Text="{Binding AprsSettings.TxFreq3MhzText}" MaxLength="9" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.AllowDecimalPoint="True" views:DigitOnlyInput.MaxValue="480" />
+                        <TextBox Grid.Column="2" Text="{Binding AprsSettings.TxFreq4MhzText}" MaxLength="9" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.AllowDecimalPoint="True" views:DigitOnlyInput.MaxValue="480" />
+                        <TextBox Grid.Column="3" Text="{Binding AprsSettings.TxFreq5MhzText}" MaxLength="9" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.AllowDecimalPoint="True" views:DigitOnlyInput.MaxValue="480" />
+                        <TextBox Grid.Row="1" Text="{Binding AprsSettings.TxFreq6MhzText}" MaxLength="9" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.AllowDecimalPoint="True" views:DigitOnlyInput.MaxValue="480" />
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding AprsSettings.TxFreq7MhzText}" MaxLength="9" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.AllowDecimalPoint="True" views:DigitOnlyInput.MaxValue="480" />
+                        <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding AprsSettings.TxFreq8MhzText}" MaxLength="9" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.AllowDecimalPoint="True" views:DigitOnlyInput.MaxValue="480" />
+                    </Grid>
+
+                    <!-- CONFIRMED 2026-08-15: user checked the real vendor
+                         CPS directly - there are no Filters checkboxes at
+                         all on this radio's APRS dialog, not just missed in
+                         a screenshot. Ported from the reference project as-is
+                         but not a real D890UV feature - disabled per this
+                         project's "disable, don't remove" rule (a vendor
+                         field confirmed non-functional here might still be
+                         real on another AnyTone model). -->
+                    <TextBlock Classes="SectionTitle" Text="Filters" />
+                    <WrapPanel IsEnabled="False" ToolTip.Tip="Confirmed 2026-08-15: this radio's vendor CPS has no Filters section at all - not a real D890UV feature, kept for other AnyTone models.">
+                        <CheckBox Content="Position" IsChecked="{Binding AprsSettings.FilterPosition}" />
+                        <CheckBox Content="Mic-E" IsChecked="{Binding AprsSettings.FilterMicE}" />
+                        <CheckBox Content="Object" IsChecked="{Binding AprsSettings.FilterObject}" />
+                        <CheckBox Content="Item" IsChecked="{Binding AprsSettings.FilterItem}" />
+                        <CheckBox Content="Message" IsChecked="{Binding AprsSettings.FilterMessage}" />
+                        <CheckBox Content="WX Report" IsChecked="{Binding AprsSettings.FilterWxReport}" />
+                        <CheckBox Content="NMEA Report" IsChecked="{Binding AprsSettings.FilterNmeaReport}" />
+                        <CheckBox Content="Status Report" IsChecked="{Binding AprsSettings.FilterStatusReport}" />
+                        <CheckBox Content="Other" IsChecked="{Binding AprsSettings.FilterOther}" />
+                    </WrapPanel>
+
+                    <TextBlock Classes="SectionTitle" Text="Additional Fix Locations (2-8)" />
+                    <ListBox ItemsSource="{Binding AprsSettings.AdditionalFixLocations}"
+                             SelectedItem="{Binding SelectedFixLocation}"
+                             MaxHeight="220">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:AprsFixLocationEntry">
+                                <Grid ColumnDefinitions="30,*" ColumnSpacing="8" Margin="4">
+                                    <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Lat}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+                        <HeaderedContentControl Header="Latitude">
+                            <TextBox Text="{Binding SelectedFixLocation.LatText}" MaxLength="8" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.AllowDecimalPoint="True" views:DigitOnlyInput.MaxValue="90" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="N/S">
+                            <ComboBox ItemsSource="{Binding AprsSettings.NsOptions}" SelectedItem="{Binding SelectedFixLocation.NsText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="2" Header="Longitude">
+                            <TextBox Text="{Binding SelectedFixLocation.LngText}" MaxLength="9" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.AllowDecimalPoint="True" views:DigitOnlyInput.MaxValue="180" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="3" Header="E/W">
+                            <ComboBox ItemsSource="{Binding AprsSettings.EwOptions}" SelectedItem="{Binding SelectedFixLocation.EwText}" HorizontalAlignment="Stretch"
+                                      IsEnabled="{Binding SelectedFixLocation.CanEditEw}"
+                                      ToolTip.Tip="Confirmed 2026-08-15: the vendor CPS never writes E/W for Fix4-8, only Fix2/Fix3 - nothing to persist here for this slot." />
+                        </HeaderedContentControl>
+                    </Grid>
+                    <!-- "Sate Fix PointName N" not yet modeled - see Fix 1's
+                         own comment above, same gap applies to Fix 2-8. -->
+
+                    <TextBlock Classes="SectionTitle" Text="Digital Report Channels (1-8)" />
+                    <ListBox ItemsSource="{Binding AprsSettings.DigitalReports}"
+                             SelectedItem="{Binding SelectedDigitalReport}"
+                             MaxHeight="220">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:AprsDigitalReportEntry">
+                                <Grid ColumnDefinitions="30,*" ColumnSpacing="8" Margin="4">
+                                    <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Channel}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+                        <HeaderedContentControl Header="Channel (raw)" ToolTip.Tip="Vendor CPS shows this as a dropdown (Current Channel + all digital channels + VFO A/VFO B), not a raw number - the real option list and its byte encoding are both still unconfirmed. Left as a raw index until the live-capture pass.">
+                            <TextBox Text="{Binding SelectedDigitalReport.Channel}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="APRS TG">
+                            <TextBox Text="{Binding SelectedDigitalReport.TalkgroupIdText}"
+                                     MaxLength="8"
+                                     views:DigitOnlyInput.Enabled="True" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="2" Header="Call Type">
+                            <ComboBox ItemsSource="{Binding SelectedDigitalReport.CallTypeOptions}" SelectedItem="{Binding SelectedDigitalReport.CallTypeText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="3" Header="Slot">
+                            <ComboBox ItemsSource="{Binding SelectedDigitalReport.SlotOptions}" SelectedItem="{Binding SelectedDigitalReport.SlotText}" HorizontalAlignment="Stretch" />
+                        </HeaderedContentControl>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

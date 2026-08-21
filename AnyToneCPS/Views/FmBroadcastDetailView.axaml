@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.FmBroadcastDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact FM Broadcast list stays in
+         MainView.axaml, IsFmBroadcastViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <StackPanel Spacing="12">
+                <TextBlock Classes="SectionTitle" Text="FM channel details" />
+                <HeaderedContentControl Header="Number">
+                    <TextBox Text="{Binding SelectedFmChannel.Number}"
+                             views:DigitOnlyInput.Enabled="True"
+                             views:DigitOnlyInput.MaxValue="100"
+                             Classes="PinDigits" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Frequency (MHz)">
+                    <TextBox Text="{Binding SelectedFmChannel.FrequencyMhzText}"
+                             views:DigitOnlyInput.Enabled="True"
+                             views:DigitOnlyInput.AllowDecimalPoint="True"
+                             views:DigitOnlyInput.MaxValue="108"
+                             Classes="PinDigits" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Name">
+                    <TextBox Text="{Binding SelectedFmChannel.Name}"
+                             MaxLength="16"
+                             views:AsciiTextInput.Enabled="True"
+                             FontWeight="{Binding SelectedFmChannel.NameFontWeight}" />
+                </HeaderedContentControl>
+                <CheckBox IsChecked="{Binding SelectedFmChannel.ScanAdd}" Content="Scan Add" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

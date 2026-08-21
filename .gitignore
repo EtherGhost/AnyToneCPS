@@ -1,0 +1,64 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+out/
+publish/
+artifacts/
+
+# .NET
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+*.nupkg
+*.snupkg
+*.binlog
+
+# NuGet
+packages/
+*.nuget.props
+*.nuget.targets
+project.assets.json
+project.nuget.cache
+
+# IDEs
+.vs/
+.vscode/
+.idea/
+local.properties
+*.sln.iml
+*.csproj.iml
+riderModule.iml
+_ReSharper.Caches/
+
+# Avalonia / XAML designer
+*.axaml.g.cs
+*.xaml.g.cs
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+*.keystore
+*.jks
+
+# iOS / macOS
+*.ipa
+*.dSYM/
+*.xcuserstate
+xcuserdata/
+
+# Browser / frontend tooling
+node_modules/
+dist/
+wwwroot/_framework/
+
+# OS files
+.DS_Store
+Thumbs.db

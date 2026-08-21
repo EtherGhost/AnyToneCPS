@@ -1,0 +1,139 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:models="using:AnyToneCPS.Models"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.DtmfDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact DTMF list stays in
+         MainView.axaml, IsDtmfViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <ScrollViewer>
+                <StackPanel Spacing="14" MaxWidth="900" Margin="4">
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <GroupBox Grid.Column="0" Header="DTMF Settings">
+                            <StackPanel Spacing="10">
+                                <HeaderedContentControl Header="DTMF Transmitting Time (ms)">
+                                    <ComboBox ItemsSource="{Binding DtmfSettings.TransmittingTimeMsOptions}"
+                                              SelectedItem="{Binding DtmfSettings.TransmittingTimeMsText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                                <HeaderedContentControl Header="DTMF Self ID">
+                                    <TextBox Text="{Binding DtmfSettings.SelfId}"
+                                             MaxLength="3"
+                                             views:DigitOnlyInput.Enabled="True" />
+                                </HeaderedContentControl>
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <HeaderedContentControl Header="DTMF Interval Character">
+                                        <ComboBox ItemsSource="{Binding DtmfIntervalCharacterOptions}"
+                                                  SelectedItem="{Binding DtmfSettings.IntervalCharacter}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                    <HeaderedContentControl Grid.Column="1" Header="Group Code">
+                                        <ComboBox ItemsSource="{Binding DtmfGroupCodeOptions}"
+                                                  SelectedItem="{Binding DtmfSettings.GroupCode}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                </Grid>
+                                <HeaderedContentControl Header="Decoding Response">
+                                    <ComboBox ItemsSource="{Binding DtmfDecodingResponseOptions}"
+                                              SelectedItem="{Binding DtmfSettings.DecodingResponseText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <HeaderedContentControl Header="First Digit Time (ms)">
+                                        <ComboBox ItemsSource="{Binding DtmfSettings.FirstDigitTimeMsOptions}"
+                                                  SelectedItem="{Binding DtmfSettings.FirstDigitTimeMsText}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                    <HeaderedContentControl Grid.Column="1" Header="Pretime (ms)">
+                                        <ComboBox ItemsSource="{Binding DtmfSettings.PretimeMsOptions}"
+                                                  SelectedItem="{Binding DtmfSettings.PretimeMsText}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <HeaderedContentControl Header="Auto Reset Time (s)">
+                                        <ComboBox ItemsSource="{Binding DtmfSettings.AutoResetTimeSecondsOptions}"
+                                                  SelectedItem="{Binding DtmfSettings.AutoResetTimeSecondsText}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                    <HeaderedContentControl Grid.Column="1" Header="Time-Lapse After Encode (ms)">
+                                        <ComboBox ItemsSource="{Binding DtmfSettings.TimeLapseAfterEncodeMsOptions}"
+                                                  SelectedItem="{Binding DtmfSettings.TimeLapseAfterEncodeMsText}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <HeaderedContentControl Header="PTT ID Pause Time (s)">
+                                        <ComboBox ItemsSource="{Binding DtmfSettings.PttIdPauseTimeSecondsOptions}"
+                                                  SelectedItem="{Binding DtmfSettings.PttIdPauseTimeSecondsText}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                    <HeaderedContentControl Grid.Column="1" Header="D Code Pause (s)">
+                                        <ComboBox ItemsSource="{Binding DtmfSettings.DCodePauseSecondsOptions}"
+                                                  SelectedItem="{Binding DtmfSettings.DCodePauseSecondsText}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                </Grid>
+                                <CheckBox Content="Side Tone" IsChecked="{Binding DtmfSettings.SideTone}" />
+                                <CheckBox Content="PTT ID" IsChecked="{Binding DtmfSettings.PttId}" />
+                                <HeaderedContentControl Header="PTT ID Starting (BOT)" IsEnabled="{Binding DtmfSettings.PttId}">
+                                    <TextBox Text="{Binding DtmfSettings.PttIdStartingBot}"
+                                             MaxLength="16"
+                                             views:DtmfCodeInput.Enabled="True" />
+                                </HeaderedContentControl>
+                                <HeaderedContentControl Header="PTT ID Ending (EOT)" IsEnabled="{Binding DtmfSettings.PttId}">
+                                    <TextBox Text="{Binding DtmfSettings.PttIdEndingEot}"
+                                             MaxLength="16"
+                                             views:DtmfCodeInput.Enabled="True" />
+                                </HeaderedContentControl>
+                                <HeaderedContentControl Header="Remotely Kill">
+                                    <TextBox Text="{Binding DtmfSettings.RemotelyKill}"
+                                             MaxLength="14"
+                                             views:DtmfCodeInput.Enabled="True" />
+                                </HeaderedContentControl>
+                                <HeaderedContentControl Header="Remotely Stun">
+                                    <TextBox Text="{Binding DtmfSettings.RemotelyStun}"
+                                             MaxLength="14"
+                                             views:DtmfCodeInput.Enabled="True" />
+                                </HeaderedContentControl>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Grid.Column="1" Header="DTMF Encode">
+                            <ListBox ItemsSource="{Binding DtmfEncodeEntries}"
+                                     SelectedItem="{Binding SelectedDtmfEncodeEntry}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:DtmfEncodeEntry">
+                                        <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="6" Margin="4">
+                                            <TextBlock Text="{Binding DisplayLabel}" VerticalAlignment="Center" />
+                                            <TextBox Grid.Column="1"
+                                                     Text="{Binding Code}"
+                                                     MaxLength="16"
+                                                     views:DtmfCodeInput.Enabled="True" />
+                                            <Button Grid.Column="2"
+                                                    Content="Special Call"
+                                                    Click="DtmfSpecialCallButton_OnClick" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </GroupBox>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

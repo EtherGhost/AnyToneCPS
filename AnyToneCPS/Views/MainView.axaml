@@ -1,0 +1,1590 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:models="using:AnyToneCPS.Models"
+             xmlns:ti="clr-namespace:Avalonia.Input.TextInput;assembly=Avalonia.Base"
+             xmlns:views="using:AnyToneCPS.Views"
+             xmlns:converters="using:AnyToneCPS.Converters"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.MainView"
+             x:DataType="vm:MainViewModel">
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+        </Style>
+        <Style Selector="TextBlock.SectionTitle">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource AppStrongTextBrush}" />
+        </Style>
+        <Style Selector="TextBlock.Label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource AppMutedTextBrush}" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <!-- Label+field wrapper for side-by-side detail-panel rows (Zone/
+             ScanList/AM Zone's "No/Name/Channel..." header rows etc.) -
+             same idea as a reference project's own HeaderedContentControl
+             style: the header always renders via the same TextBlock.Label
+             look (including TextTrimming, so a squeezed column clips its
+             label instead of overlapping its neighbor - see the real
+             resize bug this was built to fix), instead of every field
+             hand-rolling its own StackPanel+TextBlock and risking
+             forgetting TextTrimming. HorizontalAlignment="Stretch" on the
+             ContentPresenter so the wrapped TextBox/ComboBox/etc fills the
+             field's own column width, same as a plain StackPanel already did. -->
+        <Style Selector="HeaderedContentControl">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <StackPanel>
+                        <TextBlock Classes="Label" Text="{TemplateBinding Header}" TextTrimming="CharacterEllipsis" />
+                        <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Border.Panel">
+            <Setter Property="Background" Value="{DynamicResource AppPanelBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppPanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+        <!-- Hints the platform's on-screen keyboard to show a numeric
+             layout (Android) - the actual character-blocking is done in
+             code-behind via a Tunnel-phase TextInput handler, since this
+             hint alone doesn't stop a physical/Bluetooth keyboard or paste. -->
+        <Style Selector="TextBox.PinDigits">
+            <Setter Property="ti:TextInputOptions.ContentType" Value="Number" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="Background" Value="{DynamicResource AppPrimaryButtonBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppHeaderTextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppPrimaryButtonBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="MinWidth" Value="104" />
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AppPrimaryButtonHoverBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppPrimaryButtonHoverBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppHeaderTextBrush}" />
+        </Style>
+        <Style Selector="Button:pressed">
+            <Setter Property="Background" Value="{DynamicResource AppPrimaryButtonPressedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppHeaderTextBrush}" />
+        </Style>
+        <Style Selector="Button:disabled">
+            <Setter Property="Background" Value="{DynamicResource AppDisabledBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppSubtleTextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppDisabledBorderBrush}" />
+        </Style>
+        <Style Selector="Button.ToolbarButton">
+            <Setter Property="MinWidth" Value="92" />
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+        </Style>
+        <Style Selector="Button.ClusterButton">
+            <Setter Property="Width" Value="64" />
+            <Setter Property="MinWidth" Value="64" />
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <!-- Compact "?" badge that opens a Flyout with explanatory text,
+             for panels that need to say something about HOW writing works
+             (e.g. "whole list rewritten together") without it reading like
+             a "not yet writable" capability warning - those keep the
+             always-visible AppInfoBadgeBackgroundBrush banner instead.
+             Same Button+Flyout technique as MainView's own Validation
+             badge. -->
+        <Style Selector="Button.InfoIconButton">
+            <Setter Property="Content" Value="?" />
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="11" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Background" Value="{DynamicResource AppInfoBadgeBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppInfoBadgeTextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppInfoBadgeBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="Border.TypeBadge">
+            <Setter Property="Background" Value="{DynamicResource AppTypeBadgeBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppTypeBadgeBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Padding" Value="7,2" />
+            <Setter Property="MinWidth" Value="34" />
+        </Style>
+        <Style Selector="Border.TypeBadge TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource AppTypeBadgeTextBrush}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.InfoBadge">
+            <Setter Property="Background" Value="{DynamicResource AppInfoBadgeBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppInfoBadgeBorderBrush}" />
+        </Style>
+        <Style Selector="Border.InfoBadge TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource AppInfoBadgeTextBrush}" />
+        </Style>
+        <Style Selector="WrapPanel > Button">
+            <Setter Property="Margin" Value="0,0,8,8" />
+        </Style>
+        <Style Selector="WrapPanel > TextBox">
+            <Setter Property="Margin" Value="0,0,8,8" />
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Background" Value="{DynamicResource AppInputBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppInputForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppInputBorderBrush}" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource AppPrimaryButtonBrush}" />
+        </Style>
+
+        <Style Selector="ComboBox">
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Background" Value="{DynamicResource AppInputBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppInputForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppInputBorderBrush}" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="TextBox:focus, ComboBox:focus">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppInputFocusBorderBrush}" />
+        </Style>
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="{DynamicResource AppInputBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppPanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+        </Style>
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="Background" Value="{DynamicResource AppSelectionBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppSelectionTextBrush}" />
+        </Style>
+        <Style Selector="TreeViewItem">
+            <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+        </Style>
+        <Style Selector="TreeViewItem:selected">
+            <Setter Property="Background" Value="{DynamicResource AppSelectionBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppSelectionTextBrush}" />
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+        </Style>
+        <Style Selector="Border.CsvCell">
+            <Setter Property="Width" Value="170" />
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Background" Value="{DynamicResource AppInputBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppPanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,1,1" />
+        </Style>
+        <Style Selector="Border.CsvHeaderCell">
+            <Setter Property="Width" Value="170" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Background" Value="{DynamicResource AppCsvHeaderBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppCsvHeaderBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,1,1" />
+        </Style>
+        <Style Selector="Border.CsvHeaderCell TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource AppHeaderTextBrush}" />
+        </Style>
+        <Style Selector="TabControl">
+            <Setter Property="Background" Value="{DynamicResource AppPanelBackgroundBrush}" />
+        </Style>
+        <Style Selector="TabItem">
+            <Setter Property="Foreground" Value="{DynamicResource AppTabTextBrush}" />
+        </Style>
+        <Style Selector="TabItem:selected">
+            <Setter Property="Foreground" Value="{DynamicResource AppStrongTextBrush}" />
+        </Style>
+        <!-- Hides the tab strip on the Radio TabControl's 19 tabs (2026-07-28) -
+             navigation into them now happens exclusively via the sidebar tree's
+             "Radio Settings" group (SelectedOptionalSettingsSubTabIndex), so the
+             strip was pure redundant clutter, same class of issue the old flat
+             "Codeplug lists" TabControl had before its own tree migration.
+             SelectedIndex binding (and therefore content switching) is
+             untouched - only the header row's visibility changes. -->
+        <Style Selector="TabControl.NavDriven /template/ ItemsPresenter#PART_ItemsPresenter">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+    </UserControl.Styles>
+
+    <!-- ClipToBounds is the real fix for controls bleeding past the window
+         edge onto the desktop when the window is shorter than content's
+         minimum required height: Avalonia's Grid "*" rows only negotiate
+         *extra* space, they don't forcibly shrink children below their own
+         minimums, so a genuine deficit just renders past its container's
+         bounds instead of being cut off - none of Border/Panel/Grid clip
+         children by default. This outermost clip is the backstop no matter
+         how deep the layout math goes wrong further in. -->
+    <Grid ClipToBounds="True">
+    <Grid Background="{DynamicResource AppRootBackgroundBrush}" RowDefinitions="Auto,*">
+        <Border Grid.Row="0"
+                Background="{DynamicResource AppHeaderBackgroundBrush}"
+                BorderBrush="{DynamicResource AppHeaderBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="22,8">
+            <!-- No "AnyTone CPS" title text here (removed 2026-08-14) - the
+                 window's own title bar already shows it. Row 0 is the
+                 toolbar/port-selector alone (was sharing its row with the
+                 Validation/Saved/Status line, which overflowed behind the
+                 buttons on anything narrower than "every button fits" -
+                 see this Border's git history for the screenshot that
+                 caught it). Row 1 is that status line PLUS the read/write
+                 progress text, merged into one row instead of two - it was
+                 sitting empty most of the time since read/write progress
+                 only shows while a radio operation is active. A single
+                 implicit column (not the earlier "*,Auto" split) so the
+                 WrapPanel below gets a real finite width to wrap against -
+                 an Auto column always measures its child with infinite
+                 width, so a WrapPanel inside one never wraps at all. -->
+            <Grid RowDefinitions="Auto,Auto">
+                <!-- Wraps onto a second line (growing this Auto row, and so
+                     the header) once the window's too narrow for every
+                     button - was a non-wrapping StackPanel, which just let
+                     the row run past the window edge instead. -->
+                <WrapPanel Grid.Row="0"
+                           HorizontalAlignment="Right">
+                    <Button Classes="ToolbarButton" Command="{Binding NewProjectCommand}" Content="New" Margin="0,0,8,4" />
+                    <Button Classes="ToolbarButton" Command="{Binding LoadProjectCommand}" Content="Load" Margin="0,0,8,4" />
+                    <Button Classes="ToolbarButton" Command="{Binding SaveProjectCommand}" Content="Save" Margin="0,0,8,4" />
+                    <Button Classes="ToolbarButton" Command="{Binding SaveProjectAsCommand}" Content="Save As" Margin="0,0,8,4" />
+                    <Button Classes="ToolbarButton"
+                            Command="{Binding ReadFromRadioCommand}"
+                            Content="Read from Radio"
+                            Margin="0,0,8,4" />
+                    <Button Classes="ToolbarButton"
+                            Command="{Binding WriteChangesToRadioCommand}"
+                            Content="Write Changes to Radio"
+                            ToolTip.Tip="Reads and rewrites the radio's whole known codeplug with every pending channel change - not just one field. Takes several minutes."
+                            Margin="0,0,8,4" />
+                    <ComboBox ItemsSource="{Binding AvailablePorts}"
+                              SelectedItem="{Binding SelectedPort}"
+                              VerticalAlignment="Center"
+                              MinWidth="160"
+                              IsVisible="{Binding IsRadioAvailableOnThisPlatform}"
+                              Margin="6,0,8,4" />
+                    <Button Classes="ToolbarButton"
+                            Command="{Binding RefreshRadioPortsCommand}"
+                            Content="Refresh ports"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding IsRadioAvailableOnThisPlatform}"
+                            Margin="0,0,0,4" />
+                </WrapPanel>
+
+                <!-- Grid, not a horizontal StackPanel - a StackPanel gives
+                     every child unbounded width to measure against, so a
+                     fixed MaxWidth (the previous approach) ellipsizes at
+                     that fixed number regardless of how much real space is
+                     left in the row. Here only the codeplug path (the one
+                     most likely to be long) gets the "*" column, so it
+                     fills whatever's actually left after its neighbors and
+                     only trims when the row genuinely runs out of room. -->
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto"
+                      Margin="0,6,0,0">
+                    <!-- Compact badge + Flyout instead of an always-reserved
+                         panel - matches MobileMainView.axaml's Validation
+                         button, added there specifically to stop permanently
+                         eating window space for a list that's usually empty. -->
+                    <Button Grid.Column="0"
+                            MinHeight="0"
+                            MinWidth="0"
+                            Padding="8,3"
+                            FontSize="12"
+                            Background="{DynamicResource AppInfoBadgeBackgroundBrush}"
+                            Foreground="{DynamicResource AppInfoBadgeTextBrush}"
+                            BorderBrush="{DynamicResource AppInfoBadgeBorderBrush}"
+                            Content="{Binding ValidationSummary, StringFormat='Validation: {0}'}">
+                        <Button.Flyout>
+                            <Flyout>
+                                <Border Classes="Panel" Padding="8" MaxWidth="320">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Classes="SectionTitle" Text="Validation" />
+                                        <ListBox MaxHeight="360" ItemsSource="{Binding ValidationMessages}">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" Margin="8,5" Foreground="{DynamicResource AppErrorBrush}" TextWrapping="Wrap" />
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </StackPanel>
+                                </Border>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <TextBlock Grid.Column="1"
+                               Foreground="{DynamicResource AppMutedTextBrush}"
+                               Text="{Binding DirtyIndicator}"
+                               VerticalAlignment="Center"
+                               Margin="16,0,0,0" />
+                    <TextBlock Grid.Column="2"
+                               Foreground="{DynamicResource AppStatusBrush}"
+                               Text="{Binding StatusMessage}"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="360"
+                               VerticalAlignment="Center"
+                               Margin="16,0,0,0" />
+                    <!-- Which codeplug/project file is loaded - moved here
+                         2026-08-14 from ChannelDetailView (Common tab header),
+                         where it duplicated this same info off in a page
+                         that isn't always the one open. -->
+                    <TextBlock Grid.Column="3"
+                               Text="{Binding DataStoreDescription}"
+                               Foreground="{DynamicResource AppSubtleTextBrush}"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center"
+                               Margin="16,0,0,0" />
+                    <TextBlock Grid.Column="4"
+                               Text="Reading codeplug..."
+                               Foreground="{DynamicResource AppStatusBrush}"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"
+                               Margin="16,0,0,0"
+                               IsVisible="{Binding IsReadingFromRadio}" />
+                    <!-- Button+Flyout instead of a bare truncated TextBlock -
+                         a real incident 2026-08-16: the app's very first
+                         live write against real hardware reported a
+                         mismatch warning that was longer than the
+                         status bar could show, with no way to see the
+                         rest even maximized, and no way to copy it either.
+                         Same technique as the Validation badge above -
+                         status stays compact in the toolbar, full detail
+                         (SelectableTextBlock, so it can be copied) opens
+                         in a Flyout on click. -->
+                    <Button Grid.Column="5"
+                            MinHeight="0"
+                            MinWidth="0"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            VerticalAlignment="Center"
+                            Margin="16,0,0,0"
+                            IsVisible="{Binding IsReadingFromRadio}">
+                        <TextBlock Text="{Binding RadioReadStatusText}"
+                                   Foreground="{DynamicResource AppStatusBrush}"
+                                   TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="360" />
+                        <Button.Flyout>
+                            <Flyout>
+                                <Border Classes="Panel" Padding="8" MaxWidth="480">
+                                    <ScrollViewer MaxHeight="420">
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Classes="SectionTitle" Text="Read From Radio" />
+                                            <SelectableTextBlock Text="{Binding RadioReadStatusText}" TextWrapping="Wrap" />
+                                            <ItemsControl ItemsSource="{Binding RadioReadWarnings}" IsVisible="{Binding HasRadioReadWarnings}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="x:String">
+                                                        <SelectableTextBlock Text="{Binding}" Foreground="{DynamicResource AppErrorBrush}" TextWrapping="Wrap" FontSize="12" Margin="0,4,0,0" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Border>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button Grid.Column="6"
+                            MinHeight="0"
+                            MinWidth="0"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            VerticalAlignment="Center"
+                            Margin="16,0,0,0">
+                        <TextBlock Text="{Binding RadioWriteStatusText}"
+                                   Foreground="{DynamicResource AppStatusBrush}"
+                                   TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="360" />
+                        <Button.Flyout>
+                            <Flyout>
+                                <Border Classes="Panel" Padding="8" MaxWidth="480">
+                                    <ScrollViewer MaxHeight="420">
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Classes="SectionTitle" Text="Write to Radio" />
+                                            <SelectableTextBlock Text="{Binding RadioWriteStatusText}" TextWrapping="Wrap" />
+                                            <ItemsControl ItemsSource="{Binding RadioWriteWarnings}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="x:String">
+                                                        <SelectableTextBlock Text="{Binding}" Foreground="{DynamicResource AppErrorBrush}" TextWrapping="Wrap" FontSize="12" Margin="0,4,0,0" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Border>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <Grid x:Name="ShellGrid"
+              Grid.Row="1"
+              Margin="18"
+              ColumnDefinitions="320,8,*"
+              RowDefinitions="*,Auto">
+            <Border x:Name="SidebarPanel"
+                    Grid.Column="0"
+                    Grid.Row="0"
+                    MinWidth="220"
+                    Classes="Panel"
+                    Padding="0">
+                <!-- Was "Auto,*" - the TreeView had no ceiling, so with
+                     enough nav nodes it grew past the sidebar's own bounds
+                     (and pushed the quick-pick list below it off-screen
+                     too) instead of scrolling internally. "*,*" gives both
+                     halves real bounded space to self-scroll within.
+                     Deliberately NOT wrapped in an outer ScrollViewer too -
+                     the TreeView and the quick-pick ListBox below it both
+                     already scroll internally, and nesting them inside
+                     another ScrollViewer reintroduces the same
+                     scroll-within-a-scroll problem already fixed once in
+                     this codebase (see MobileMainView.axaml's Validation
+                     button comment). In extreme window sizes below both
+                     halves' hard minimums, the outermost ClipToBounds="True"
+                     (see the root Grid's comment) cuts overflow cleanly
+                     instead of letting it bleed onto the desktop. -->
+                <Grid RowDefinitions="*,*">
+                    <TreeView ItemsSource="{Binding NavigationTree}"
+                              SelectedItem="{Binding SelectedNavigationNode}"
+                              Margin="12"
+                              MinHeight="150">
+                        <TreeView.ItemTemplate>
+                            <TreeDataTemplate ItemsSource="{Binding Children}">
+                                <TextBlock Text="{Binding Title}" Margin="2"
+                                           Background="Transparent"
+                                           HorizontalAlignment="Stretch"
+                                           IsVisible="{Binding IsVisible}"
+                                           IsEnabled="{Binding IsEnabled}"
+                                           ToolTip.Tip="{Binding DisabledReason}"
+                                           Tapped="NavigationTreeItem_OnTapped" />
+                            </TreeDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+
+                    <Grid Grid.Row="1">
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsChannelsViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto"
+                                  ColumnSpacing="6">
+                                <TextBlock Text="{Binding ChannelCount, StringFormat='{}{0} channels'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1"
+                                        Classes="ClusterButton"
+                                        Command="{Binding AddChannelCommand}"
+                                        Content="+" />
+                                <Button Grid.Column="2"
+                                        Classes="ClusterButton"
+                                        Command="{Binding DuplicateChannelCommand}"
+                                        Content="Copy" />
+                                <Button Grid.Column="3"
+                                        Classes="ClusterButton"
+                                        Command="{Binding RemoveChannelCommand}"
+                                        Content="Del" />
+                            </Grid>
+
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding Channels}"
+                                     SelectedItem="{Binding SelectedChannel}"
+                                     SelectionMode="Multiple"
+                                     SelectionChanged="ChannelsList_OnSelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ChannelEntry">
+                                        <Grid Margin="8,7"
+                                              ColumnDefinitions="*,Auto,Auto"
+                                              RowDefinitions="Auto,Auto"
+                                              ColumnSpacing="8">
+                                            <TextBlock Text="{Binding DisplayLabel}"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <Border Grid.Column="1"
+                                                    Classes="TypeBadge InfoBadge"
+                                                    IsVisible="{Binding HasInfoBadge}"
+                                                    ToolTip.Tip="{Binding InfoBadgeToolTip}">
+                                                <TextBlock Text="{Binding InfoBadge}" />
+                                            </Border>
+                                            <Border Grid.Column="2" Classes="TypeBadge">
+                                                <TextBlock Text="{Binding TypeBadge}" />
+                                            </Border>
+                                            <TextBlock Grid.Row="1"
+                                                       Grid.ColumnSpan="3"
+                                                       Text="{Binding FrequencyLabel}"
+                                                       Foreground="{DynamicResource AppMutedTextBrush}"
+                                                       FontSize="12" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsZonesViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto"
+                                  ColumnSpacing="6">
+                                <TextBlock Text="{Binding ZoneCount, StringFormat='{}{0} zones'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1"
+                                        Classes="ToolbarButton"
+                                        Command="{Binding AddZoneCommand}"
+                                        Content="+" />
+                                <Button Grid.Column="2"
+                                        Classes="ToolbarButton"
+                                        Command="{Binding RemoveZoneCommand}"
+                                        Content="Del" />
+                            </Grid>
+
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding Zones}"
+                                     SelectedItem="{Binding SelectedZone}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ZoneEntry">
+                                        <Grid Margin="8,7"
+                                              RowDefinitions="Auto,Auto">
+                                            <TextBlock Text="{Binding DisplayLabel}"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Row="1"
+                                                       Text="{Binding Members.Count, StringFormat='{}{0} members'}"
+                                                       Foreground="{DynamicResource AppMutedTextBrush}"
+                                                       FontSize="12" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsDigitalKeysViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding VisibleEncryptionKeys.Count, StringFormat='{}{0} Digital keys'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddDigitalEncryptionKeyCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveEncryptionKeyCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding VisibleEncryptionKeys}"
+                                     SelectedItem="{Binding SelectedEncryptionKey}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:EncryptionKeyEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding EncryptionIdText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsArc4KeysViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding VisibleArc4EncryptionKeys.Count, StringFormat='{}{0} ARC4 keys'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddArc4EncryptionKeyCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveArc4EncryptionKeyCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding VisibleArc4EncryptionKeys}"
+                                     SelectedItem="{Binding SelectedArc4EncryptionKey}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:EncryptionKeyEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding EncryptionKeyText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsAesKeysViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding VisibleAesEncryptionKeys.Count, StringFormat='{}{0} AES keys'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddAesEncryptionKeyCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveAesEncryptionKeyCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding VisibleAesEncryptionKeys}"
+                                     SelectedItem="{Binding SelectedAesEncryptionKey}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:EncryptionKeyEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding EncryptionIdText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsRadioIdListViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding RadioIdCount, StringFormat='{}{0} radio IDs'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddRadioIdCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveRadioIdCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding RadioIds}"
+                                     SelectedItem="{Binding SelectedRadioId}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:RadioIdEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsTalkgroupsViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding TalkgroupCount, StringFormat='{}{0} talkgroups'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddTalkgroupCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveTalkgroupCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding Talkgroups}"
+                                     SelectedItem="{Binding SelectedTalkgroup}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:TalkgroupEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsScanListsViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto"
+                                  ColumnSpacing="6">
+                                <TextBlock Text="{Binding ScanListCount, StringFormat='{}{0} scan lists'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1"
+                                        Classes="ToolbarButton"
+                                        Command="{Binding AddScanListCommand}"
+                                        Content="+" />
+                                <Button Grid.Column="2"
+                                        Classes="ToolbarButton"
+                                        Command="{Binding RemoveScanListCommand}"
+                                        Content="Del" />
+                            </Grid>
+
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding ScanLists}"
+                                     SelectedItem="{Binding SelectedScanList}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ScanListEntry">
+                                        <Grid Margin="8,7"
+                                              RowDefinitions="Auto,Auto">
+                                            <TextBlock Text="{Binding DisplayLabel}"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Row="1"
+                                                       Text="{Binding Members.Count, StringFormat='{}{0} channels'}"
+                                                       Foreground="{DynamicResource AppMutedTextBrush}"
+                                                       FontSize="12" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsRoamingChannelsViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding RoamingChannelCount, StringFormat='{}{0} roaming channels'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddRoamingChannelCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveRoamingChannelCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding RoamingChannels}"
+                                     SelectedItem="{Binding SelectedRoamingChannel}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:RoamingChannelEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsRoamingZonesViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding RoamingZoneCount, StringFormat='{}{0} roaming zones'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddRoamingZoneCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveRoamingZoneCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding RoamingZones}"
+                                     SelectedItem="{Binding SelectedRoamingZone}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:RoamingZoneEntry">
+                                        <Grid ColumnDefinitions="50,*,50" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding Members.Count, StringFormat='{}{0} ch'}"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource AppMutedTextBrush}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsReceiveGroupListsViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding ReceiveGroupListCount, StringFormat='{}{0} receive group lists'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddReceiveGroupListCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveReceiveGroupListCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding ReceiveGroupLists}"
+                                     SelectedItem="{Binding SelectedReceiveGroupList}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ReceiveGroupListEntry">
+                                        <Grid ColumnDefinitions="50,*,50" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding TalkgroupIndexes.Count, StringFormat='{}{0} tg'}"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource AppMutedTextBrush}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsAutoRepeaterOffsetsViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding AutoRepeaterOffsetCount, StringFormat='{}{0} auto repeater offsets'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddAutoRepeaterOffsetCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveAutoRepeaterOffsetCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding AutoRepeaterOffsets}"
+                                     SelectedItem="{Binding SelectedAutoRepeaterOffset}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:AutoRepeaterOffsetEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding OffsetFrequencyLabel}" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsAnalogAddressBookViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding AnalogAddressCount, StringFormat='{}{0} analog addresses'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddAnalogAddressCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveAnalogAddressCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding AnalogAddresses}"
+                                     SelectedItem="{Binding SelectedAnalogAddress}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:AnalogAddressEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsGpsRoamingViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding GpsRoamingCount, StringFormat='{}{0} of 32 fixed GPS roaming slots'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding ResetGpsRoamingCommand}" Content="Reset" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding GpsRoamingEntries}"
+                                     SelectedItem="{Binding SelectedGpsRoaming}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:GpsRoamingEntry">
+                                        <Grid ColumnDefinitions="40,40,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Enabled}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="2" Text="{Binding ZoneDisplayName}" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsTalkgroupWhitelistViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding TalkgroupWhitelistCount, StringFormat='{}{0} whitelist entries'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddTalkgroupWhitelistEntryCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveTalkgroupWhitelistEntryCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding TalkgroupWhitelist}"
+                                     SelectedItem="{Binding SelectedTalkgroupWhitelistEntry}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:TalkgroupWhitelistEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding DmrId}" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsDigitalContactWhitelistViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding DigitalContactWhitelistCount, StringFormat='{}{0} whitelist entries'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddDigitalContactWhitelistEntryCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveDigitalContactWhitelistEntryCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding DigitalContactWhitelist}"
+                                     SelectedItem="{Binding SelectedDigitalContactWhitelistEntry}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:DigitalContactWhitelistEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding DmrId}" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid Margin="12"
+                              IsVisible="{Binding IsDigitalContactsViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="Digital Contacts" />
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsPrefabricatedSmsViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding PrefabricatedSmsCount, StringFormat='{}{0} prefabricated SMS'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddPrefabricatedSmsCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemovePrefabricatedSmsCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding PrefabricatedSmsMessages}"
+                                     SelectedItem="{Binding SelectedPrefabricatedSms}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:PrefabricatedSmsEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Text}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsAmAirBandViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding AmAirCount, StringFormat='{}{0} AM air channels'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddAmAirCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveAmAirCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding AmAirChannels}"
+                                     SelectedItem="{Binding SelectedAmAir}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:AmAirEntry">
+                                        <Grid ColumnDefinitions="50,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Row="1"
+                                                       Grid.Column="1"
+                                                       Text="{Binding FrequencyLabel}"
+                                                       Foreground="{DynamicResource AppMutedTextBrush}"
+                                                       FontSize="12" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsAmZoneViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding AmZoneCount, StringFormat='{}{0} AM zones'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddAmZoneCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveAmZoneCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding AmZones}"
+                                     SelectedItem="{Binding SelectedAmZone}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:AmZoneEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsFmBroadcastViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding FmChannelCount, StringFormat='{}{0} FM channels'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddFmChannelCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveFmChannelCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding FmChannels}"
+                                     SelectedItem="{Binding SelectedFmChannel}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:FmChannelEntry">
+                                        <Grid ColumnDefinitions="50,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Row="1"
+                                                       Grid.Column="1"
+                                                       Text="{Binding FrequencyLabel}"
+                                                       Foreground="{DynamicResource AppMutedTextBrush}"
+                                                       FontSize="12" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsAnalogQuickCallViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding AnalogQuickCallCount, StringFormat='{}{0} analog quick calls'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddAnalogQuickCallCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveAnalogQuickCallCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding AnalogQuickCalls}"
+                                     SelectedItem="{Binding SelectedAnalogQuickCall}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:AnalogQuickCallEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding DisplayLabel}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsStateInformationViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding StateInformationCount, StringFormat='{}{0} state information entries'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddStateInformationCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveStateInformationCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding StateInformationEntries}"
+                                     SelectedItem="{Binding SelectedStateInformation}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:StateInformationEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Content}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <!-- No Add/Del toolbar - Hot Key is a fixed 18-row
+                             list, one per physical/programmable key, not
+                             addable/removable (see HotKeyEntry's class doc
+                             comment). -->
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsHotKeyViewSelected}">
+                            <TextBlock Text="18 hot keys" VerticalAlignment="Center" FontWeight="SemiBold" />
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding HotKeys}"
+                                     SelectedItem="{Binding SelectedHotKey}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:HotKeyEntry">
+                                        <TextBlock Text="{Binding DisplayLabel}" Margin="4" VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid Margin="12"
+                              IsVisible="{Binding IsQdc1200DecodeViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="QDC 1200 Decode Settings" />
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsQdc1200EncodeViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="QDC 1200 Encode Settings" />
+                            <StackPanel Grid.Row="1" Spacing="8">
+                                <CheckBox Content="Side Tone" IsChecked="{Binding Qdc1200Settings.SideTone}" />
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <HeaderedContentControl Header="Max ACK Wait Time (s)">
+                                        <ComboBox ItemsSource="{Binding Qdc1200MaxAckWaitTimeOptions}"
+                                                  SelectedItem="{Binding Qdc1200Settings.MaxAckWaitTimeText}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                    <HeaderedContentControl Grid.Column="1" Header="Pretime (ms)">
+                                        <ComboBox ItemsSource="{Binding Qdc1200PretimeOptions}"
+                                                  SelectedItem="{Binding Qdc1200Settings.PretimeText}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                </Grid>
+                                <HeaderedContentControl Header="Resend Code in Case No Response">
+                                    <ComboBox ItemsSource="{Binding Qdc1200ResendCodeOptions}"
+                                              SelectedItem="{Binding Qdc1200Settings.ResendCodeText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                            </StackPanel>
+                            <Grid Grid.Row="2"
+                                  RowDefinitions="Auto,*"
+                                  RowSpacing="10">
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                    <TextBlock Text="{Binding Qdc1200IdCount, StringFormat='{}{0} QDC 1200 IDs'}"
+                                               VerticalAlignment="Center"
+                                               FontWeight="SemiBold" />
+                                    <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddQdc1200IdCommand}" Content="+" />
+                                    <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveQdc1200IdCommand}" Content="Del" />
+                                </Grid>
+                                <ListBox Grid.Row="1"
+                                         ItemsSource="{Binding Qdc1200Ids}"
+                                         SelectedItem="{Binding SelectedQdc1200Id}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:Qdc1200IdEntry">
+                                            <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                                <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsQdcAddressBookViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding QdcAddressCount, StringFormat='{}{0} QDC addresses'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddQdcAddressCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveQdcAddressCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding QdcAddresses}"
+                                     SelectedItem="{Binding SelectedQdcAddress}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:QdcAddressEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsFiveToneViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding FiveToneIdCount, StringFormat='{}{0} 5Tone IDs'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddFiveToneIdCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveFiveToneIdCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding FiveToneIds}"
+                                     SelectedItem="{Binding SelectedFiveToneId}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:FiveToneIdEntry">
+                                        <Grid ColumnDefinitions="50,*"
+                                              ColumnSpacing="8"
+                                              Margin="4"
+                                              DoubleTapped="FiveToneRow_OnDoubleTapped"
+                                              ToolTip.Tip="Double-click a row already set by &amp;Special Call to reset it - matches the real vendor CPS's own gesture.">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsTwoToneEncodeViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="2Tone Encode Settings" />
+                            <StackPanel Grid.Row="1" Spacing="8">
+                                <CheckBox Content="Side Tone" IsChecked="{Binding TwoToneEncodeSettings.SideTone}" />
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <HeaderedContentControl Header="1st Tone Duration (s)">
+                                        <ComboBox ItemsSource="{Binding TwoToneEncodeSettings.ToneDurationOptions}"
+                                                  SelectedItem="{Binding TwoToneEncodeSettings.FirstToneDurationSecondsText}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                    <HeaderedContentControl Grid.Column="1" Header="2nd Tone Duration (s)">
+                                        <ComboBox ItemsSource="{Binding TwoToneEncodeSettings.ToneDurationOptions}"
+                                                  SelectedItem="{Binding TwoToneEncodeSettings.SecondToneDurationSecondsText}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                </Grid>
+                                <HeaderedContentControl Header="Long Tone Duration (s)">
+                                    <ComboBox ItemsSource="{Binding TwoToneEncodeSettings.ToneDurationOptions}"
+                                              SelectedItem="{Binding TwoToneEncodeSettings.LongToneDurationSecondsText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                    <HeaderedContentControl Header="Gap Time (ms)">
+                                        <ComboBox ItemsSource="{Binding TwoToneEncodeSettings.GapTimeMsOptions}"
+                                                  SelectedItem="{Binding TwoToneEncodeSettings.GapTimeMsText}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                    <HeaderedContentControl Grid.Column="1" Header="Auto Reset Time (s)">
+                                        <ComboBox ItemsSource="{Binding TwoToneEncodeSettings.AutoResetTimeSecondsOptions}"
+                                                  SelectedItem="{Binding TwoToneEncodeSettings.AutoResetTimeSecondsText}"
+                                                  HorizontalAlignment="Stretch" />
+                                    </HeaderedContentControl>
+                                </Grid>
+                            </StackPanel>
+                            <Grid Grid.Row="2"
+                                  RowDefinitions="Auto,*"
+                                  RowSpacing="10">
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                    <TextBlock Text="{Binding TwoToneEncodeCount, StringFormat='{}{0} 2Tone Encode entries'}"
+                                               VerticalAlignment="Center"
+                                               FontWeight="SemiBold" />
+                                    <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddTwoToneEncodeEntryCommand}" Content="+" />
+                                    <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveTwoToneEncodeEntryCommand}" Content="Del" />
+                                </Grid>
+                                <ListBox Grid.Row="1"
+                                         ItemsSource="{Binding TwoToneEncodeEntries}"
+                                         SelectedItem="{Binding SelectedTwoToneEncodeEntry}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:TwoToneEncodeEntry">
+                                            <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                                <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsTwoToneDecodeViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding TwoToneDecodeCount, StringFormat='{}{0} 2Tone Decode entries'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddTwoToneDecodeEntryCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveTwoToneDecodeEntryCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding TwoToneDecodeEntries}"
+                                     SelectedItem="{Binding SelectedTwoToneDecodeEntry}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:TwoToneDecodeEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid Margin="12"
+                              IsVisible="{Binding IsDtmfViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="DTMF Settings" />
+                        </Grid>
+
+                        <Grid Margin="12"
+                              IsVisible="{Binding IsMasterIdViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="Master ID" />
+                        </Grid>
+
+                        <Grid Margin="12"
+                              IsVisible="{Binding IsTalkAliasSettingsViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="Talk Alias Settings" />
+                        </Grid>
+
+                        <Grid Margin="12"
+                              IsVisible="{Binding IsAlarmSettingsViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="Alarm Settings" />
+                        </Grid>
+
+                        <Grid Margin="12"
+                              IsVisible="{Binding IsAprsSettingsViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="APRS Settings" />
+                        </Grid>
+
+                        <Grid RowDefinitions="Auto,*"
+                              Margin="12"
+                              RowSpacing="10"
+                              IsVisible="{Binding IsAprsFiltersViewSelected}">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Text="{Binding AprsReceiveFilterCount, StringFormat='{}{0} APRS receive filters'}"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1" Classes="ToolbarButton" Command="{Binding AddAprsReceiveFilterCommand}" Content="+" />
+                                <Button Grid.Column="2" Classes="ToolbarButton" Command="{Binding RemoveAprsReceiveFilterCommand}" Content="Del" />
+                            </Grid>
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding AprsReceiveFilters}"
+                                     SelectedItem="{Binding SelectedAprsReceiveFilter}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:AprsReceiveFilterEntry">
+                                        <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                            <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Callsign}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <Grid Margin="12"
+                              IsVisible="{Binding IsRadioViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="Radio" />
+                        </Grid>
+
+                        <Grid Margin="12"
+                              IsVisible="{Binding IsImportsViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="Imports" />
+                        </Grid>
+
+                        <Grid Margin="12"
+                              IsVisible="{Binding IsExportsViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="Exports" />
+                        </Grid>
+
+                        <Grid Margin="12"
+                              IsVisible="{Binding IsSettingsViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="Settings" />
+                        </Grid>
+
+                        <Grid Margin="12"
+                              IsVisible="{Binding IsDevOptionsViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="Dev Options" />
+                        </Grid>
+
+                        <Grid Margin="12"
+                              IsVisible="{Binding IsAboutViewSelected}">
+                            <TextBlock Classes="SectionTitle" Text="About" />
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1"
+                          Grid.Row="0"
+                          Width="8"
+                          HorizontalAlignment="Stretch"
+                          Background="Transparent" />
+
+            <Grid x:Name="ContentHost"
+                  Grid.Column="2"
+                  Grid.Row="0"
+                  RowDefinitions="*"
+                  MinWidth="320">
+                <Grid>
+                    <views:ChannelDetailView IsVisible="{Binding IsChannelsViewSelected}" />
+
+                    <views:KeysDetailView IsVisible="{Binding IsAnyKeysViewSelected}" />
+
+                    <views:RadioIdListDetailView IsVisible="{Binding IsRadioIdListViewSelected}" />
+
+                    <views:TalkgroupsDetailView IsVisible="{Binding IsTalkgroupsViewSelected}" />
+
+                    <views:ScanListDetailView IsVisible="{Binding IsScanListsViewSelected}" />
+
+                    <views:RoamingChannelsDetailView IsVisible="{Binding IsRoamingChannelsViewSelected}" />
+
+                    <views:RoamingZonesDetailView IsVisible="{Binding IsRoamingZonesViewSelected}" />
+
+                    <views:ReceiveGroupListDetailView IsVisible="{Binding IsReceiveGroupListsViewSelected}" />
+
+                    <views:AutoRepeaterOffsetsDetailView IsVisible="{Binding IsAutoRepeaterOffsetsViewSelected}" />
+
+                    <views:AnalogAddressBookDetailView IsVisible="{Binding IsAnalogAddressBookViewSelected}" />
+
+                    <views:GpsRoamingDetailView IsVisible="{Binding IsGpsRoamingViewSelected}" />
+
+                    <views:TalkgroupWhitelistDetailView IsVisible="{Binding IsTalkgroupWhitelistViewSelected}" />
+
+                    <views:DigitalContactWhitelistDetailView IsVisible="{Binding IsDigitalContactWhitelistViewSelected}" />
+
+                    <views:DigitalContactsDetailView IsVisible="{Binding IsDigitalContactsViewSelected}" />
+
+                    <views:PrefabricatedSmsDetailView IsVisible="{Binding IsPrefabricatedSmsViewSelected}" />
+
+                    <views:AmAirBandDetailView IsVisible="{Binding IsAmAirBandViewSelected}" />
+
+                    <views:AmZoneDetailView IsVisible="{Binding IsAmZoneViewSelected}" />
+
+                    <views:FmBroadcastDetailView IsVisible="{Binding IsFmBroadcastViewSelected}" />
+
+                    <views:AnalogQuickCallDetailView IsVisible="{Binding IsAnalogQuickCallViewSelected}" />
+
+                    <views:StateInformationDetailView IsVisible="{Binding IsStateInformationViewSelected}" />
+
+                    <views:HotKeyDetailView IsVisible="{Binding IsHotKeyViewSelected}" />
+
+                    <views:Qdc1200DecodeDetailView IsVisible="{Binding IsQdc1200DecodeViewSelected}" />
+
+                    <views:Qdc1200EncodeDetailView IsVisible="{Binding IsQdc1200EncodeViewSelected}" />
+
+                    <views:QdcAddressBookDetailView IsVisible="{Binding IsQdcAddressBookViewSelected}" />
+
+                    <views:FiveToneDetailView IsVisible="{Binding IsFiveToneViewSelected}" />
+
+                    <views:TwoToneEncodeDetailView IsVisible="{Binding IsTwoToneEncodeViewSelected}" />
+
+                    <views:TwoToneDecodeDetailView IsVisible="{Binding IsTwoToneDecodeViewSelected}" />
+
+                    <views:DtmfDetailView IsVisible="{Binding IsDtmfViewSelected}" />
+
+                    <views:MasterIdDetailView IsVisible="{Binding IsMasterIdViewSelected}" />
+
+                    <views:TalkAliasSettingsDetailView IsVisible="{Binding IsTalkAliasSettingsViewSelected}" />
+
+                    <views:AlarmSettingsDetailView IsVisible="{Binding IsAlarmSettingsViewSelected}" />
+
+                    <views:AprsSettingsDetailView IsVisible="{Binding IsAprsSettingsViewSelected}" />
+
+                    <views:AprsFiltersDetailView IsVisible="{Binding IsAprsFiltersViewSelected}" />
+
+                    <views:OptionalSettingsView IsVisible="{Binding IsRadioViewSelected}" />
+
+                    <views:ZoneDetailView IsVisible="{Binding IsZonesViewSelected}" />
+
+                    <views:ImportsDetailView IsVisible="{Binding IsImportsViewSelected}" />
+
+                    <views:ExportsDetailView IsVisible="{Binding IsExportsViewSelected}" />
+
+                    <views:SettingsDetailView IsVisible="{Binding IsSettingsViewSelected}" />
+
+                    <views:DevOptionsDetailView IsVisible="{Binding IsDevOptionsViewSelected}" />
+
+                    <views:AboutDetailView IsVisible="{Binding IsAboutViewSelected}" />
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- Safety-critical startup popup, added 2026-07-30, user-requested -
+             see OptionalSettingsEntry.IsVoxOn's doc comment for the hazard
+             this warns about. Shown once per launch (unless "Don't show
+             again" is checked), auto-dismisses after 8s
+             (MainViewModel.LoadAppSettingsAsync), sits in this outer Grid's
+             shared (0,0) cell so it overlays on top of everything else. -->
+        <Border IsVisible="{Binding ShowVoxStartupWarning}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="0,24,0,0"
+                MaxWidth="480"
+                Background="{DynamicResource AppInfoBadgeBackgroundBrush}"
+                BorderBrush="{DynamicResource AppErrorBrush}"
+                BorderThickness="2"
+                CornerRadius="8"
+                Padding="16,12">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Safety warning: turn VOX off before connecting the radio"
+                           FontWeight="Bold"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource AppInfoBadgeTextBrush}" />
+                <TextBlock TextWrapping="Wrap"
+                           Foreground="{DynamicResource AppInfoBadgeTextBrush}"
+                           Text="If VOX is on, the radio can start transmitting on its own while connected to this computer for programming. That can damage the PC. Make sure VOX is off before connecting." />
+                <Grid ColumnDefinitions="*,Auto">
+                    <CheckBox Content="Don't show again"
+                              IsChecked="{Binding SuppressVoxStartupWarning}"
+                              Foreground="{DynamicResource AppInfoBadgeTextBrush}" />
+                    <Button Grid.Column="1" Content="Close" Command="{Binding DismissVoxStartupWarningCommand}" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Blocking busy overlay, added 2026-08-07 - shared by project
+             load/save and radio read/write (see MainViewModel.
+             IsBusyOverlayVisible's doc comment). Sits in this outer Grid's
+             shared (0,0) cell, same technique as the VOX warning above, but
+             covers the full window and is not dismissible - these are all
+             operations where editing fields mid-flight would be unsafe. -->
+        <Border IsVisible="{Binding IsBusyOverlayVisible}"
+                Background="#B0000000">
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MinWidth="260"
+                    MaxWidth="480"
+                    Background="{DynamicResource AppPanelBackgroundBrush}"
+                    BorderBrush="{DynamicResource AppPanelBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="24,20">
+                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                    <ProgressBar IsIndeterminate="True" Width="200" />
+                    <TextBlock Text="{Binding BusyOverlayMessage}"
+                               HorizontalAlignment="Center"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
+    </Grid>
+</UserControl>

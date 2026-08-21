@@ -1,0 +1,151 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:models="using:AnyToneCPS.Models"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.ZoneDetailView"
+             x:DataType="vm:MainViewModel">
+    <!--
+    Split out of MainView.axaml 2026-08-10, same reasoning as
+    ChannelDetailView/OptionalSettingsView's own doc comments - the sidebar's
+    own compact Zone list stays in MainView.axaml, IsZonesViewSelected list
+    section. The HeaderedContentControl style this panel relies on
+    (see MainView.axaml's own UserControl.Styles) is app-wide via that
+    file's styles, not redefined here.
+    -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <Grid RowDefinitions="Auto,*"
+                  RowSpacing="16">
+                <Grid ColumnSpacing="12"
+                      ColumnDefinitions="1*,1.5*,1.5*,1.5*">
+                    <HeaderedContentControl Header="No">
+                        <TextBox Text="{Binding SelectedZone.Number}"
+                                 FontWeight="{Binding SelectedZone.NumberFontWeight}" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="1" Header="Zone Name">
+                        <TextBox Text="{Binding SelectedZone.Name}"
+                                 MaxLength="16"
+                                 views:AsciiTextInput.Enabled="True"
+                                 FontWeight="{Binding SelectedZone.NameFontWeight}" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="2" Header="A Channel">
+                        <ComboBox ItemsSource="{Binding SelectedZoneMemberOptions}"
+                                  SelectedItem="{Binding SelectedZone.AChannel}"
+                                  FontWeight="{Binding SelectedZone.AChannelFontWeight}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:ChannelEntry">
+                                    <TextBlock Text="{Binding DisplayLabel}" TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="3" Header="B Channel">
+                        <ComboBox ItemsSource="{Binding SelectedZoneMemberOptions}"
+                                  SelectedItem="{Binding SelectedZone.BChannel}"
+                                  FontWeight="{Binding SelectedZone.BChannelFontWeight}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:ChannelEntry">
+                                    <TextBlock Text="{Binding DisplayLabel}" TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </HeaderedContentControl>
+                </Grid>
+
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="*,Auto,*"
+                      RowDefinitions="*,Auto"
+                      ColumnSpacing="12"
+                      RowSpacing="12">
+                    <Grid RowDefinitions="Auto,*"
+                          RowSpacing="8">
+                        <TextBlock Text="{Binding AvailableZoneChannels.Count, StringFormat='Available Channels ({0})'}"
+                                   FontWeight="SemiBold" />
+                        <ListBox x:Name="AvailableZoneChannelsList"
+                                 Grid.Row="1"
+                                 ItemsSource="{Binding AvailableZoneChannels}"
+                                 SelectionMode="Multiple"
+                                 SelectionChanged="AvailableZoneChannelsList_OnSelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:ChannelEntry">
+                                    <Grid Margin="8,7"
+                                          ColumnDefinitions="2*,*,*"
+                                          ColumnSpacing="12">
+                                        <TextBlock Text="{Binding DisplayLabel}"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding RxFrequencyMHzText}"
+                                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding TransmitFrequencyMHzText}"
+                                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+
+                    <StackPanel Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Spacing="8"
+                                MinWidth="110">
+                        <Button Command="{Binding AddZoneMembersCommand}" Content="Add &gt;" />
+                        <Button Command="{Binding RemoveZoneMembersCommand}" Content="&lt; Remove" />
+                        <Button Command="{Binding MoveZoneMemberUpCommand}" Content="Up" />
+                        <Button Command="{Binding MoveZoneMemberDownCommand}" Content="Down" />
+                        <CheckBox IsChecked="{Binding SelectedZone.IsHidden}"
+                                  Content="Hidden"
+                                  FontWeight="{Binding SelectedZone.IsHiddenFontWeight}" />
+                    </StackPanel>
+
+                    <Grid Grid.Column="2"
+                          RowDefinitions="Auto,*"
+                          RowSpacing="8">
+                        <TextBlock Text="{Binding SelectedZone.Members.Count, StringFormat='Added Channels ({0})'}"
+                                   FontWeight="{Binding SelectedZone.MembersFontWeight}" />
+                        <ListBox x:Name="ZoneMembersList"
+                                 Grid.Row="1"
+                                 ItemsSource="{Binding SelectedZone.Members}"
+                                 SelectionMode="Multiple"
+                                 SelectionChanged="ZoneMembersList_OnSelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:ChannelEntry">
+                                    <Grid Margin="8,7"
+                                          ColumnDefinitions="2*,*,*"
+                                          ColumnSpacing="12">
+                                        <TextBlock Text="{Binding DisplayLabel}"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding RxFrequencyMHzText}"
+                                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding TransmitFrequencyMHzText}"
+                                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

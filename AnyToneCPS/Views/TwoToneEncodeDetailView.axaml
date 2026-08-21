@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.TwoToneEncodeDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact 2Tone Encode list stays in
+         MainView.axaml, IsTwoToneEncodeViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <StackPanel Spacing="12" MaxWidth="360">
+                <TextBlock Classes="SectionTitle" Text="{Binding SelectedTwoToneEncodeEntry.Number, StringFormat='2Tone Encode {0} details'}" />
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                    <HeaderedContentControl Header="1st Tone Frequency (Hz)">
+                        <TextBox Text="{Binding SelectedTwoToneEncodeEntry.FirstToneFrequencyHzText}"
+                                 views:DigitOnlyInput.Enabled="True"
+                                 views:DigitOnlyInput.AllowDecimalPoint="True"
+                                 views:DigitOnlyInput.MaxValue="3106" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="1" Header="2nd Tone Frequency (Hz)">
+                        <TextBox Text="{Binding SelectedTwoToneEncodeEntry.SecondToneFrequencyHzText}"
+                                 views:DigitOnlyInput.Enabled="True"
+                                 views:DigitOnlyInput.AllowDecimalPoint="True"
+                                 views:DigitOnlyInput.MaxValue="3106" />
+                    </HeaderedContentControl>
+                </Grid>
+                <HeaderedContentControl Header="Name">
+                    <TextBox Text="{Binding SelectedTwoToneEncodeEntry.Name}"
+                             MaxLength="7"
+                             views:AsciiTextInput.Enabled="True" />
+                </HeaderedContentControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

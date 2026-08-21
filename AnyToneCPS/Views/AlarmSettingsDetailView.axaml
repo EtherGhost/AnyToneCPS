@@ -1,0 +1,163 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.AlarmSettingsDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Alarm Settings list stays in
+         MainView.axaml, IsAlarmSettingsViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <ScrollViewer>
+                <StackPanel Margin="8" Spacing="10" MaxWidth="900">
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,*" ColumnSpacing="12" RowSpacing="10">
+                    <GroupBox Grid.Row="0" Grid.Column="0" Header="Analog Alarm">
+                    <StackPanel Spacing="10">
+                        <HeaderedContentControl Header="Emergency Alarm">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.AnalogEmergencyAlarmOptions}"
+                                      SelectedItem="{Binding AlarmSettings.AnalogEmergencyAlarmText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="ENI Type Select" IsEnabled="{Binding AlarmSettings.IsAnalogEniTypeEnabled}">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.EniTypeOptions}"
+                                      SelectedItem="{Binding AlarmSettings.AnalogEniTypeText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Emergency ID"
+                                                 ToolTip.Tip="Not independently confirmed against real hardware - inferred from the reference project's own source."
+                                                 IsEnabled="{Binding AlarmSettings.IsAnalogEmergencyIdEnabled}">
+                            <ComboBox ItemsSource="{Binding AlarmSettingsAnalogEmergencyIdOptions}"
+                                      SelectedItem="{Binding AlarmSettingsAnalogEmergencyIdSelection}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Alarm Time [s]" IsEnabled="{Binding AlarmSettings.IsAnalogAlarmTimeEnabled}">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.DurationOptions}"
+                                      SelectedItem="{Binding AlarmSettings.AnalogAlarmTimeText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Duration of TX [s]" IsEnabled="{Binding AlarmSettings.IsAnalogTxRxDurationEnabled}">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.DurationOptions}"
+                                      SelectedItem="{Binding AlarmSettings.AnalogTxDurationText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Duration of RX [s]" IsEnabled="{Binding AlarmSettings.IsAnalogTxRxDurationEnabled}">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.DurationOptions}"
+                                      SelectedItem="{Binding AlarmSettings.AnalogRxDurationText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Emergency ENI Send Select">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.EniSendOptions}"
+                                      SelectedItem="{Binding AlarmSettings.AnalogEniSendText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Emergency Channel" IsEnabled="{Binding AlarmSettings.IsAnalogEniSendAssignedChannel}">
+                            <ComboBox ItemsSource="{Binding AlarmSettingsAnalogEmergencyChannelOptions}"
+                                      SelectedItem="{Binding AlarmSettingsAnalogEmergencyChannelSelection}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Emergency Cycle">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.EmergencyCycleOptions}"
+                                      SelectedItem="{Binding AlarmSettings.AnalogEmergencyCycleText}" />
+                        </HeaderedContentControl>
+                    </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Grid.Row="1" Grid.Column="0" Header="QDC1200 Setting" IsEnabled="{Binding AlarmSettings.IsQdcSettingEnabled}">
+                    <StackPanel Spacing="10">
+                        <HeaderedContentControl Header="Kind" ToolTip.Tip="Byte address not confirmed - the reference project's own source never assigns this field for any radio model.">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.CallTypeOptions}"
+                                      SelectedItem="{Binding AlarmSettings.QdcCallTypeText}" />
+                        </HeaderedContentControl>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                            <HeaderedContentControl Header="Group ID" IsEnabled="{Binding AlarmSettings.IsQdcGroupIdEnabled}">
+                                <TextBox Text="{Binding AlarmSettings.QdcGroupId}"
+                                         MaxLength="3"
+                                         views:HexDigitInput.Enabled="True" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Grid.Column="1" Header="Private ID" IsEnabled="{Binding AlarmSettings.IsQdcPrivateIdEnabled}">
+                                <TextBox Text="{Binding AlarmSettings.QdcPrivateId}"
+                                         MaxLength="4"
+                                         views:HexDigitInput.Enabled="True" />
+                            </HeaderedContentControl>
+                        </Grid>
+                    </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Grid.Row="2" Grid.Column="0" Header="Work Alone">
+                    <StackPanel Spacing="10">
+                        <HeaderedContentControl Header="Response Time (minutes)">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.WorkAloneResponseTimeOptions}"
+                                      SelectedItem="{Binding AlarmSettings.WorkAloneResponseTimeText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Warning Time [s]">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.WorkAloneWarningTimeOptions}"
+                                      SelectedItem="{Binding AlarmSettings.WorkAloneWarningTimeText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Response">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.WorkAloneResponseOptions}"
+                                      SelectedItem="{Binding AlarmSettings.WorkAloneResponseText}" />
+                        </HeaderedContentControl>
+                    </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Grid.Row="0" Grid.Column="1" Header="Digital Alarm">
+                    <StackPanel Spacing="10">
+                        <HeaderedContentControl Header="Emergency Alarm">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.DigitalEmergencyAlarmOptions}"
+                                      SelectedItem="{Binding AlarmSettings.DigitalEmergencyAlarmText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Alarm Time [s]">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.DurationOptions}"
+                                      SelectedItem="{Binding AlarmSettings.DigitalAlarmTimeText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Duration of TX [s]">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.DurationOptions}"
+                                      SelectedItem="{Binding AlarmSettings.DigitalTxDurationText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Duration of RX [s]">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.DurationOptions}"
+                                      SelectedItem="{Binding AlarmSettings.DigitalRxDurationText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Emergency ENI Send Select">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.EniSendOptions}"
+                                      SelectedItem="{Binding AlarmSettings.DigitalEniSendText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Emergency Channel" IsEnabled="{Binding AlarmSettings.IsDigitalEniSendAssignedChannel}">
+                            <ComboBox ItemsSource="{Binding AlarmSettingsDigitalEmergencyChannelOptions}"
+                                      SelectedItem="{Binding AlarmSettingsDigitalEmergencyChannelSelection}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Emergency Cycle">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.EmergencyCycleOptions}"
+                                      SelectedItem="{Binding AlarmSettings.DigitalEmergencyCycleText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="TG/DMR ID">
+                            <TextBox Text="{Binding AlarmSettings.DigitalTgDmrIdText}"
+                                     MaxLength="8"
+                                     views:DigitOnlyInput.Enabled="True"
+                                     views:DigitOnlyInput.MaxValue="16776415" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Header="Call Type">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.CallTypeOptions}"
+                                      SelectedItem="{Binding AlarmSettings.DigitalCallTypeText}" />
+                        </HeaderedContentControl>
+                        <CheckBox Content="Receive Alarm" IsChecked="{Binding AlarmSettings.ReceiveAlarm}" />
+                    </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Grid.Row="1" Grid.Column="1" Header="Man Down">
+                    <StackPanel Spacing="10">
+                        <CheckBox Content="Man Down" IsChecked="{Binding AlarmSettings.ManDown}" />
+                        <HeaderedContentControl Header="Man Down Delay [s]">
+                            <ComboBox ItemsSource="{Binding AlarmSettings.ManDownDelayOptions}"
+                                      SelectedItem="{Binding AlarmSettings.ManDownDelayText}" />
+                        </HeaderedContentControl>
+                    </StackPanel>
+                    </GroupBox>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,506 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:models="using:AnyToneCPS.Models"
+             xmlns:views="using:AnyToneCPS.Views"
+             xmlns:converters="using:AnyToneCPS.Converters"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.ChannelDetailView"
+             x:DataType="vm:MainViewModel">
+    <!--
+    Split out of MainView.axaml 2026-08-10, same reasoning as
+    OptionalSettingsView's own doc comment (see that file) - a real,
+    previously-confirmed Android NativeAOT crash caused by MainView's own
+    single compiled populate method growing too large. This is the Channel
+    detail/editor panel only (the sidebar's own compact Channel list stays
+    in MainView.axaml, IsChannelsViewSelected list section) - the single
+    biggest per-entity detail panel in the whole file.
+    -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <!-- Editing one field of several selected channels at once is
+             ambiguous, so the whole editor hides behind a summary while a
+             bulk selection (2+ channels, Ctrl/Shift-click) is active - see
+             MainViewModel.IsSingleChannelSelected/SelectedChannels. -->
+        <TextBlock IsVisible="{Binding !IsSingleChannelSelected}"
+                   Text="{Binding MultiChannelSelectionSummary}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   FontSize="16"
+                   Foreground="{DynamicResource AppMutedTextBrush}" />
+        <ScrollViewer IsVisible="{Binding IsSingleChannelSelected}">
+            <TabControl>
+                <TabItem Header="Common">
+                    <Border Classes="Panel">
+                        <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                      RowSpacing="18">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="SectionTitle" Text="Channel Data" />
+                        <StackPanel Grid.Column="1"
+                                    Spacing="2"
+                                    HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding StatusMessage}"
+                                       Foreground="{DynamicResource AppMutedTextBrush}"
+                                       HorizontalAlignment="Right" />
+                        </StackPanel>
+                    </Grid>
+
+                    <GroupBox Grid.Row="1" Header="Both Analog and Digital">
+                    <Grid ColumnDefinitions="*,*,*,*,*"
+                          RowDefinitions="Auto,Auto"
+                          ColumnSpacing="12"
+                          RowSpacing="12">
+                        <HeaderedContentControl Header="No">
+                            <TextBox Text="{Binding SelectedChannel.Number}"
+                                     views:DigitOnlyInput.Enabled="True"
+                                     views:DigitOnlyInput.MaxValue="4000"
+                                     FontWeight="{Binding SelectedChannel.NumberFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="Name">
+                            <TextBox Text="{Binding SelectedChannel.Name}"
+                                     MaxLength="16"
+                                     views:AsciiTextInput.Enabled="True"
+                                     FontWeight="{Binding SelectedChannel.NameFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="2" Header="RX (MHz)">
+                            <TextBox Text="{Binding SelectedChannel.RxFrequencyMHzText}"
+                                     MaxLength="9"
+                                     views:DigitOnlyInput.Enabled="True"
+                                     views:DigitOnlyInput.AllowDecimalPoint="True"
+                                     views:DigitOnlyInput.MaxValue="480"
+                                     FontWeight="{Binding SelectedChannel.ReceiveFrequencyFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="3" Header="TX (MHz)">
+                            <TextBox Text="{Binding SelectedChannel.TransmitFrequencyMHzText}"
+                                     MaxLength="9"
+                                     views:DigitOnlyInput.Enabled="True"
+                                     views:DigitOnlyInput.AllowDecimalPoint="True"
+                                     views:DigitOnlyInput.MaxValue="480"
+                                     FontWeight="{Binding SelectedChannel.TransmitFrequencyFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="4" Header="Correct Frequency Hz" ToolTip.Tip="Steps of 10 Hz (0-1250 Hz).">
+                            <TextBox Text="{Binding SelectedChannel.CorrectFrequencyHzText}"
+                                     views:DigitOnlyInput.Enabled="True"
+                                     views:DigitOnlyInput.MaxValue="1250"
+                                     FontWeight="{Binding SelectedChannel.CorrectFrequencyHzFontWeight}" />
+                        </HeaderedContentControl>
+
+                        <HeaderedContentControl Grid.Row="1" Header="Type">
+                            <ComboBox ItemsSource="{Binding ChannelTypes}"
+                                      SelectedItem="{Binding SelectedChannel.ChannelTypeSelection}"
+                                      FontWeight="{Binding SelectedChannel.ChannelTypeFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="1" Header="Power">
+                            <ComboBox ItemsSource="{Binding TransmitPowers}"
+                                      SelectedItem="{Binding SelectedChannel.TransmitPowerSelection}"
+                                      FontWeight="{Binding SelectedChannel.TransmitPowerFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="2" Header="Bandwidth" IsEnabled="{Binding SelectedChannel.CanUseBandwidth}">
+                            <ComboBox ItemsSource="{Binding Bandwidths}"
+                                      SelectedItem="{Binding SelectedChannel.BandwidthSelection}"
+                                      FontWeight="{Binding SelectedChannel.BandwidthFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="3" Header="{Binding BusyLockTxPermitHeaderText}">
+                            <ComboBox ItemsSource="{Binding BusyLockTxPermitValues}"
+                                      SelectedItem="{Binding SelectedChannel.BusyLockTxPermitSelection}"
+                                      FontWeight="{Binding SelectedChannel.BusyLockTxPermitFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="4" Header="Scan List">
+                            <ComboBox ItemsSource="{Binding ScanListOptions}"
+                                      SelectedItem="{Binding SelectedChannelScanListName}"
+                                      ToolTip.Tip="Membership is stored on the scan list, not the channel - see ScanListEntry." />
+                        </HeaderedContentControl>
+                    </Grid>
+                    </GroupBox>
+
+                    <GroupBox Grid.Row="2" Header="Analog Only" IsVisible="{Binding SelectedChannel.HasAnalogCapability}">
+                    <Grid ColumnDefinitions="*,*,*,*,*"
+                          RowDefinitions="Auto,Auto,Auto"
+                          ColumnSpacing="12"
+                          RowSpacing="10">
+                        <HeaderedContentControl Header="CTCSS Decode">
+                            <ComboBox ItemsSource="{Binding CtcssDcsModes}"
+                                      SelectedItem="{Binding SelectedChannel.CtcssDecodeSelection}"
+                                      FontWeight="{Binding SelectedChannel.CtcssDecodeFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="Decode Tone" IsVisible="{Binding SelectedChannel.IsDecodeToneVisible}">
+                            <ComboBox ItemsSource="{Binding SelectedChannel.DecodeToneOptions}"
+                                      SelectedItem="{Binding SelectedChannel.DecodeToneSelection}"
+                                      ToolTip.Tip="CTCSS tone or DCS code, depending on CTCSS Decode's mode. 'Custom CTCSS' is shown for reference but not selectable - its raw value on the wire isn't confirmed."
+                                      FontWeight="{Binding SelectedChannel.DecodeToneFontWeight}">
+                                <ComboBox.Styles>
+                                    <Style Selector="ComboBoxItem">
+                                        <Setter Property="IsEnabled">
+                                            <Setter.Value>
+                                                <Binding Converter="{x:Static converters:DisabledWhenEqualsConverter.Instance}" ConverterParameter="Custom CTCSS" />
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ComboBox.Styles>
+                            </ComboBox>
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="2" Header="CTCSS Encode">
+                            <ComboBox ItemsSource="{Binding CtcssDcsModes}"
+                                      SelectedItem="{Binding SelectedChannel.CtcssEncodeSelection}"
+                                      FontWeight="{Binding SelectedChannel.CtcssEncodeFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="3" Header="Encode Tone" IsVisible="{Binding SelectedChannel.IsEncodeToneVisible}">
+                            <ComboBox ItemsSource="{Binding SelectedChannel.EncodeToneOptions}"
+                                      SelectedItem="{Binding SelectedChannel.EncodeToneSelection}"
+                                      ToolTip.Tip="CTCSS tone or DCS code, depending on CTCSS Encode's mode. 'Custom CTCSS' is shown for reference but not selectable - its raw value on the wire isn't confirmed."
+                                      FontWeight="{Binding SelectedChannel.EncodeToneFontWeight}">
+                                <ComboBox.Styles>
+                                    <Style Selector="ComboBoxItem">
+                                        <Setter Property="IsEnabled">
+                                            <Setter.Value>
+                                                <Binding Converter="{x:Static converters:DisabledWhenEqualsConverter.Instance}" ConverterParameter="Custom CTCSS" />
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ComboBox.Styles>
+                            </ComboBox>
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="4" Header="Squelch Mode">
+                            <ComboBox ItemsSource="{Binding AnalogSquelchModes}"
+                                      SelectedItem="{Binding SelectedChannel.SquelchModeSelection}"
+                                      FontWeight="{Binding SelectedChannel.SquelchModeFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Header="Optional Signal" IsVisible="{Binding SelectedChannel.IsAnalog}">
+                            <ComboBox ItemsSource="{Binding OptionalSignals}"
+                                      SelectedItem="{Binding SelectedChannel.OptionalSignalSelection}"
+                                      FontWeight="{Binding SelectedChannel.OptionalSignalFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="1" Header="DTMF ID"
+                                                 IsEnabled="{Binding SelectedChannel.IsOptionalSignalDtmf}"
+                                                 ToolTip.Tip="Only usable when Optional Signal is set to DTMF.">
+                            <ComboBox ItemsSource="{Binding DtmfIds}"
+                                      SelectedItem="{Binding SelectedChannel.DtmfIdSelection}"
+                                      FontWeight="{Binding SelectedChannel.DtmfIdIndexFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="2" Header="2Tone ID"
+                                                 IsEnabled="{Binding SelectedChannel.IsOptionalSignalTwoTone}"
+                                                 ToolTip.Tip="Only usable when Optional Signal is set to 2Tone.">
+                            <ComboBox ItemsSource="{Binding Tone2Ids}"
+                                      SelectedItem="{Binding SelectedChannel.Tone2IdSelection}"
+                                      FontWeight="{Binding SelectedChannel.Tone2IdIndexFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="3" Header="5Tone ID"
+                                                 IsEnabled="{Binding SelectedChannel.IsOptionalSignalFiveTone}"
+                                                 ToolTip.Tip="Only usable when Optional Signal is set to 5Tone.">
+                            <ComboBox ItemsSource="{Binding Tone5Ids}"
+                                      SelectedItem="{Binding SelectedChannel.Tone5IdSelection}"
+                                      FontWeight="{Binding SelectedChannel.Tone5IdIndexFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="4" Header="QDC1200 ID"
+                                                 IsEnabled="{Binding SelectedChannel.IsOptionalSignalQdc1200}"
+                                                 ToolTip.Tip="Only usable when Optional Signal is set to QDC1200.">
+                            <ComboBox ItemsSource="{Binding QdcIds}"
+                                      SelectedItem="{Binding SelectedChannel.QdcIdSelection}"
+                                      FontWeight="{Binding SelectedChannel.QdcIdIndexFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="2" Header="2Tone Decode"
+                                                 IsEnabled="{Binding SelectedChannel.IsOptionalSignalTwoTone}"
+                                                 ToolTip.Tip="Only usable when Optional Signal is set to 2Tone.">
+                            <ComboBox ItemsSource="{Binding Tone2DecodeOptions}"
+                                      SelectedItem="{Binding SelectedChannel.Tone2DecodeSelection}"
+                                      FontWeight="{Binding SelectedChannel.Tone2DecodeFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="2" Grid.Column="1" Header="5Tone Bot"
+                                                 IsEnabled="{Binding SelectedChannel.IsOptionalSignalFiveTone}"
+                                                 ToolTip.Tip="Only usable when Optional Signal is set to 5Tone.">
+                            <ComboBox ItemsSource="{Binding R5ToneOptions}"
+                                      SelectedItem="{Binding SelectedChannel.R5ToneBotSelection}"
+                                      FontWeight="{Binding SelectedChannel.R5ToneBotFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="2" Grid.Column="2" Header="5Tone Eot"
+                                                 IsEnabled="{Binding SelectedChannel.IsOptionalSignalFiveTone}"
+                                                 ToolTip.Tip="Only usable when Optional Signal is set to 5Tone.">
+                            <ComboBox ItemsSource="{Binding R5ToneOptions}"
+                                      SelectedItem="{Binding SelectedChannel.R5ToneEotSelection}"
+                                      FontWeight="{Binding SelectedChannel.R5ToneEotFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="2" Grid.Column="3" Header="PTT ID">
+                            <ComboBox ItemsSource="{Binding PttIds}"
+                                      SelectedItem="{Binding SelectedChannel.PttIdSelection}"
+                                      FontWeight="{Binding SelectedChannel.PttIdFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="2" Grid.Column="4" Header="Custom CTCSS (Hz)">
+                            <TextBox Text="{Binding SelectedChannel.CustomCtcssText}"
+                                     views:DigitOnlyInput.Enabled="True"
+                                     views:DigitOnlyInput.AllowDecimalPoint="True"
+                                     views:DigitOnlyInput.MaxValue="260"
+                                     FontWeight="{Binding SelectedChannel.CustomCtcssFontWeight}" />
+                        </HeaderedContentControl>
+                    </Grid>
+                    </GroupBox>
+
+                    <GroupBox Grid.Row="3" Header="Digital Only" IsVisible="{Binding SelectedChannel.IsDigital}">
+                    <Grid ColumnDefinitions="*,*,*,*,*"
+                          RowDefinitions="Auto,Auto,Auto"
+                          ColumnSpacing="12"
+                          RowSpacing="12">
+                        <HeaderedContentControl Header="Contact">
+                            <ComboBox ItemsSource="{Binding ContactOptions}"
+                                      SelectedItem="{Binding SelectedChannelContactName}"
+                                      FontWeight="{Binding SelectedChannel.ContactFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="Radio ID">
+                            <ComboBox ItemsSource="{Binding RadioIdOptions}"
+                                      SelectedItem="{Binding SelectedChannelRadioIdName}"
+                                      FontWeight="{Binding SelectedChannel.RadioIdFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="2" Header="RX Color Code">
+                            <ComboBox ItemsSource="{Binding ColorCodeOptions}"
+                                      SelectedItem="{Binding SelectedChannel.ColorCodeText}"
+                                      FontWeight="{Binding SelectedChannel.ColorCodeFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="3" Header="TX Color Code">
+                            <ComboBox ItemsSource="{Binding ColorCodeOptions}"
+                                      SelectedItem="{Binding SelectedChannel.TxColorCodeText}"
+                                      FontWeight="{Binding SelectedChannel.TxColorCodeFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="4" Header="Slot">
+                            <ComboBox ItemsSource="{Binding RepeaterSlots}"
+                                      SelectedItem="{Binding SelectedChannel.RepeaterSlotText}"
+                                      FontWeight="{Binding SelectedChannel.RepeaterSlotFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Header="Receive Group">
+                            <ComboBox ItemsSource="{Binding ReceiveGroupListOptions}"
+                                      SelectedItem="{Binding SelectedChannelReceiveGroupListName}"
+                                      FontWeight="{Binding SelectedChannel.ReceiveGroupListFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="1" Header="Digital Key"
+                                                 IsVisible="{Binding !OptionalSettings.IsAesArc4EncryptionTypeSelected}"
+                                                 ToolTip.Tip="Only usable when Optional Settings' Encryption Type is set to Basic (not AES/ARC4).">
+                            <ComboBox ItemsSource="{Binding DigitalEncryptionKeyOptions}"
+                                      SelectedItem="{Binding SelectedChannel.DigitalEncryptionText}"
+                                      FontWeight="{Binding SelectedChannel.DigitalEncryptionFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="1" Header="AES Key"
+                                                 ToolTip.Tip="Only usable when Optional Settings' Encryption Type is set to AES/ARC4 and Extended Encryption is AES.">
+                            <HeaderedContentControl.IsVisible>
+                                <MultiBinding Converter="{x:Static converters:EncryptionKeyVisibilityConverter.Instance}" ConverterParameter="False">
+                                    <Binding Path="OptionalSettings.IsAesArc4EncryptionTypeSelected" />
+                                    <Binding Path="SelectedChannel.ExtendEncryption" />
+                                </MultiBinding>
+                            </HeaderedContentControl.IsVisible>
+                            <ComboBox ItemsSource="{Binding AesEncryptionKeyOptions}"
+                                      SelectedItem="{Binding SelectedChannel.AesDigitalEncryptionText}"
+                                      FontWeight="{Binding SelectedChannel.AesDigitalEncryptionFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="1" Header="ARC4 Key"
+                                                 ToolTip.Tip="Only usable when Optional Settings' Encryption Type is set to AES/ARC4 and Extended Encryption is ARC4.">
+                            <HeaderedContentControl.IsVisible>
+                                <MultiBinding Converter="{x:Static converters:EncryptionKeyVisibilityConverter.Instance}" ConverterParameter="True">
+                                    <Binding Path="OptionalSettings.IsAesArc4EncryptionTypeSelected" />
+                                    <Binding Path="SelectedChannel.ExtendEncryption" />
+                                </MultiBinding>
+                            </HeaderedContentControl.IsVisible>
+                            <ComboBox ItemsSource="{Binding Arc4EncryptionKeyOptions}"
+                                      SelectedItem="{Binding SelectedChannel.Arc4EncryptionText}"
+                                      FontWeight="{Binding SelectedChannel.Arc4EncryptionFontWeight}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="2" Header="Extended Encryption"
+                                                 IsEnabled="{Binding OptionalSettings.IsAesArc4EncryptionTypeSelected}"
+                                                 ToolTip.Tip="Only usable when Optional Settings' Encryption Type is set to AES/ARC4.">
+                            <ComboBox ItemsSource="{Binding ExtendEncryptionOptions}"
+                                      SelectedItem="{Binding SelectedChannel.ExtendEncryptionSelection}"
+                                      FontWeight="{Binding SelectedChannel.ExtendEncryptionFontWeight}" />
+                        </HeaderedContentControl>
+                        <StackPanel Grid.Row="1" Grid.Column="3">
+                            <StackPanel.IsVisible>
+                                <MultiBinding Converter="{x:Static converters:EncryptionKeyVisibilityConverter.Instance}" ConverterParameter="False">
+                                    <Binding Path="OptionalSettings.IsAesArc4EncryptionTypeSelected" />
+                                    <Binding Path="SelectedChannel.ExtendEncryption" />
+                                </MultiBinding>
+                            </StackPanel.IsVisible>
+                            <CheckBox Content="AES Multiple Key"
+                                      IsChecked="{Binding SelectedChannel.AesMultipleKey}"
+                                      IsEnabled="{Binding OptionalSettings.IsAesArc4EncryptionTypeSelected}"
+                                      FontWeight="{Binding SelectedChannel.AesMultipleKeyFontWeight}" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="1" Grid.Column="4">
+                            <StackPanel.IsVisible>
+                                <MultiBinding Converter="{x:Static converters:EncryptionKeyVisibilityConverter.Instance}" ConverterParameter="False">
+                                    <Binding Path="OptionalSettings.IsAesArc4EncryptionTypeSelected" />
+                                    <Binding Path="SelectedChannel.ExtendEncryption" />
+                                </MultiBinding>
+                            </StackPanel.IsVisible>
+                            <CheckBox Content="AES Random Key"
+                                      IsChecked="{Binding SelectedChannel.AesRandomKey}"
+                                      IsEnabled="{Binding OptionalSettings.IsAesArc4EncryptionTypeSelected}"
+                                      FontWeight="{Binding SelectedChannel.AesRandomKeyFontWeight}" />
+                        </StackPanel>
+                        <HeaderedContentControl Grid.Row="2" Header="TX Interrupt"
+                                                 ToolTip.Tip="'High priority' is shown for reference but not selectable - its raw value on the wire isn't confirmed yet, see RESUME_HERE.md.">
+                            <ComboBox ItemsSource="{Binding TxInterruptOptions}"
+                                      SelectedItem="{Binding SelectedChannel.TxInterruptSelection}"
+                                      FontWeight="{Binding SelectedChannel.TxInterruptFontWeight}">
+                                <ComboBox.Styles>
+                                    <Style Selector="ComboBoxItem">
+                                        <Setter Property="IsEnabled">
+                                            <Setter.Value>
+                                                <Binding Converter="{x:Static converters:DisabledWhenEqualsConverter.Instance}" ConverterParameter="High priority" />
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ComboBox.Styles>
+                            </ComboBox>
+                        </HeaderedContentControl>
+                    </Grid>
+                    </GroupBox>
+                        </Grid>
+                    </Border>
+                </TabItem>
+
+                <TabItem Header="Advanced">
+                    <Border Classes="Panel">
+                        <StackPanel Spacing="18">
+                            <GroupBox Header="Traffic and Scanning">
+                                <Grid ColumnDefinitions="*,*,*,*"
+                                      RowDefinitions="Auto,Auto"
+                                      ColumnSpacing="12"
+                                      RowSpacing="10"
+                                      Margin="0,8,0,0">
+                                    <StackPanel>
+                                        <CheckBox Content="Talk Around"
+                                                  IsChecked="{Binding SelectedChannel.TalkAround}"
+                                                  FontWeight="{Binding SelectedChannel.TalkAroundFontWeight}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <CheckBox Content="PTT Prohibit"
+                                                  IsChecked="{Binding SelectedChannel.PttProhibit}"
+                                                  FontWeight="{Binding SelectedChannel.PttProhibitFontWeight}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <CheckBox Content="Auto Scan"
+                                                  IsChecked="{Binding SelectedChannel.AutoScan}"
+                                                  FontWeight="{Binding SelectedChannel.AutoScanFontWeight}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="3">
+                                        <CheckBox Content="Work Alone"
+                                                  IsChecked="{Binding SelectedChannel.WorkAlone}"
+                                                  FontWeight="{Binding SelectedChannel.WorkAloneFontWeight}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1">
+                                        <CheckBox Content="Data ACK Disable"
+                                                  IsChecked="{Binding SelectedChannel.DataAckDisable}"
+                                                  FontWeight="{Binding SelectedChannel.DataAckDisableFontWeight}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="1">
+                                        <CheckBox Content="Exclude Channel From Roaming"
+                                                  IsChecked="{Binding SelectedChannel.ExcludeChannelRoaming}"
+                                                  FontWeight="{Binding SelectedChannel.ExcludeChannelRoamingFontWeight}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="2">
+                                        <CheckBox Content="Idle TX"
+                                                  IsChecked="{Binding SelectedChannel.IdleTx}"
+                                                  FontWeight="{Binding SelectedChannel.IdleTxFontWeight}" />
+                                    </StackPanel>
+                                </Grid>
+                            </GroupBox>
+
+                            <GroupBox Header="Analog Signaling" IsVisible="{Binding SelectedChannel.HasAnalogCapability}">
+                                <Grid ColumnDefinitions="*,*,*,*"
+                                      ColumnSpacing="12"
+                                      RowDefinitions="Auto,Auto"
+                                      RowSpacing="10"
+                                      Margin="0,8,0,0">
+                                    <StackPanel IsEnabled="{Binding SelectedChannel.CanUseReverse}">
+                                        <CheckBox Content="Reverse"
+                                                  IsChecked="{Binding SelectedChannel.Reverse}"
+                                                  FontWeight="{Binding SelectedChannel.ReverseFontWeight}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <CheckBox Content="Compand"
+                                                  IsEnabled="False"
+                                                  ToolTip.Tip="Confirmed non-functional on this radio - the real vendor CPS itself reverts this checkbox to unchecked as soon as you leave the channel's edit mode, so there's nothing to write. See RESUME_HERE.md, 2026-08-01." />
+                                    </StackPanel>
+                                    <HeaderedContentControl Grid.Row="1" Header="Scramble Set">
+                                        <ComboBox ItemsSource="{Binding ScrambleValues}"
+                                                  SelectedItem="{Binding SelectedChannel.ScrambleModeSelection}"
+                                                  FontWeight="{Binding SelectedChannel.ScrambleFontWeight}" />
+                                    </HeaderedContentControl>
+                                    <HeaderedContentControl Grid.Row="1" Grid.Column="1" Header="Custom Scrambler" IsEnabled="{Binding SelectedChannel.IsCustomScramble}">
+                                        <ComboBox ItemsSource="{Binding CustomScramblerValues}"
+                                                  SelectedItem="{Binding SelectedChannel.CustomScramblerSelection}"
+                                                  FontWeight="{Binding SelectedChannel.ScrambleFrequencyFontWeight}" />
+                                    </HeaderedContentControl>
+                                </Grid>
+                            </GroupBox>
+
+                            <GroupBox Header="DMR Details" IsVisible="{Binding SelectedChannel.IsDigital}">
+                                <Grid ColumnDefinitions="*,*,*"
+                                      RowDefinitions="Auto,Auto,Auto"
+                                      ColumnSpacing="12"
+                                      RowSpacing="10"
+                                      Margin="0,8,0,0">
+                                    <HeaderedContentControl Header="DMR Mode"
+                                                             ToolTip.Tip="Only applies in simplex mode - doesn't affect whether the channel is repeater or simplex.">
+                                        <ComboBox ItemsSource="{Binding DmrModes}"
+                                                  SelectedItem="{Binding SelectedChannel.DmrModeSelection}"
+                                                  FontWeight="{Binding SelectedChannel.DmrModeFontWeight}" />
+                                    </HeaderedContentControl>
+                                    <StackPanel Grid.Column="1">
+                                        <CheckBox Content="Slot Suit"
+                                                  IsChecked="{Binding SelectedChannel.SlotSuit}"
+                                                  FontWeight="{Binding SelectedChannel.SlotSuitFontWeight}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <CheckBox Content="Call Confirmation"
+                                                  IsChecked="{Binding SelectedChannel.CallConfirmation}"
+                                                  FontWeight="{Binding SelectedChannel.CallConfirmationFontWeight}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1">
+                                        <CheckBox Content="DMR CRC Ignore"
+                                                  IsChecked="{Binding SelectedChannel.DmrCrcIgnore}"
+                                                  FontWeight="{Binding SelectedChannel.DmrCrcIgnoreFontWeight}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="1">
+                                        <CheckBox Content="Send Talker Alias"
+                                                  IsChecked="{Binding SelectedChannel.SendTalkerAlias}"
+                                                  FontWeight="{Binding SelectedChannel.SendTalkerAliasFontWeight}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="2">
+                                        <CheckBox Content="SMS Forbid"
+                                                  IsChecked="{Binding SelectedChannel.SmsForbid}"
+                                                  FontWeight="{Binding SelectedChannel.SmsForbidFontWeight}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2">
+                                        <CheckBox Content="APRS RX"
+                                                  IsChecked="{Binding SelectedChannel.AprsRx}"
+                                                  FontWeight="{Binding SelectedChannel.AprsRxFontWeight}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="1">
+                                        <CheckBox Content="Ranging"
+                                                  IsChecked="{Binding SelectedChannel.Ranging}"
+                                                  FontWeight="{Binding SelectedChannel.RangingFontWeight}" />
+                                    </StackPanel>
+                                </Grid>
+                            </GroupBox>
+
+                            <GroupBox Header="Service">
+                                <Grid ColumnDefinitions="*,*,*"
+                                      ColumnSpacing="12"
+                                      Margin="0,8,0,0">
+                                    <StackPanel IsVisible="{Binding SelectedChannel.IsDigital}">
+                                        <CheckBox Content="SMS Confirmation"
+                                                  IsChecked="{Binding SelectedChannel.SmsConfirmation}"
+                                                  FontWeight="{Binding SelectedChannel.SmsConfirmationFontWeight}" />
+                                    </StackPanel>
+                                </Grid>
+                            </GroupBox>
+                        </StackPanel>
+                    </Border>
+                </TabItem>
+            </TabControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

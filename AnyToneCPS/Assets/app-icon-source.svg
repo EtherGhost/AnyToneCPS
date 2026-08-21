@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <clipPath id="round">
+      <rect x="0" y="0" width="512" height="512" rx="96" ry="96"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#round)">
+    <rect width="512" height="512" fill="#1E2530"/>
+
+    <!-- handheld radio silhouette, flat, generic -->
+    <g fill="#E8ECF1">
+      <!-- antenna -->
+      <rect x="248" y="72" width="16" height="96" rx="8"/>
+      <!-- body -->
+      <rect x="176" y="160" width="160" height="248" rx="28"/>
+      <!-- top knob -->
+      <circle cx="308" cy="176" r="14" fill="#1E2530"/>
+      <circle cx="308" cy="176" r="9" fill="#E8ECF1"/>
+    </g>
+
+    <!-- screen -->
+    <rect x="200" y="196" width="112" height="72" rx="10" fill="#3FD6C2"/>
+
+    <!-- speaker slits -->
+    <g fill="#1E2530">
+      <rect x="200" y="292" width="112" height="10" rx="5"/>
+      <rect x="200" y="312" width="112" height="10" rx="5"/>
+      <rect x="200" y="332" width="112" height="10" rx="5"/>
+    </g>
+
+    <!-- side PTT button, generic accent, no brand-specific color -->
+    <rect x="152" y="208" width="20" height="56" rx="8" fill="#3FD6C2"/>
+
+    <!-- broadcast/programming waves, minimal, right side -->
+    <g stroke="#3FD6C2" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.9">
+      <path d="M356 236 A48 48 0 0 1 356 332"/>
+      <path d="M384 208 A88 88 0 0 1 384 360"/>
+    </g>
+  </g>
+</svg>

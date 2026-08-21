@@ -1,0 +1,127 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:models="using:AnyToneCPS.Models"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.ScanListDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Scan List list stays in
+         MainView.axaml, IsScanListsViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <Grid RowDefinitions="Auto,*"
+                  RowSpacing="16">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" MinWidth="60" />
+                        <ColumnDefinition Width="*" MinWidth="120" />
+                    </Grid.ColumnDefinitions>
+                    <HeaderedContentControl Header="Number">
+                        <TextBox Text="{Binding SelectedScanList.Number}" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="1" Header="Name">
+                        <TextBox Text="{Binding SelectedScanList.Name}"
+                                 views:AsciiTextInput.Enabled="True"
+                                 FontWeight="{Binding SelectedScanList.NameFontWeight}" />
+                    </HeaderedContentControl>
+                </Grid>
+                <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <HeaderedContentControl Header="Priority Channel Select"
+                                                 ToolTip.Tip="Confirmed 2026-07-19 via vendor CPS help text and a live differential test.">
+                            <ComboBox ItemsSource="{Binding ScanListPriorityChannelSelectOptions}"
+                                      SelectedItem="{Binding SelectedScanList.PriorityChannelSelectText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="Revert Channel"
+                                                 ToolTip.Tip="Labels confirmed 2026-07-19 via vendor CPS help text (topic 67) - not yet independently live-write-tested for every value.">
+                            <ComboBox ItemsSource="{Binding ScanListRevertChannelOptions}"
+                                      SelectedItem="{Binding SelectedScanList.RevertChannelText}" />
+                        </HeaderedContentControl>
+                    </Grid>
+                    <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <HeaderedContentControl Header="Priority Channel 1">
+                            <ComboBox ItemsSource="{Binding SelectedScanListMemberOptions}"
+                                      SelectedItem="{Binding SelectedScanList.PriorityChannel1Text}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="Priority Channel 2">
+                            <ComboBox ItemsSource="{Binding SelectedScanListMemberOptions}"
+                                      SelectedItem="{Binding SelectedScanList.PriorityChannel2Text}" />
+                        </HeaderedContentControl>
+                    </Grid>
+                    <Grid Grid.Row="2" ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
+                        <HeaderedContentControl Header="Lookback Time A [s]">
+                            <ComboBox ItemsSource="{Binding ScanListLookBackTimeOptions}"
+                                      SelectedItem="{Binding SelectedScanList.LookbackTimeAText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="1" Header="Lookback Time B [s]">
+                            <ComboBox ItemsSource="{Binding ScanListLookBackTimeOptions}"
+                                      SelectedItem="{Binding SelectedScanList.LookbackTimeBText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="2" Header="Dropout Delay Time [s]">
+                            <ComboBox ItemsSource="{Binding ScanListDropoutDelayDwellTimeOptions}"
+                                      SelectedItem="{Binding SelectedScanList.DropoutDelayTimeText}" />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Column="3" Header="Dwell Time [s]">
+                            <ComboBox ItemsSource="{Binding ScanListDropoutDelayDwellTimeOptions}"
+                                      SelectedItem="{Binding SelectedScanList.DwellTimeText}" />
+                        </HeaderedContentControl>
+                    </Grid>
+
+                    <Grid Grid.Row="3"
+                          ColumnDefinitions="*,Auto,*"
+                          ColumnSpacing="12">
+                        <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                            <TextBlock Text="{Binding AvailableScanListChannels.Count, StringFormat='Available channels ({0})'}"
+                                       FontWeight="SemiBold" />
+                            <ListBox x:Name="AvailableScanListChannelsList"
+                                     Grid.Row="1"
+                                     ItemsSource="{Binding AvailableScanListChannels}"
+                                     SelectionMode="Multiple"
+                                     SelectionChanged="AvailableScanListChannelsList_OnSelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ChannelEntry">
+                                        <TextBlock Margin="8,7" Text="{Binding DisplayLabel}" TextTrimming="CharacterEllipsis" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <StackPanel Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Spacing="8"
+                                    MinWidth="100">
+                            <Button Command="{Binding AddScanListMembersCommand}" Content="Add &gt;" />
+                            <Button Command="{Binding RemoveScanListMembersCommand}" Content="&lt; Remove" />
+                        </StackPanel>
+
+                        <Grid Grid.Column="2" RowDefinitions="Auto,*" RowSpacing="8">
+                            <TextBlock Text="{Binding SelectedScanList.Members.Count, StringFormat='Scan channel members ({0})'}"
+                                       FontWeight="{Binding SelectedScanList.MembersFontWeight}" />
+                            <ListBox x:Name="ScanListMembersList"
+                                     Grid.Row="1"
+                                     ItemsSource="{Binding SelectedScanList.Members}"
+                                     SelectionMode="Multiple"
+                                     SelectionChanged="ScanListMembersList_OnSelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ChannelEntry">
+                                        <TextBlock Margin="8,7" Text="{Binding DisplayLabel}" TextTrimming="CharacterEllipsis" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,26 @@
+<linker>
+  <!--
+    Preserves every type/member under AnyToneCPS.Models from trimming.
+
+    Real crash found 2026-08-17: EncryptionKeyEntry.EncryptionIdText is a
+    genuine public property (see EncryptionKeyEntry.cs), but Desktop's
+    NativeAOT publish threw "The type 'EncryptionKeyEntry' does not contain
+    a public property named 'EncryptionIdText'" on startup - CommunityToolkit
+    .Mvvm's ObservableValidator.ValidateProperty(object, string), called from
+    every model's OnXxxTextChanged partial method, is explicitly marked
+    RequiresUnreferencedCode because it finds the named property via
+    reflection at runtime, and the trimmer stripped that property's metadata
+    since nothing else in the app reflects on it by name. Android's own
+    NativeAOT publish did not hit this same crash - the two toolchains trim
+    differently - but the same crash is latent for any other "*Text"
+    validated property (there are dozens, same pattern throughout Models),
+    on either platform, the moment execution happens to reach one the
+    trimmer decided to strip. A per-property [DynamicDependency] fix (the
+    pattern used for MainViewModel.DevForceModelToImage's own reflection)
+    doesn't scale here and would silently miss any property added later -
+    rooting the whole Models namespace is the general fix.
+  -->
+  <assembly fullname="AnyToneCPS">
+    <type fullname="AnyToneCPS.Models.*" />
+  </assembly>
+</linker>

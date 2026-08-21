@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.DevOptionsDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Dev Options list stays in
+         MainView.axaml, IsDevOptionsViewSelected list section.
+
+         Dev-only diagnostics, split out of Settings 2026-08-07 so the
+         regular Settings page only shows things a radio operator would
+         actually want (theme, export folder) - this is build/runtime info
+         useful when debugging the app itself. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                  RowSpacing="18">
+                <TextBlock Classes="SectionTitle" Text="Dev Options" />
+
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="*,*"
+                      RowDefinitions="Auto,Auto"
+                      ColumnSpacing="18"
+                      RowSpacing="12">
+                    <HeaderedContentControl Header="Version">
+                        <TextBlock Text="{Binding AppVersion}" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="1" Header="NativeAOT">
+                        <TextBlock Text="{Binding NativeAotDescription}" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Row="1" Header="Project File">
+                        <TextBlock Text="{Binding CurrentProjectLocation}"
+                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                   TextWrapping="Wrap" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Row="1" Grid.Column="1" Header="Settings File">
+                        <TextBlock Text="{Binding SettingsFileLocation}"
+                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                   TextWrapping="Wrap" />
+                    </HeaderedContentControl>
+                </Grid>
+
+                <TextBlock Grid.Row="2"
+                           Text="{Binding AppDataLocation, StringFormat='Appdata: {0}'}"
+                           Foreground="{DynamicResource AppSubtleTextBrush}"
+                           TextWrapping="Wrap" />
+
+                <!-- TEMPORARY - added 2026-08-16 for one live hardware
+                     test, remove along with DevForceModelToImageCommand
+                     after that test. -->
+                <StackPanel Grid.Row="3" Spacing="6" Margin="0,12,0,0">
+                    <Button Content="Force Model → Image (mark everything dirty)"
+                            Command="{Binding DevForceModelToImageCommand}"
+                            ToolTip.Tip="Marks every loaded entity dirty using its own current values, so Write to Radio re-encodes everything instead of only what changed. Use right after a Read From Radio." />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

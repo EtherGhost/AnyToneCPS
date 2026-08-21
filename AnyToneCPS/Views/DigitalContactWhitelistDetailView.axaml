@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.DigitalContactWhitelistDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Digital Contact Whitelist list
+         stays in MainView.axaml, IsDigitalContactWhitelistViewSelected list
+         section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <StackPanel Spacing="12">
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBlock Classes="SectionTitle" Text="Digital contact whitelist entry details" />
+                    <Button Classes="InfoIconButton">
+                        <Button.Flyout>
+                            <Flyout>
+                                <Border Classes="Panel" Padding="8" MaxWidth="360">
+                                    <TextBlock Text="The whole list is rewritten together on every Write to Radio, up to 1000 entries. Number reflects packed position on the radio, not a chosen slot - it isn't editable." TextWrapping="Wrap" />
+                                </Border>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                </StackPanel>
+                <HeaderedContentControl Header="Number">
+                    <TextBox Text="{Binding SelectedDigitalContactWhitelistEntry.Number}" IsReadOnly="True" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="DMR ID">
+                    <TextBox Text="{Binding SelectedDigitalContactWhitelistEntry.DmrIdText}"
+                             MaxLength="8"
+                             views:DigitOnlyInput.Enabled="True" />
+                </HeaderedContentControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

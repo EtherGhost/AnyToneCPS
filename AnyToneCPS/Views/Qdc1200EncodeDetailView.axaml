@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:views="using:AnyToneCPS.Views"
+             xmlns:converters="using:AnyToneCPS.Converters"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.Qdc1200EncodeDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact QDC 1200 Encode list stays in
+         MainView.axaml, IsQdc1200EncodeViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <StackPanel Spacing="12" MaxWidth="360">
+                <TextBlock Classes="SectionTitle" Text="{Binding SelectedQdc1200Id.Number, StringFormat='QDC 1200 ID {0} details'}" />
+                <HeaderedContentControl Header="Call Type">
+                    <ComboBox ItemsSource="{Binding Qdc1200IdCallTypeOptions}"
+                              SelectedItem="{Binding SelectedQdc1200Id.CallTypeText}"
+                              HorizontalAlignment="Stretch" />
+                </HeaderedContentControl>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                    <HeaderedContentControl Header="Private Call ID" IsEnabled="{Binding SelectedQdc1200Id.IsPrivateCallIdEnabled}">
+                        <TextBox Text="{Binding SelectedQdc1200Id.PrivateCallId}"
+                                 MaxLength="4"
+                                 views:HexDigitInput.Enabled="True" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="1" Header="Group Call ID" IsEnabled="{Binding SelectedQdc1200Id.IsGroupCallIdEnabled}">
+                        <TextBox Text="{Binding SelectedQdc1200Id.GroupCallId}"
+                                 MaxLength="3"
+                                 views:HexDigitInput.Enabled="True" />
+                    </HeaderedContentControl>
+                </Grid>
+                <HeaderedContentControl Header="Type" IsEnabled="{Binding SelectedQdc1200Id.IsTypeEnabled}">
+                    <ComboBox ItemsSource="{Binding SelectedQdc1200Id.TypeOptions}"
+                              SelectedItem="{Binding SelectedQdc1200Id.TypeText}"
+                              HorizontalAlignment="Stretch" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Need to Answer" IsEnabled="{Binding SelectedQdc1200Id.IsNeedToAnswerEnabled}">
+                    <ToggleSwitch IsChecked="{Binding SelectedQdc1200Id.NeedToAnswerText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Name">
+                    <TextBox Text="{Binding SelectedQdc1200Id.Name}"
+                             MaxLength="12"
+                             views:AsciiTextInput.Enabled="True" />
+                </HeaderedContentControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

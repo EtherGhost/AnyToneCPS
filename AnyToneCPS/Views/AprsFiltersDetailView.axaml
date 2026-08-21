@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.AprsFiltersDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact APRS Filters list stays in
+         MainView.axaml, IsAprsFiltersViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*">
+        <Border Background="{DynamicResource AppInfoBadgeBackgroundBrush}"
+                BorderBrush="{DynamicResource AppInfoBadgeBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10,6"
+                Margin="4,4,4,0">
+            <TextBlock Text="Not yet writable to the radio - edits here are saved to the project file only." TextWrapping="Wrap" />
+        </Border>
+        <Border Grid.Row="1" Classes="Panel">
+            <StackPanel Spacing="12">
+                <TextBlock Classes="SectionTitle" Text="APRS receive filter details" />
+                <HeaderedContentControl Header="Number">
+                    <TextBox Text="{Binding SelectedAprsReceiveFilter.Number}" />
+                </HeaderedContentControl>
+                <CheckBox IsChecked="{Binding SelectedAprsReceiveFilter.Enabled}" Content="Enabled" />
+                <HeaderedContentControl Header="Callsign">
+                    <TextBox Text="{Binding SelectedAprsReceiveFilter.Callsign}" views:AsciiTextInput.Enabled="True" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="SSID">
+                    <TextBox Text="{Binding SelectedAprsReceiveFilter.Ssid}" />
+                </HeaderedContentControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.ImportsDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Imports list stays in
+         MainView.axaml, IsImportsViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <Grid RowDefinitions="Auto,Auto"
+                  RowSpacing="12">
+                <TextBlock Classes="SectionTitle" Text="Imports" />
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="*,*"
+                      ColumnSpacing="12">
+                    <HeaderedContentControl Header="Channel import">
+                        <StackPanel>
+                            <TextBlock Text="{Binding LastChannelImportLocation}"
+                                       Foreground="{DynamicResource AppMutedTextBrush}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <!-- TODO: disabled during the Channel canonical-model migration -
+                                 CpsCsvImporter builds against the old string-based ChannelEntry
+                                 shape; reconnect once it's updated for the new typed model. -->
+                            <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button Command="{Binding ImportChannelsCommand}" Content="Files" IsEnabled="False" />
+                                <Button Command="{Binding ImportChannelFolderCommand}" Content="Folder" IsEnabled="False" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="1" Header="Zone import">
+                        <StackPanel>
+                            <TextBlock Text="{Binding LastZoneImportLocation}"
+                                       Foreground="{DynamicResource AppMutedTextBrush}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <!-- TODO: disabled during the Channel canonical-model migration -
+                                 Zone CSV import depends transitively on CpsCsvImporter.ToChannel
+                                 (channel-name lookups); reconnect together with Channel CSV import. -->
+                            <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button Command="{Binding ImportZonesCommand}" Content="Files" IsEnabled="False" />
+                                <Button Command="{Binding ImportZoneFolderCommand}" Content="Folder" IsEnabled="False" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </HeaderedContentControl>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:models="using:AnyToneCPS.Models"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.ReceiveGroupListDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Receive Group List list stays in
+         MainView.axaml, IsReceiveGroupListsViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
+                <TextBlock Classes="SectionTitle" Text="Receive group list details" />
+                <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <HeaderedContentControl Header="Number">
+                        <TextBox Text="{Binding SelectedReceiveGroupList.Number}"
+                                 views:DigitOnlyInput.Enabled="True"
+                                 views:DigitOnlyInput.MaxValue="250"
+                                 Classes="PinDigits" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="1" Header="Name">
+                        <TextBox Text="{Binding SelectedReceiveGroupList.Name}"
+                                 MaxLength="16"
+                                 views:AsciiTextInput.Enabled="True" />
+                    </HeaderedContentControl>
+                </Grid>
+
+                <Grid Grid.Row="3"
+                      ColumnDefinitions="*,Auto,*"
+                      ColumnSpacing="12">
+                    <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                        <TextBlock Text="{Binding AvailableReceiveGroupListTalkgroups.Count, StringFormat='Available Receive Group Call Contact ({0})'}"
+                                   FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <ListBox x:Name="AvailableReceiveGroupListTalkgroupsList"
+                                 Grid.Row="1"
+                                 ItemsSource="{Binding AvailableReceiveGroupListTalkgroups}"
+                                 SelectionMode="Multiple"
+                                 SelectionChanged="AvailableReceiveGroupListTalkgroupsList_OnSelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:TalkgroupEntry">
+                                    <TextBlock Margin="8,7" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+
+                    <StackPanel Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Spacing="8"
+                                MinWidth="100">
+                        <Button Command="{Binding AddReceiveGroupListMembersCommand}" Content="Add &gt;" />
+                        <Button Command="{Binding RemoveReceiveGroupListMembersCommand}" Content="&lt; Remove" />
+                    </StackPanel>
+
+                    <Grid Grid.Column="2" RowDefinitions="Auto,*" RowSpacing="8">
+                        <TextBlock Text="{Binding ReceiveGroupListMemberTalkgroups.Count, StringFormat='Receive Group Call List Member ({0})'}"
+                                   FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <ListBox x:Name="ReceiveGroupListMemberTalkgroupsList"
+                                 Grid.Row="1"
+                                 ItemsSource="{Binding ReceiveGroupListMemberTalkgroups}"
+                                 SelectionMode="Multiple"
+                                 SelectionChanged="ReceiveGroupListMemberTalkgroupsList_OnSelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:TalkgroupEntry">
+                                    <TextBlock Margin="8,7" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

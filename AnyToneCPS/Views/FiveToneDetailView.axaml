@@ -1,0 +1,264 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.FiveToneDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact 5Tone list stays in
+         MainView.axaml, IsFiveToneViewSelected list section (including its
+         own DoubleTapped handler, FiveToneRow_OnDoubleTapped, which lives
+         in MainView.axaml.cs since it's on the sidebar ListBox, not here). -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <ScrollViewer>
+                <StackPanel Spacing="14" MaxWidth="900" Margin="4">
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+                    <GroupBox Grid.Row="0" Grid.Column="0" Header="Decode">
+                        <StackPanel Spacing="10">
+                            <HeaderedContentControl Header="Self ID">
+                                <TextBox Text="{Binding FiveToneSettings.SelfId}"
+                                         views:DigitOnlyInput.Enabled="True"
+                                         MaxLength="7" />
+                            </HeaderedContentControl>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <HeaderedContentControl Header="Decode Standard">
+                                    <ComboBox ItemsSource="{Binding FiveToneDecodeStandardOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.DecodeStandardText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                                <HeaderedContentControl Grid.Column="1" Header="Decoding Response">
+                                    <ComboBox ItemsSource="{Binding FiveToneDecodingResponseOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.DecodingResponseText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                            </Grid>
+                            <HeaderedContentControl Header="Decode Time (ms)">
+                                <ComboBox ItemsSource="{Binding FiveToneDecodeTimeMsOptions}"
+                                          SelectedItem="{Binding FiveToneSettings.DecodeTimeMsText}"
+                                          HorizontalAlignment="Stretch" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Header="5TONE Dec Units"
+                                                     ToolTip.Tip="Unlabeled in the vendor CPS - meaning of each unit unconfirmed.">
+                                <WrapPanel>
+                                    <CheckBox Content="1" IsChecked="{Binding FiveToneSettings.DecUnit1}" Margin="0,0,8,0" />
+                                    <CheckBox Content="2" IsChecked="{Binding FiveToneSettings.DecUnit2}" Margin="0,0,8,0" />
+                                    <CheckBox Content="3" IsChecked="{Binding FiveToneSettings.DecUnit3}" Margin="0,0,8,0" />
+                                    <CheckBox Content="4" IsChecked="{Binding FiveToneSettings.DecUnit4}" Margin="0,0,8,0" />
+                                    <CheckBox Content="5" IsChecked="{Binding FiveToneSettings.DecUnit5}" Margin="0,0,8,0" />
+                                    <CheckBox Content="6" IsChecked="{Binding FiveToneSettings.DecUnit6}" Margin="0,0,8,0" />
+                                    <CheckBox Content="7" IsChecked="{Binding FiveToneSettings.DecUnit7}" Margin="0,0,8,0" />
+                                </WrapPanel>
+                            </HeaderedContentControl>
+                            <CheckBox Content="Disp AnyID" IsChecked="{Binding FiveToneSettings.DispAnyId}" />
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Grid.Row="0" Grid.Column="1" Header="Information ID / Information Code Function1">
+                        <StackPanel Spacing="10">
+                            <HeaderedContentControl Header="Infomation ID NO.">
+                                <ComboBox ItemsSource="{Binding FiveToneInfoIdNoOptions}"
+                                          SelectedItem="{Binding FiveToneSettings.InfoIdNoText}"
+                                          HorizontalAlignment="Stretch" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Header="Function Option" IsEnabled="{Binding IsInfoIdRowSelected}">
+                                <ComboBox ItemsSource="{Binding FiveToneFunctionOptionOptions}"
+                                          SelectedItem="{Binding SelectedInfoIdRow.FunctionOptionText}"
+                                          HorizontalAlignment="Stretch" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Header="Decoding Response" IsEnabled="{Binding SelectedInfoIdRow.IsFunctionDecodingResponseEnabled}">
+                                <ComboBox ItemsSource="{Binding SelectedInfoIdRow.FunctionDecodingResponseOptions}"
+                                          SelectedItem="{Binding SelectedInfoIdRow.FunctionDecodingResponseText}"
+                                          HorizontalAlignment="Stretch" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Header="Infomation ID" IsEnabled="{Binding IsInfoIdRowSelected}">
+                                <TextBox Text="{Binding SelectedInfoIdRow.InformationId}"
+                                         MaxLength="12"
+                                         views:HexDigitInput.Enabled="True" />
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Header="Function Name" IsEnabled="{Binding SelectedInfoIdRow.IsFunctionNameEnabled}">
+                                <TextBox Text="{Binding SelectedInfoIdRow.FunctionName}"
+                                         MaxLength="7"
+                                         views:AsciiTextInput.Enabled="True" />
+                            </HeaderedContentControl>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Header="Encode">
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <HeaderedContentControl Header="Pretime (ms)">
+                                    <ComboBox ItemsSource="{Binding FiveTonePretimeOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.PretimeText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                                <HeaderedContentControl Grid.Column="1" Header="Auto Reset Time (s)">
+                                    <ComboBox ItemsSource="{Binding FiveToneAutoResetTimeOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.AutoResetTimeText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <HeaderedContentControl Header="Time-Lapse After Encode (ms)">
+                                    <ComboBox ItemsSource="{Binding FiveToneTimeLapseAfterEncodeOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.TimeLapseAfterEncodeText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                                <HeaderedContentControl Grid.Column="1" Header="PTT ID Pause Time (s)">
+                                    <ComboBox ItemsSource="{Binding FiveTonePttIdPauseTimeOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.PttIdPauseTimeText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <HeaderedContentControl Header="First Tone Length (ms)">
+                                    <ComboBox ItemsSource="{Binding FiveToneFirstToneLengthOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.FirstToneLengthText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                                <HeaderedContentControl Grid.Column="1" Header="Stop Code">
+                                    <ComboBox ItemsSource="{Binding FiveToneStopCodeOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.StopCodeText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <HeaderedContentControl Header="Stop Time Length (ms)">
+                                    <ComboBox ItemsSource="{Binding FiveToneStopTimeLengthOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.StopTimeLengthText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                                <HeaderedContentControl Grid.Column="1" Header="First Tone Length After Stop (ms)">
+                                    <ComboBox ItemsSource="{Binding FiveToneFirstToneLengthAfterStopOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.FirstToneLengthAfterStopText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                            </Grid>
+                            <CheckBox Content="Side Tone" IsChecked="{Binding FiveToneSettings.SideTone}" />
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Grid.Row="3" Grid.Column="0" Header="PTT ID Starting (BOT)">
+                        <StackPanel Spacing="10">
+                            <HeaderedContentControl Header="Encode ID" IsEnabled="{Binding FiveToneSettings.IsBotEncodeIdEnabled}">
+                                <TextBox Text="{Binding FiveToneSettings.BotEncodeId}"
+                                         MaxLength="24"
+                                         views:HexDigitInput.Enabled="True" />
+                            </HeaderedContentControl>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <HeaderedContentControl Header="Encode/Decode Standard">
+                                    <ComboBox ItemsSource="{Binding FiveToneDecodeStandardOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.BotStandardText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                                <HeaderedContentControl Grid.Column="1" Header="Time Of Encode Tone (ms)">
+                                    <ComboBox ItemsSource="{Binding FiveToneTimeOfEncodeToneOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.BotTimeOfEncodeToneText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+                                <Button Content="Special Call" Command="{Binding OpenFiveToneBotSpecialCallCommand}" />
+                                <Button Grid.Column="1"
+                                        Content="Reset Special Call"
+                                        Command="{Binding ResetFiveToneBotSpecialCallCommand}"
+                                        IsEnabled="{Binding FiveToneSettings.BotSpecialCall.IsConfigured}" />
+                                <TextBlock Grid.Column="2"
+                                           VerticalAlignment="Center"
+                                           Classes="Label"
+                                           IsVisible="{Binding FiveToneSettings.BotSpecialCall.IsConfigured}"
+                                           Text="{Binding FiveToneSettings.BotSpecialCall.CallingTypeText, StringFormat='Configured: {0}'}" />
+                            </Grid>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Grid.Row="3" Grid.Column="1" Header="PTT ID Ending (EOT)">
+                        <StackPanel Spacing="10">
+                            <HeaderedContentControl Header="Encode ID" IsEnabled="{Binding FiveToneSettings.IsEotEncodeIdEnabled}">
+                                <TextBox Text="{Binding FiveToneSettings.EotEncodeId}"
+                                         MaxLength="24"
+                                         views:HexDigitInput.Enabled="True" />
+                            </HeaderedContentControl>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <HeaderedContentControl Header="Encode/Decode Standard">
+                                    <ComboBox ItemsSource="{Binding FiveToneDecodeStandardOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.EotStandardText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                                <HeaderedContentControl Grid.Column="1" Header="Time Of Encode Tone (ms)">
+                                    <ComboBox ItemsSource="{Binding FiveToneTimeOfEncodeToneOptions}"
+                                              SelectedItem="{Binding FiveToneSettings.EotTimeOfEncodeToneText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+                                <Button Content="Special Call" Command="{Binding OpenFiveToneEotSpecialCallCommand}" />
+                                <Button Grid.Column="1"
+                                        Content="Reset Special Call"
+                                        Command="{Binding ResetFiveToneEotSpecialCallCommand}"
+                                        IsEnabled="{Binding FiveToneSettings.EotSpecialCall.IsConfigured}" />
+                                <TextBlock Grid.Column="2"
+                                           VerticalAlignment="Center"
+                                           Classes="Label"
+                                           IsVisible="{Binding FiveToneSettings.EotSpecialCall.IsConfigured}"
+                                           Text="{Binding FiveToneSettings.EotSpecialCall.CallingTypeText, StringFormat='Configured: {0}'}" />
+                            </Grid>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Header="{Binding SelectedFiveToneId.Number, StringFormat='5Tone ID {0} details'}">
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+                                <Button Content="&amp;Special Call"
+                                        Command="{Binding OpenFiveToneRowSpecialCallCommand}" />
+                                <Button Grid.Column="1"
+                                        Content="Reset Special Call"
+                                        Command="{Binding ResetFiveToneRowSpecialCallCommand}"
+                                        CommandParameter="{Binding SelectedFiveToneId}"
+                                        IsEnabled="{Binding SelectedFiveToneId.SpecialCall.IsConfigured}"
+                                        ToolTip.Tip="Same as double-clicking this row in the list on the left - matches the real vendor CPS's own reset gesture." />
+                                <TextBlock Grid.Column="2"
+                                           VerticalAlignment="Center"
+                                           Classes="Label"
+                                           IsVisible="{Binding SelectedFiveToneId.SpecialCall.IsConfigured}"
+                                           Text="{Binding SelectedFiveToneId.SpecialCall.CallingTypeText, StringFormat='Configured: {0}'}" />
+                            </Grid>
+                            <HeaderedContentControl Header="Encode ID" IsEnabled="{Binding SelectedFiveToneId.IsEncodeIdEnabled}">
+                                <TextBox Text="{Binding SelectedFiveToneId.EncodeId}"
+                                         MaxLength="40"
+                                         views:HexDigitInput.Enabled="{Binding SelectedFiveToneId.IsEncodeIdHexOnly}" />
+                            </HeaderedContentControl>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8" IsEnabled="{Binding SelectedFiveToneId.SpecialCall.IsConfigured}">
+                                <HeaderedContentControl Header="Encode/Decode Standard">
+                                    <ComboBox ItemsSource="{Binding FiveToneDecodeStandardOptions}"
+                                              SelectedItem="{Binding SelectedFiveToneId.StandardText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                                <HeaderedContentControl Grid.Column="1" Header="Time Of Encode Tone (ms)">
+                                    <ComboBox ItemsSource="{Binding FiveToneTimeOfEncodeToneOptions}"
+                                              SelectedItem="{Binding SelectedFiveToneId.TimeOfEncodeToneText}"
+                                              HorizontalAlignment="Stretch" />
+                                </HeaderedContentControl>
+                            </Grid>
+                            <HeaderedContentControl Header="Name" IsEnabled="{Binding SelectedFiveToneId.SpecialCall.IsConfigured}">
+                                <TextBox Text="{Binding SelectedFiveToneId.Name}"
+                                         MaxLength="7"
+                                         views:AsciiTextInput.Enabled="True" />
+                            </HeaderedContentControl>
+                        </StackPanel>
+                    </GroupBox>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

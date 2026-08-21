@@ -1,0 +1,155 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:models="using:AnyToneCPS.Models"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.ExportsDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Exports list stays in
+         MainView.axaml, IsExportsViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,*"
+                  RowSpacing="12">
+                <TextBlock Classes="SectionTitle" Text="Exports" />
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="*,Auto,Auto,Auto"
+                      ColumnSpacing="10">
+                    <HeaderedContentControl Header="Export folder">
+                        <TextBlock Text="{Binding ExportDirectory}"
+                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                   TextTrimming="CharacterEllipsis" />
+                    </HeaderedContentControl>
+                    <Button Grid.Column="1"
+                            Command="{Binding ChooseExportDirectoryCommand}"
+                            Content="Choose export folder"
+                            IsEnabled="False" />
+                    <Button Grid.Column="2"
+                            Command="{Binding SaveExportCommand}"
+                            Content="Write files"
+                            IsEnabled="False" />
+                    <Button Grid.Column="3"
+                            Command="{Binding RefreshExportCommand}"
+                            Content="Refresh preview"
+                            IsEnabled="False" />
+                </Grid>
+                <!-- TODO: disabled during the Channel canonical-model migration -
+                     CpsCsvExporter.BuildChannelCsv/BuildZoneCsv now throw
+                     NotSupportedException; reconnect once they're updated for the
+                     new typed ChannelEntry. -->
+
+                <TextBlock Grid.Row="2"
+                           Text="{Binding DataStoreDescription}"
+                           Foreground="{DynamicResource AppSubtleTextBrush}"
+                           FontSize="12"
+                           TextTrimming="CharacterEllipsis" />
+
+                <TextBlock Grid.Row="3"
+                           Text="Preview of what would be written"
+                           Foreground="{DynamicResource AppSubtleTextBrush}"
+                           FontSize="12" />
+
+                <Grid Grid.Row="4"
+                      RowDefinitions="*,*"
+                      RowSpacing="12">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <ItemsControl ItemsSource="{Binding ChannelPreviewHeaders}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Classes="CsvHeaderCell">
+                                            <TextBlock Text="{Binding}"
+                                                       FontSize="12"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <ItemsControl ItemsSource="{Binding ChannelPreviewRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:CsvPreviewRow">
+                                        <ItemsControl ItemsSource="{Binding Cells}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Classes="CsvCell">
+                                                        <TextBlock Text="{Binding}"
+                                                                   FontSize="12"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <ScrollViewer Grid.Row="1"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <ItemsControl ItemsSource="{Binding ZonePreviewHeaders}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Classes="CsvHeaderCell">
+                                            <TextBlock Text="{Binding}"
+                                                       FontSize="12"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <ItemsControl ItemsSource="{Binding ZonePreviewRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:CsvPreviewRow">
+                                        <ItemsControl ItemsSource="{Binding Cells}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Classes="CsvCell">
+                                                        <TextBlock Text="{Binding}"
+                                                                   FontSize="12"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

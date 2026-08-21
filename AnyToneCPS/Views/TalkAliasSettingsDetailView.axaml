@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.TalkAliasSettingsDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Talk Alias Settings list stays
+         in MainView.axaml, IsTalkAliasSettingsViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <StackPanel Margin="8" Spacing="10" MaxWidth="360">
+                <HeaderedContentControl Header="Display Priority">
+                    <ComboBox ItemsSource="{Binding TalkAliasSettings.DisplayPriorityOptions}"
+                              SelectedItem="{Binding TalkAliasSettings.DisplayPriorityText}" />
+                </HeaderedContentControl>
+                <HeaderedContentControl Header="Data Format">
+                    <ComboBox ItemsSource="{Binding TalkAliasSettings.DataFormatOptions}"
+                              SelectedItem="{Binding TalkAliasSettings.DataFormatText}" />
+                </HeaderedContentControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,98 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:models="using:AnyToneCPS.Models"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.RoamingZonesDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact Roaming Zones list stays in
+         MainView.axaml, IsRoamingZonesViewSelected list section. Full
+         radio-write support added the same day - see RoamingZoneCodec's
+         own doc comment for the live-capture confirmation. Member dual-list
+         + Up/Down layout mirrors ZoneDetailView's own. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <Grid RowDefinitions="Auto,*"
+                  RowSpacing="16">
+                <Grid ColumnSpacing="12"
+                      ColumnDefinitions="1*,2*">
+                    <HeaderedContentControl Header="No">
+                        <TextBox Text="{Binding SelectedRoamingZone.Number}" IsReadOnly="True" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="1" Header="Name">
+                        <TextBox Text="{Binding SelectedRoamingZone.Name}"
+                                 MaxLength="16"
+                                 views:AsciiTextInput.Enabled="True" />
+                    </HeaderedContentControl>
+                </Grid>
+
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="*,Auto,*"
+                      RowDefinitions="*,Auto"
+                      ColumnSpacing="12"
+                      RowSpacing="12">
+                    <Grid RowDefinitions="Auto,*"
+                          RowSpacing="8">
+                        <TextBlock Text="{Binding AvailableRoamingZoneChannels.Count, StringFormat='Available Roaming Channels ({0})'}"
+                                   FontWeight="SemiBold" />
+                        <ListBox x:Name="AvailableRoamingZoneChannelsList"
+                                 Grid.Row="1"
+                                 ItemsSource="{Binding AvailableRoamingZoneChannels}"
+                                 SelectionMode="Multiple"
+                                 SelectionChanged="AvailableRoamingZoneChannelsList_OnSelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:RoamingChannelEntry">
+                                    <Grid Margin="8,7" ColumnDefinitions="50,*" ColumnSpacing="8">
+                                        <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+
+                    <StackPanel Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Spacing="8"
+                                MinWidth="110">
+                        <Button Command="{Binding AddRoamingZoneMembersCommand}" Content="Add &gt;" />
+                        <Button Command="{Binding RemoveRoamingZoneMembersCommand}" Content="&lt; Remove" />
+                        <Button Command="{Binding MoveRoamingZoneMemberUpCommand}" Content="Up" />
+                        <Button Command="{Binding MoveRoamingZoneMemberDownCommand}" Content="Down" />
+                    </StackPanel>
+
+                    <Grid Grid.Column="2"
+                          RowDefinitions="Auto,*"
+                          RowSpacing="8">
+                        <TextBlock Text="{Binding SelectedRoamingZone.Members.Count, StringFormat='Roaming Zone Channel Member ({0})'}"
+                                   FontWeight="SemiBold" />
+                        <ListBox x:Name="RoamingZoneMembersList"
+                                 Grid.Row="1"
+                                 ItemsSource="{Binding SelectedRoamingZone.Members}"
+                                 SelectionMode="Multiple"
+                                 SelectionChanged="RoamingZoneMembersList_OnSelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:RoamingChannelEntry">
+                                    <Grid Margin="8,7" ColumnDefinitions="50,*" ColumnSpacing="8">
+                                        <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

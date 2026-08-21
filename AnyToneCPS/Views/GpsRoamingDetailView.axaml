@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:views="using:AnyToneCPS.Views"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.GpsRoamingDetailView"
+             x:DataType="vm:MainViewModel">
+    <!-- Split out of MainView.axaml 2026-08-10 - see ChannelDetailView's own
+         doc comment. Sidebar's own compact GPS Roaming list stays in
+         MainView.axaml, IsGpsRoamingViewSelected list section. -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Border Classes="Panel">
+            <StackPanel Spacing="12" MaxWidth="480">
+                <TextBlock Classes="SectionTitle" Text="GPS roaming details" />
+                <HeaderedContentControl Header="Number">
+                    <TextBox Text="{Binding SelectedGpsRoaming.Number}" IsReadOnly="True" />
+                </HeaderedContentControl>
+                <CheckBox IsChecked="{Binding SelectedGpsRoaming.Enabled}" Content="Enabled" />
+                <HeaderedContentControl Header="Zone">
+                    <ComboBox ItemsSource="{Binding GpsRoamingZoneOptions}"
+                              SelectedItem="{Binding SelectedGpsRoamingZoneName}"
+                              HorizontalAlignment="Stretch" />
+                </HeaderedContentControl>
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                    <HeaderedContentControl Header="Lat Degree">
+                        <ComboBox ItemsSource="{Binding SelectedGpsRoaming.LatDegreeOptions}"
+                                  SelectedItem="{Binding SelectedGpsRoaming.LatDegree}"
+                                  HorizontalAlignment="Stretch" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="1" Header="Lat Minute">
+                        <TextBox Text="{Binding SelectedGpsRoaming.LatMinuteText}"
+                                 MaxLength="5"
+                                 views:DigitOnlyInput.Enabled="True"
+                                 views:DigitOnlyInput.AllowDecimalPoint="True"
+                                 ToolTip.Tip="MM.mm, minutes 00-59" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="2" Header="N/S">
+                        <ComboBox ItemsSource="{Binding SelectedGpsRoaming.NorthSouthOptions}"
+                                  SelectedItem="{Binding SelectedGpsRoaming.NorthSouthText}"
+                                  HorizontalAlignment="Stretch" />
+                    </HeaderedContentControl>
+                </Grid>
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                    <HeaderedContentControl Header="Long Degree">
+                        <ComboBox ItemsSource="{Binding SelectedGpsRoaming.LongDegreeOptions}"
+                                  SelectedItem="{Binding SelectedGpsRoaming.LongDegree}"
+                                  HorizontalAlignment="Stretch" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="1" Header="Long Minute">
+                        <TextBox Text="{Binding SelectedGpsRoaming.LongMinuteText}"
+                                 MaxLength="5"
+                                 views:DigitOnlyInput.Enabled="True"
+                                 views:DigitOnlyInput.AllowDecimalPoint="True"
+                                 ToolTip.Tip="MM.mm, minutes 00-59" />
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Grid.Column="2" Header="E/W">
+                        <ComboBox ItemsSource="{Binding SelectedGpsRoaming.EastWestOptions}"
+                                  SelectedItem="{Binding SelectedGpsRoaming.EastWestText}"
+                                  HorizontalAlignment="Stretch" />
+                    </HeaderedContentControl>
+                </Grid>
+                <HeaderedContentControl Header="Radius">
+                    <TextBox Text="{Binding SelectedGpsRoaming.RadiusText}"
+                             MaxLength="5"
+                             views:DigitOnlyInput.Enabled="True" />
+                </HeaderedContentControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

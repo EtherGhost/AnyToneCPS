@@ -1,0 +1,1388 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AnyToneCPS.ViewModels"
+             xmlns:models="using:AnyToneCPS.Models"
+             xmlns:ti="clr-namespace:Avalonia.Input.TextInput;assembly=Avalonia.Base"
+             xmlns:views="using:AnyToneCPS.Views"
+             xmlns:converters="using:AnyToneCPS.Converters"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="820"
+             x:Class="AnyToneCPS.Views.OptionalSettingsView"
+             x:DataType="vm:MainViewModel">
+    <!--
+    Split out of MainView.axaml 2026-08-07 - this "Radio"/Optional Settings
+    section alone was ~1530 lines (27% of that file's own 5657 total), by
+    far the single biggest section. Extracted as an isolated diagnostic fix
+    for a real, reproducible Android-only NativeAOT crash: MainView's own
+    compiled !XamlIlPopulate method was writing garbage/uninitialized double
+    values into random Layoutable properties (MaxWidth, then MaxHeight after
+    an unrelated edit shifted the IL layout) on every single launch -
+    confirmed NOT a stale build cache (two independent clean rebuilds, two
+    different garbage values), NOT TrimMode (still crashed under
+    TrimMode=partial), NOT one specific new control (removing the Roaming
+    Channel Fast Select combobox just moved the corruption to a different
+    property/offset instead of fixing it). Desktop's own NativeAOT build of
+    the exact same file launched perfectly cleanly - Android/Mono.Android's
+    specific NativeAOT codegen path is the common factor, most likely tied
+    to the sheer size of MainView's own single compiled populate method.
+    Splitting the biggest section out into its own UserControl (its own,
+    much smaller, separately-compiled populate method) is the fix, not a
+    workaround for a specific line of XAML - there was no single bad line
+    to find.
+    -->
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+                    <Grid IsVisible="{Binding IsRadioViewSelected}">
+                        <Border Classes="Panel">
+                            <TabControl Classes="NavDriven" SelectedIndex="{Binding SelectedOptionalSettingsSubTabIndex}">
+                                <TabItem Header="Radio">
+                                <ScrollViewer>
+                                <StackPanel Margin="16" Spacing="12" MaxWidth="520">
+                                <TextBlock Classes="SectionTitle" Text="Read codeplug from radio" />
+                                <TextBlock TextWrapping="Wrap"
+                                           Foreground="{DynamicResource AppMutedTextBrush}"
+                                           Text="Read-only: this never writes anything back to the radio. Connect the D890UV via its USB programming cable, pick the serial port at the top of the window, and click Read From Radio. This replaces the currently loaded channels/zones/codeplug lists with what's actually on the radio." />
+
+                                <TextBlock Classes="Label"
+                                           Text="Not available on this platform (no serial port support)."
+                                           IsVisible="{Binding !IsRadioAvailableOnThisPlatform}"
+                                           Foreground="{DynamicResource AppMutedTextBrush}" />
+
+                                <Button Command="{Binding ReadFromRadioCommand}"
+                                        Content="Read From Radio"
+                                        IsVisible="{Binding IsRadioAvailableOnThisPlatform}" />
+
+                                <TextBlock Text="Reading codeplug..."
+                                           FontWeight="Bold"
+                                           IsVisible="{Binding IsReadingFromRadio}" />
+
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding IsReadingFromRadio}">
+                                    <ProgressBar Minimum="0"
+                                                 Maximum="{Binding RadioReadProgressTotal}"
+                                                 Value="{Binding RadioReadProgressCurrent}" />
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding RadioReadProgressPercentText}"
+                                               VerticalAlignment="Center"
+                                               FontWeight="SemiBold" />
+                                </Grid>
+
+                                <TextBlock Text="{Binding RadioReadStatusText}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding RadioIdentitySummary}"
+                                           IsVisible="{Binding HasRadioIdentitySummary}"
+                                           Foreground="{DynamicResource AppMutedTextBrush}" />
+
+                                <TextBlock Classes="Label"
+                                           Text="Warnings"
+                                           IsVisible="{Binding HasRadioReadWarnings}" />
+                                <ItemsControl ItemsSource="{Binding RadioReadWarnings}"
+                                              IsVisible="{Binding HasRadioReadWarnings}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource AppMutedTextBrush}"
+                                                       TextWrapping="Wrap" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <Border BorderBrush="{DynamicResource AppHeaderBorderBrush}"
+                                        BorderThickness="0,1,0,0"
+                                        Padding="0,12,0,0"
+                                        Margin="0,8,0,0"
+                                        IsVisible="{Binding HasDeviceLocalInfo}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Classes="SectionTitle" Text="Device Information" />
+                                        <TextBlock Classes="Label"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                                   Text="Read directly from the radio - never saved to the project file, and only available right after a Read From Radio." />
+                                        <WrapPanel>
+                                            <HeaderedContentControl Width="140" Header="Model"><TextBlock Text="{Binding DeviceModel}" /></HeaderedContentControl>
+                                            <HeaderedContentControl Width="220" Header="Bands"><TextBlock Text="{Binding DeviceBands}" /></HeaderedContentControl>
+                                            <HeaderedContentControl Width="140" Header="Firmware Version"><TextBlock Text="{Binding DeviceVersion}" /></HeaderedContentControl>
+                                        </WrapPanel>
+
+                                        <TextBlock Classes="SectionTitle" Text="Local Information" Margin="0,8,0,0" />
+                                        <WrapPanel>
+                                            <HeaderedContentControl Width="140" Header="Radio Type"><TextBlock Text="{Binding DeviceLocalInfo.RadioType}" /></HeaderedContentControl>
+                                            <HeaderedContentControl Width="140" Header="Area Code"><TextBlock Text="{Binding DeviceLocalInfo.AreaCode}" /></HeaderedContentControl>
+                                            <HeaderedContentControl Width="140" Header="Manufacture Code"><TextBlock Text="{Binding DeviceLocalInfo.ManufactureCode}" /></HeaderedContentControl>
+                                            <HeaderedContentControl Width="180" Header="Serial Number"><TextBlock Text="{Binding DeviceLocalInfo.SerialNumber}" /></HeaderedContentControl>
+                                            <HeaderedContentControl Width="140" Header="Production Date"><TextBlock Text="{Binding DeviceLocalInfo.ProductionDate}" /></HeaderedContentControl>
+                                            <HeaderedContentControl Width="140" Header="Maintenance Date"><TextBlock Text="{Binding DeviceLocalInfo.MaintenanceDate}" /></HeaderedContentControl>
+                                            <HeaderedContentControl Width="140" Header="Dealer Code"><TextBlock Text="{Binding DeviceLocalInfo.DealerCode}" /></HeaderedContentControl>
+                                            <HeaderedContentControl Width="140" Header="Stock Date"><TextBlock Text="{Binding DeviceLocalInfo.StockDate}" /></HeaderedContentControl>
+                                            <HeaderedContentControl Width="140" Header="Sell Date"><TextBlock Text="{Binding DeviceLocalInfo.SellDate}" /></HeaderedContentControl>
+                                            <HeaderedContentControl Width="140" Header="Seller"><TextBlock Text="{Binding DeviceLocalInfo.Seller}" /></HeaderedContentControl>
+                                        </WrapPanel>
+                                        <HeaderedContentControl Header="Maintenance Description">
+                                            <TextBlock Text="{Binding DeviceLocalInfo.MaintenanceDescription}" TextWrapping="Wrap" />
+                                        </HeaderedContentControl>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Hidden for now (IsVisible="False") - a diagnostic/dev tool,
+                                     not something an end user needs. Set back to
+                                     "{Binding IsRadioAvailableOnThisPlatform}" to restore it. -->
+                                <Border BorderBrush="{DynamicResource AppHeaderBorderBrush}"
+                                        BorderThickness="0,1,0,0"
+                                        Padding="0,12,0,0"
+                                        Margin="0,8,0,0"
+                                        IsVisible="False">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Classes="SectionTitle" Text="Verify saved project matches radio" />
+                                        <TextBlock Classes="Label"
+                                                   TextWrapping="Wrap"
+                                                   Text="Loads the saved project file, does an independent fresh Read From Radio, and diffs every Channel/Zone/Scan List/Encryption Key field between the two - catches drift between what's saved and what's actually on the radio. Requires the project to already be saved. Neither read disturbs the currently loaded data." />
+                                        <Button Command="{Binding VerifyReadSaveRoundtripCommand}"
+                                                Content="Verify Saved Project Matches Radio" />
+                                        <TextBlock Text="{Binding VerifyRoundtripStatusText}" TextWrapping="Wrap" FontWeight="SemiBold" />
+                                        <ItemsControl ItemsSource="{Binding VerifyRoundtripMismatches}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}"
+                                                               FontSize="11"
+                                                               Foreground="{DynamicResource AppMutedTextBrush}"
+                                                               TextWrapping="Wrap" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                                </StackPanel>
+                                </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Power-on">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+                                            <StackPanel Spacing="12">
+                                                <HeaderedContentControl Header="Power-on Interface">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettings.PowerOnInterfaceOptions}"
+                                                              SelectedItem="{Binding OptionalSettings.PowerOnInterfaceText}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Power-on Display (line 1)">
+                                                    <TextBox Text="{Binding OptionalSettings.PowerOnDisplayLine1}" MaxLength="14" views:AsciiTextInput.Enabled="True" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Power-on Display (line 2)">
+                                                    <TextBox Text="{Binding OptionalSettings.PowerOnDisplayLine2}" MaxLength="14" views:AsciiTextInput.Enabled="True" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Power-on Password">
+                                                    <ToggleSwitch IsChecked="{Binding OptionalSettings.PowerOnPasswordText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Power-on Password Char">
+                                                    <TextBox Name="PowerOnPasswordCharBox"
+                                                             Classes="PinDigits"
+                                                             Text="{Binding OptionalSettings.PowerOnPasswordChar}"
+                                                             MaxLength="8" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Default Startup Channel">
+                                                    <ToggleSwitch IsChecked="{Binding OptionalSettings.DefaultStartupChannelText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                </HeaderedContentControl>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="12">
+                                                <HeaderedContentControl Header="Startup Zone A">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettingsZoneOptions}"
+                                                              SelectedItem="{Binding OptionalSettingsStartupZoneAName}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Startup Channel A">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettingsStartupChannelAOptions}"
+                                                              SelectedItem="{Binding OptionalSettingsStartupChannelAName}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Startup Zone B">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettingsZoneOptions}"
+                                                              SelectedItem="{Binding OptionalSettingsStartupZoneBName}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Startup Channel B">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettingsStartupChannelBOptions}"
+                                                              SelectedItem="{Binding OptionalSettingsStartupChannelBName}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Startup GPS Test"
+                                                                         ToolTip.Tip="Not stored anywhere this app can currently read or write - confirmed 2026-07-20 via two live differential tests (a full-codeplug diff and a clean before/after Read From Radio diff across 5300+ addresses) that found zero byte changes despite the setting demonstrably persisting on the real radio. Also confirmed independently: loading a saved project showed 'Off' while a Read From Radio on the same radio showed 'On', with no edit in between - it lives outside the normal codeplug memory this app can access. Disabled until that's found.">
+                                                    <ToggleSwitch IsChecked="{Binding OptionalSettings.StartupGpsTestText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}"
+                                                                  IsEnabled="False" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Startup Reset">
+                                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.StartupResetText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                        <TextBlock Grid.Column="1"
+                                                                   Text="Set ON to allow MCU reboot"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource AppMutedTextBrush}" />
+                                                    </Grid>
+                                                </HeaderedContentControl>
+                                            </StackPanel>
+                                        </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Alert Tone">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="16" Margin="16">
+                                        <Grid RowDefinitions="*,*,*" ColumnDefinitions="*,*" ColumnSpacing="16" RowSpacing="16">
+                                            <GroupBox Grid.Row="0" Grid.Column="0" Header="Alert Tone">
+                                                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10" Margin="8">
+                                                    <HeaderedContentControl Grid.Row="0" Grid.Column="0" Header="SMS Alert">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.NoneRingOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.SmsAlertText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Grid.Row="0" Grid.Column="1" Header="Call Alert">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.NoneRingOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.CallAlertText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Grid.Row="1" Grid.Column="0" Header="Digi Call Reset Tone">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.DigiCallResetToneText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Grid.Row="1" Grid.Column="1" Header="Talk Permit">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.TalkPermitOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.TalkPermitText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Grid.Row="2" Grid.Column="0" Header="Key Tone">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.KeyToneText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Grid.Row="2" Grid.Column="1" Header="Digi Idle Channel Tone">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.DigiIdleChannelToneOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.DigiIdleChannelToneText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Grid.Row="3" Grid.Column="0" Header="Startup Sound">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.StartupSoundText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Grid.Row="3" Grid.Column="1" Header="Ana Idle Channel Tone">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.AnalogIdleChannelToneText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                </Grid>
+                                            </GroupBox>
+                                            <GroupBox Grid.Row="0" Grid.Column="1" Header="Call Permit Tone">
+                                                <Grid ColumnDefinitions="Auto,*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="6" Margin="8">
+                                                    <TextBlock Grid.Row="0" Grid.Column="1" Classes="Label" Text="Frequency[Hz]" HorizontalAlignment="Center" />
+                                                    <TextBlock Grid.Row="0" Grid.Column="2" Classes="Label" Text="Period[10ms]" HorizontalAlignment="Center" />
+                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="First Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="1" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallPermitTones[0].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="1" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallPermitTones[0].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Second Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="2" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallPermitTones[1].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="2" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallPermitTones[1].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Third Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="3" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallPermitTones[2].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="3" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallPermitTones[2].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Fourth Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="4" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallPermitTones[3].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="4" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallPermitTones[3].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Fifth Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="5" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallPermitTones[4].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="5" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallPermitTones[4].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                </Grid>
+                                            </GroupBox>
+                                            <GroupBox Grid.Row="1" Grid.Column="0" Header="Match End Tone">
+                                                <Grid ColumnDefinitions="Auto,*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="6" Margin="8">
+                                                    <TextBlock Grid.Row="0" Grid.Column="1" Classes="Label" Text="Frequency[Hz]" HorizontalAlignment="Center" />
+                                                    <TextBlock Grid.Row="0" Grid.Column="2" Classes="Label" Text="Period[10ms]" HorizontalAlignment="Center" />
+                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="First Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="1" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.MatchEndTones[0].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="1" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.MatchEndTones[0].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Second Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="2" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.MatchEndTones[1].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="2" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.MatchEndTones[1].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Third Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="3" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.MatchEndTones[2].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="3" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.MatchEndTones[2].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Fourth Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="4" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.MatchEndTones[3].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="4" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.MatchEndTones[3].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Fifth Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="5" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.MatchEndTones[4].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="5" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.MatchEndTones[4].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                </Grid>
+                                            </GroupBox>
+                                            <GroupBox Grid.Row="1" Grid.Column="1" Header="Call Reset Tone">
+                                                <Grid ColumnDefinitions="Auto,*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="6" Margin="8">
+                                                    <TextBlock Grid.Row="0" Grid.Column="1" Classes="Label" Text="Frequency[Hz]" HorizontalAlignment="Center" />
+                                                    <TextBlock Grid.Row="0" Grid.Column="2" Classes="Label" Text="Period[10ms]" HorizontalAlignment="Center" />
+                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="First Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="1" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallResetTones[0].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="1" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallResetTones[0].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Second Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="2" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallResetTones[1].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="2" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallResetTones[1].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Third Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="3" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallResetTones[2].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="3" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallResetTones[2].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Fourth Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="4" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallResetTones[3].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="4" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallResetTones[3].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Fifth Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="5" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallResetTones[4].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="5" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallResetTones[4].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                </Grid>
+                                            </GroupBox>
+                                            <GroupBox Grid.Row="2" Grid.Column="0" Header="UnMatch End Tone">
+                                                <Grid ColumnDefinitions="Auto,*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="6" Margin="8">
+                                                    <TextBlock Grid.Row="0" Grid.Column="1" Classes="Label" Text="Frequency[Hz]" HorizontalAlignment="Center" />
+                                                    <TextBlock Grid.Row="0" Grid.Column="2" Classes="Label" Text="Period[10ms]" HorizontalAlignment="Center" />
+                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="First Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="1" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.UnMatchEndTones[0].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="1" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.UnMatchEndTones[0].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Second Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="2" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.UnMatchEndTones[1].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="2" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.UnMatchEndTones[1].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Third Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="3" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.UnMatchEndTones[2].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="3" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.UnMatchEndTones[2].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Fourth Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="4" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.UnMatchEndTones[3].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="4" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.UnMatchEndTones[3].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Fifth Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="5" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.UnMatchEndTones[4].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="5" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.UnMatchEndTones[4].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                </Grid>
+                                            </GroupBox>
+                                            <GroupBox Grid.Row="2" Grid.Column="1" Header="All Call End Tone">
+                                                <Grid ColumnDefinitions="Auto,*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="6" Margin="8">
+                                                    <TextBlock Grid.Row="0" Grid.Column="1" Classes="Label" Text="Frequency[Hz]" HorizontalAlignment="Center" />
+                                                    <TextBlock Grid.Row="0" Grid.Column="2" Classes="Label" Text="Period[10ms]" HorizontalAlignment="Center" />
+                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="First Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="1" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallAllTones[0].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="1" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallAllTones[0].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Second Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="2" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallAllTones[1].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="2" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallAllTones[1].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Third Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="3" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallAllTones[2].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="3" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallAllTones[2].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Fourth Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="4" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallAllTones[3].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="4" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallAllTones[3].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Fifth Tone" VerticalAlignment="Center" />
+                                                    <DataValidationErrors Grid.Row="5" Grid.Column="1">
+                                                        <TextBox Text="{Binding OptionalSettings.CallAllTones[4].FrequencyText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="3000" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                    <DataValidationErrors Grid.Row="5" Grid.Column="2">
+                                                        <TextBox Text="{Binding OptionalSettings.CallAllTones[4].PeriodText, UpdateSourceTrigger=PropertyChanged}" views:DigitOnlyInput.Enabled="True" views:DigitOnlyInput.MaxValue="200" Classes="PinDigits" />
+                                                    </DataValidationErrors>
+                                                </Grid>
+                                            </GroupBox>
+                                        </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Power Save">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <StackPanel Spacing="12" MaxWidth="360">
+                                                <HeaderedContentControl Header="Auto Shutdown (minutes)">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettings.AutoShutdownOptions}"
+                                                              SelectedItem="{Binding OptionalSettings.AutoShutdownText}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Power Save">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettings.PowerSaveOptions}"
+                                                              SelectedItem="{Binding OptionalSettings.PowerSaveText}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Auto Shutdown Type">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettings.AutoShutdownTypeOptions}"
+                                                              SelectedItem="{Binding OptionalSettings.AutoShutdownTypeText}" />
+                                                </HeaderedContentControl>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Display">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+                                                <StackPanel Grid.Column="0" Spacing="12">
+                                                    <HeaderedContentControl Header="Brightness">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.BrightnessOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.BrightnessText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Auto Backlight Duration">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.AutoBacklightDurationOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.AutoBacklightDurationText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Backlight Delay Of TX[s]">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.BacklightTxDelayOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.BacklightTxDelayText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Menu Exit Time[s]">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.MenuExitTimeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.MenuExitTimeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Time Display">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.TimeDisplayOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.TimeDisplayText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Last Caller">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.LastCallerOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.LastCallerText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Call Display Mode">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.CallDisplayModeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.CallDisplayModeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Call Sign Display Color">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.Color1Options}"
+                                                                  SelectedItem="{Binding OptionalSettings.CallsignDisplayColorText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Call End Prompt Box">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.CallEndPromptBoxText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Display Channel Number">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.DisplayChannelNumberOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.DisplayChannelNumberText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Display Current Contact">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.DisplayCurrentContactText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Standby Char Color">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.Color2Options}"
+                                                                  SelectedItem="{Binding OptionalSettings.StandbyCharColorText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Standby BK Picture">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.DisplayStandbyPictureOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.StandbyBkPictureText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Show Last Call On Launch">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.ShowLastCallOnLaunchText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Separate Display">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.SeparateDisplayText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="CH Switching Keeps Last Caller">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.ChSwitchingKeepsCallerText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Spacing="12">
+                                                    <HeaderedContentControl Header="Receive Backlight Delay[s]">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.BacklightRxDelayOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.BacklightRxDelayText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="A Channel Name Color">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.Color1Options}"
+                                                                  SelectedItem="{Binding OptionalSettings.ChannelNameColorAText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="B Channel Name Color">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.Color1Options}"
+                                                                  SelectedItem="{Binding OptionalSettings.ChannelNameColorBText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Zone Name Color A">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.Color1Options}"
+                                                                  SelectedItem="{Binding OptionalSettings.ZoneNameColorAText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Zone Name Color B">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.Color1Options}"
+                                                                  SelectedItem="{Binding OptionalSettings.ZoneNameColorBText}" />
+                                                    </HeaderedContentControl>
+                                                    <CheckBox Content="Display Channel Type" IsChecked="{Binding OptionalSettings.DisplayChannelType}" />
+                                                    <CheckBox Content="Display Time Slot" IsChecked="{Binding OptionalSettings.DisplayTimeSlot}" />
+                                                    <CheckBox Content="Display Color Code" IsChecked="{Binding OptionalSettings.DisplayColorCode}" />
+                                                    <HeaderedContentControl Header="Date Display Format">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.DateDisplayFormatOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.DateDisplayFormatText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Volume Bar">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.VolumeBarText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Night Mode">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.NightModeText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Work Mode">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+                                                <StackPanel Grid.Column="0" Spacing="12">
+                                                    <HeaderedContentControl Header="Display Mode">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.DisplayModeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.DisplayModeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="VF/MR A"
+                                                                             IsEnabled="{Binding OptionalSettings.IsVfMrEditable}"
+                                                                             ToolTip.Tip="Matches the real vendor CPS: VF/MR A/B can only be changed while Display Mode is Channel.">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.VfoMemModeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.VfMrAText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="MEM Zone A">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettingsZoneOptions}"
+                                                                  SelectedItem="{Binding OptionalSettingsMemZoneAName}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="VF/MR B"
+                                                                             IsEnabled="{Binding OptionalSettings.IsVfMrEditable}"
+                                                                             ToolTip.Tip="Matches the real vendor CPS: VF/MR A/B can only be changed while Display Mode is Channel.">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.VfoMemModeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.VfMrBText}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Spacing="12">
+                                                    <HeaderedContentControl Header="MEM Zone B">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettingsZoneOptions}"
+                                                                  SelectedItem="{Binding OptionalSettingsMemZoneBName}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Main Channel Set">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.MainChannelSetOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.MainChannelSetText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Sub-Channel Mode">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.SubChannelModeText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Working Mode">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.WorkingModeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.WorkingModeText}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Vox/BT">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <!-- Safety warning, added 2026-07-30 - see
+                                                 OptionalSettingsEntry.IsVoxOn's doc comment for the
+                                                 hazard. Persistent (unlike the startup popup, this
+                                                 doesn't auto-dismiss) - stays visible for as long as
+                                                 VOX is actually on. -->
+                                            <Border IsVisible="{Binding OptionalSettings.IsVoxOn}"
+                                                    Background="{DynamicResource AppInfoBadgeBackgroundBrush}"
+                                                    BorderBrush="{DynamicResource AppErrorBrush}"
+                                                    BorderThickness="2"
+                                                    CornerRadius="8"
+                                                    Padding="12,10">
+                                                <TextBlock TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource AppInfoBadgeTextBrush}"
+                                                           Text="VOX is on - the radio can start transmitting on its own while connected to this computer for programming, which can damage the PC. Turn VOX off before connecting the radio." />
+                                            </Border>
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+                                                <StackPanel Grid.Column="0">
+                                                    <GroupBox Header="VOX">
+                                                        <StackPanel Spacing="10" Margin="8">
+                                                            <HeaderedContentControl Header="Vox On/Off">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.VoxLevelOptions}"
+                                                                          SelectedItem="{Binding OptionalSettings.VoxLevelText}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="VOX Delay (s)">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.VoxDelayOptions}"
+                                                                          SelectedItem="{Binding OptionalSettings.VoxDelayText}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="VOX Detection"
+                                                                                     IsEnabled="{Binding OptionalSettings.IsVoxDetectionEditable}"
+                                                                                     ToolTip.Tip="Matches the real vendor CPS: Vox Detection can only be changed while Vox On/Off is Off.">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.VoxDetectionOptions}"
+                                                                          SelectedItem="{Binding OptionalSettings.VoxDetectionText}" />
+                                                            </HeaderedContentControl>
+                                                        </StackPanel>
+                                                    </GroupBox>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1">
+                                                    <GroupBox Header="BT" IsEnabled="False"
+                                                              ToolTip.Tip="No Bluetooth UI exists in vendor CPS for this radio - confirmed 2026-07-25 (the real 'Vox/BT' tab only has the 3 VOX fields). These 11 fields can't be verified via live differential testing without a vendor CPS control to change, so they're disabled rather than guessed at - possibly this model has no BT hardware at all.">
+                                                        <StackPanel Spacing="10" Margin="8">
+                                                            <HeaderedContentControl Header="BT On/Off">
+                                                                <ToggleSwitch IsChecked="{Binding OptionalSettings.BtOnOffText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="BT + int Mic">
+                                                                <ToggleSwitch IsChecked="{Binding OptionalSettings.BtIntMicText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="BT + int Spk">
+                                                                <ToggleSwitch IsChecked="{Binding OptionalSettings.BtIntSpkText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="BT Mic Gain">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.BtGainOptions}"
+                                                                          SelectedItem="{Binding OptionalSettings.BtMicGainText}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="BT Spk Gain">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.BtGainOptions}"
+                                                                          SelectedItem="{Binding OptionalSettings.BtSpkGainText}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="BT Hold Time">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.BtHoldTimeOptions}"
+                                                                          SelectedItem="{Binding OptionalSettings.BtHoldTimeText}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="BT RX Delay">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.BtRxDelayOptions}"
+                                                                          SelectedItem="{Binding OptionalSettings.BtRxDelayText}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="BT PTT Hold">
+                                                                <ToggleSwitch IsChecked="{Binding OptionalSettings.BtPttHoldText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="PTT Sleep Time">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.BtPttSleepOptions}"
+                                                                          SelectedItem="{Binding OptionalSettings.BtPttSleepTimeText}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="BT NR Before">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.OffNumber5Options}"
+                                                                          SelectedItem="{Binding OptionalSettings.BtNrBeforeText}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="BT NR After">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.OffNumber5Options}"
+                                                                          SelectedItem="{Binding OptionalSettings.BtNrAfterText}" />
+                                                            </HeaderedContentControl>
+                                                        </StackPanel>
+                                                    </GroupBox>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="STE">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <StackPanel Spacing="12" MaxWidth="360">
+                                                <HeaderedContentControl Header="STE Type Of CTCSS">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettings.SteCtcssTypeOptions}"
+                                                              SelectedItem="{Binding OptionalSettings.SteTypeOfCtcssText}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="STE When No Signal (Hz)">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettings.SteNoSignalOptions}"
+                                                              SelectedItem="{Binding OptionalSettings.SteWhenNoSignalText}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="STE Time (ms)">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettings.SteTimeOptions}"
+                                                              SelectedItem="{Binding OptionalSettings.SteTimeText}" />
+                                                </HeaderedContentControl>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="AM/FM">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <HeaderedContentControl Header="AM/FM Function">
+                                                <ComboBox ItemsSource="{Binding OptionalSettings.AmFmFunctionOptions}"
+                                                          SelectedItem="{Binding OptionalSettings.AmFmFunctionText}" />
+                                            </HeaderedContentControl>
+                                            <HeaderedContentControl Header="Frequency Step (kHz)">
+                                                <ComboBox ItemsSource="{Binding OptionalSettings.FrequencyStepOptions}"
+                                                          SelectedItem="{Binding OptionalSettings.FrequencyStepText}" />
+                                            </HeaderedContentControl>
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+                                                <StackPanel Grid.Column="0">
+                                                    <GroupBox Header="FM"
+                                                              IsEnabled="{Binding OptionalSettings.IsFmSectionEnabled}"
+                                                              ToolTip.Tip="Matches the real vendor CPS: only editable while AM/FM Function is FM.">
+                                                        <StackPanel Spacing="10" Margin="8">
+                                                            <HeaderedContentControl Header="FM VFO/MEM">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.VfoMemModeOptions}"
+                                                                          SelectedItem="{Binding OptionalSettings.FmVfoMemText}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="FM Work Channel"
+                                                                                     ToolTip.Tip="Confirmed 2026-07-29 via a live differential write - the raw byte is a zero-based index into this list.">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettingsFmChannelOptions}"
+                                                                          SelectedItem="{Binding OptionalSettingsFmWorkChannelName}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="FM Monitor">
+                                                                <ToggleSwitch IsChecked="{Binding OptionalSettings.FmMonitorText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                            </HeaderedContentControl>
+                                                        </StackPanel>
+                                                    </GroupBox>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1">
+                                                    <GroupBox Header="AM"
+                                                              IsEnabled="{Binding OptionalSettings.IsAmSectionEnabled}"
+                                                              ToolTip.Tip="Matches the real vendor CPS: only editable while AM/FM Function is AM(A) or AM(B).">
+                                                        <StackPanel Spacing="10" Margin="8">
+                                                            <HeaderedContentControl Header="AM VFO/MEM">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.VfoMemModeOptions}"
+                                                                          SelectedItem="{Binding OptionalSettings.AmVfoMemText}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="AM Work Zone"
+                                                                                     IsEnabled="False"
+                                                                                     ToolTip.Tip="Confirmed 2026-07-29 via a live differential write: this doesn't persist as an independent D890UV setting - selecting a work zone in the vendor CPS only changes AM Offset's own byte. Kept here disabled rather than removed, since the control exists in the vendor CPS and may be real on other AnyTone models.">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettingsAmZoneOptions}"
+                                                                          SelectedItem="{Binding OptionalSettingsAmWorkZoneName}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="AM Offset">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.AmOffsetOptions}"
+                                                                          SelectedItem="{Binding OptionalSettings.AmOffsetText}" />
+                                                            </HeaderedContentControl>
+                                                            <HeaderedContentControl Header="AM SQL Level">
+                                                                <ComboBox ItemsSource="{Binding OptionalSettings.OffNumber5Options}"
+                                                                          SelectedItem="{Binding OptionalSettings.AmSqlLevelText}" />
+                                                            </HeaderedContentControl>
+                                                        </StackPanel>
+                                                    </GroupBox>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Key Function">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+                                                <StackPanel Grid.Column="0" Spacing="12">
+                                                    <HeaderedContentControl Header="Key Lock">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.KeyLockOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.KeyLockText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="PF1 Short Key">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.KeyFunctionOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.Pf1ShortKeyText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="PF2 Short Key">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.KeyFunctionOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.Pf2ShortKeyText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="PF3 Short Key">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.KeyFunctionOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.Pf3ShortKeyText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="P1 Short Key">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.KeyFunctionOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.P1ShortKeyText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="P2 Short Key">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.KeyFunctionOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.P2ShortKeyText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="PF1 Long Key">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.KeyFunctionOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.Pf1LongKeyText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="PF2 Long Key">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.KeyFunctionOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.Pf2LongKeyText}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Spacing="12">
+                                                    <HeaderedContentControl Header="PF3 Long Key"
+                                                                             IsEnabled="False"
+                                                                             ToolTip.Tip="Matches the real vendor CPS: PF3 Long Key is fixed at Off, not user-changeable.">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.KeyFunctionOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.Pf3LongKeyText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="P1 Long Key">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.KeyFunctionOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.P1LongKeyText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="P2 Long Key">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.KeyFunctionOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.P2LongKeyText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Long Key Time (s)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.LongKeyTimeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.LongKeyTimeText}" />
+                                                    </HeaderedContentControl>
+                                                    <CheckBox Content="Knob Lock" IsChecked="{Binding OptionalSettings.KnobLock}" />
+                                                    <CheckBox Content="Keyboard Lock" IsChecked="{Binding OptionalSettings.KeyboardLock}" />
+                                                    <CheckBox Content="Side Key Lock" IsChecked="{Binding OptionalSettings.SideKeyLock}" />
+                                                    <CheckBox Content="Forced Key Lock" IsChecked="{Binding OptionalSettings.ForcedKeyLock}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Other">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+                                                <StackPanel Grid.Column="0" Spacing="12">
+                                                    <HeaderedContentControl Header="Address Book Is Sent With Its Own Code">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.AddressBookSentWithCodeText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="TOT (seconds)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.TotOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.TotText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Language">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.LanguageOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.LanguageText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Frequency Step (kHz)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.FrequencyStepOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.GeneralFrequencyStepText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="SQL Level A">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.SqlLevelOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.SqlLevelAText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="SQL Level B">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.SqlLevelOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.SqlLevelBText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="TBST (Hz)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.TbstOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.TbstText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Analog Call Hold Time (seconds)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.AnalogCallHoldTimeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.AnalogCallHoldTimeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Call Channel Is Maintained">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.CallChannelMaintainedText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Priority Zone A">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettingsZoneOptions}"
+                                                                  SelectedItem="{Binding OptionalSettingsPriorityZoneAName}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Priority Zone B">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettingsZoneOptions}"
+                                                                  SelectedItem="{Binding OptionalSettingsPriorityZoneBName}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Mute Timing (minutes)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.MuteTimingOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.MuteTimingText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Encryption Type">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.EncryptionTypeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.EncryptionTypeText}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Spacing="12">
+                                                    <HeaderedContentControl Header="TOT Predict">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.TotPredictText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="TxPow AGC">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.TxPowerAgcText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="NOAA Moni">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.NoaaMoniText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="NOAA Scan">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.NoaaScanText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="NOAA Alert">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.NoaaText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="NOAA Channel">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.NoaaChannelCountOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.NoaaChannelText}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Digital Func">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+                                                <StackPanel Grid.Column="0" Spacing="12">
+                                                    <HeaderedContentControl Header="Group Call Hold Time (s)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.TgHoldTimeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.GroupCallHoldTimeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Private Call Hold Time (s)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.TgHoldTimeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.PrivateCallHoldTimeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Manual Dial - Group TG Hold Time (s)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.TgHoldTimeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.ManualDialGroupCallHoldTimeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Manual Dial - Private TG Hold Time (s)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.TgHoldTimeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.ManualDialPrivateCallHoldTimeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Voice Header Repetitions">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.VoiceHeaderRepetitionsOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.VoiceHeaderRepetitionsText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="TX Preamble Duration (ms)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.TxPreambleDurationOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.TxPreambleDurationText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Filter Own ID In Miss Call">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.FilterOwnIdText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Spacing="12">
+                                                    <HeaderedContentControl Header="Digital Remote Kill">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.DigitalRemoteKillText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Digital Monitor">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.DigitalMonitorOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.DigitalMonitorText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Digital Monitor CC">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.DigitalMonitorCcOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.DigitalMonitorCcText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Digital Monitor ID">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.DigitalMonitorCcOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.DigitalMonitorIdText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Monitor Hold Slot">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.MonitorSlotHoldText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Remote Monitor">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.RemoteMonitorText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="SMS Format">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.SmsFormatOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.SmsFormatText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Digital Protocol"
+                                                                             IsEnabled="False"
+                                                                             ToolTip.Tip="Matches the real vendor CPS: locked to its single option. A 2nd option (NXDN) may appear with a future vendor CPS/firmware update.">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.DigitalProtocolOptions}"
+                                                                  SelectedItem="DMR" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Reset Digital Protocol">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.ResetDigitalProtocolOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.ResetDigitalProtocolText}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="GPS/Ranging">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+                                                <StackPanel Grid.Column="0" Spacing="12">
+                                                    <HeaderedContentControl Header="GPS" IsEnabled="False" ToolTip.Tip="Not present in the vendor CPS for this radio model - kept disabled in case a future radio supports it.">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.GpsPowerText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="GPS Positioning">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.GpsPositioningText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Time Zone">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.TimeZoneOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.TimeZoneText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Ranging Interval[s]" IsEnabled="False" ToolTip.Tip="Not present in the vendor CPS for this radio model - kept disabled in case a future radio supports it.">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.RangingIntervalOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.RangingIntervalText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Distance Unit" IsEnabled="False" ToolTip.Tip="Not present in the vendor CPS for this radio model - kept disabled in case a future radio supports it.">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.DistanceUnitOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.DistanceUnitText}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Spacing="12">
+                                                    <HeaderedContentControl Header="GPS Information Template" IsEnabled="False" ToolTip.Tip="Not present in the vendor CPS for this radio model - kept disabled in case a future radio supports it.">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.GpsTemplateInformationText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="GPS Information Text" IsEnabled="False" ToolTip.Tip="Not present in the vendor CPS for this radio model - kept disabled in case a future radio supports it.">
+                                                        <TextBox Text="{Binding OptionalSettings.GpsInformationChar}" views:AsciiTextInput.Enabled="True" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="GPS Mode">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.GpsModeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.GpsModeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="GPS Roaming" ToolTip.Tip="Stays disabled in the vendor CPS even with GPS Positioning On - appears gated by a setting on the Auto Roaming tab. Not yet written to the radio.">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.GpsRoamingText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="VFO Scan">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <StackPanel Spacing="12" MaxWidth="360">
+                                                <HeaderedContentControl Header="VFO Scan Type">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettings.VfoScanTypeOptions}"
+                                                              SelectedItem="{Binding OptionalSettings.VfoScanTypeText}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="VFO Scan Start Freq (UHF) [MHz]" ToolTip.Tip="400.00000-480.00000, matching the real radio's UHF band limits.">
+                                                    <DataValidationErrors>
+                                                        <TextBox Text="{Binding OptionalSettings.VfoScanStartFreqUhfText, UpdateSourceTrigger=PropertyChanged}"
+                                                             Classes="PinDigits"
+                                                             views:DigitOnlyInput.Enabled="True"
+                                                             views:DigitOnlyInput.AllowDecimalPoint="True"
+                                                             views:DigitOnlyInput.MaxValue="480" />
+                                                    </DataValidationErrors>
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="VFO Scan End Freq (UHF) [MHz]" ToolTip.Tip="400.00000-480.00000, matching the real radio's UHF band limits.">
+                                                    <DataValidationErrors>
+                                                        <TextBox Text="{Binding OptionalSettings.VfoScanEndFreqUhfText, UpdateSourceTrigger=PropertyChanged}"
+                                                             Classes="PinDigits"
+                                                             views:DigitOnlyInput.Enabled="True"
+                                                             views:DigitOnlyInput.AllowDecimalPoint="True"
+                                                             views:DigitOnlyInput.MaxValue="480" />
+                                                    </DataValidationErrors>
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="VFO Scan Start Freq (VHF) [MHz]" ToolTip.Tip="136.00000-174.00000, matching the real radio's VHF band limits.">
+                                                    <DataValidationErrors>
+                                                        <TextBox Text="{Binding OptionalSettings.VfoScanStartFreqVhfText, UpdateSourceTrigger=PropertyChanged}"
+                                                             Classes="PinDigits"
+                                                             views:DigitOnlyInput.Enabled="True"
+                                                             views:DigitOnlyInput.AllowDecimalPoint="True"
+                                                             views:DigitOnlyInput.MaxValue="174" />
+                                                    </DataValidationErrors>
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="VFO Scan End Freq (VHF) [MHz]" ToolTip.Tip="136.00000-174.00000, matching the real radio's VHF band limits.">
+                                                    <DataValidationErrors>
+                                                        <TextBox Text="{Binding OptionalSettings.VfoScanEndFreqVhfText, UpdateSourceTrigger=PropertyChanged}"
+                                                             Classes="PinDigits"
+                                                             views:DigitOnlyInput.Enabled="True"
+                                                             views:DigitOnlyInput.AllowDecimalPoint="True"
+                                                             views:DigitOnlyInput.MaxValue="174" />
+                                                    </DataValidationErrors>
+                                                </HeaderedContentControl>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Auto repeater">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+                                                <StackPanel Grid.Column="0" Spacing="12">
+                                                    <HeaderedContentControl Header="Auto Repeater A">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.AutoRepeaterEnabledOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.AutoRepeaterAText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Auto Repeater B">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.AutoRepeaterEnabledOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.AutoRepeaterBText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Auto Repeater1(UHF)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.AutoRepeaterOffsetOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.AutoRepeater1UhfText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Auto Repeater1(VHF)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.AutoRepeaterOffsetOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.AutoRepeater1VhfText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Auto Repeater2(UHF)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.AutoRepeaterOffsetOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.AutoRepeater2UhfText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Auto Repeater2(VHF)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.AutoRepeaterOffsetOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.AutoRepeater2VhfText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Repeater Check">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.RepeaterCheckText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Repeater Check Inteval[s]">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.AutoRepeaterIntervalsOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.RepeaterCheckIntervalText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Repeater Check Reconnections">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.RepeaterCheckReconnectionsOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.RepeaterCheckReconnectionsText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Repeater Out Of Range Notify">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.RepeaterOutOfRangeNotifyOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.RepeaterOutOfRangeNotifyText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Out Of Range Notify (Times)">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.OutOfRangeNotifyCountOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.OutOfRangeNotifyText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Auto Roaming">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.AutoRoamingText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Auto Roaming Start Condition">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.AutoRoamingStartConditionOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.AutoRoamingStartConditionText}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Spacing="12">
+                                                    <HeaderedContentControl Header="Auto Roaming at Fixed Time[m]">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.AutoRoamingFixedTimeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.AutoRoamingFixedTimeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Roaming Effect Wait Time[s]">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.RoamingEffectWaitTimeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.RoamingEffectWaitTimeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Roaming Zone">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettingsRoamingZoneOptions}"
+                                                                  SelectedItem="{Binding OptionalSettingsRoamingZoneName}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Min Freq Of Auto Repeater1(VHF) [MHz]" ToolTip.Tip="136.00000-174.00000, matching the real radio's VHF band limits.">
+                                                        <DataValidationErrors>
+                                                            <TextBox Text="{Binding OptionalSettings.AutoRepeater1MinFreqVhfText, UpdateSourceTrigger=PropertyChanged}"
+                                                                     Classes="PinDigits"
+                                                                     views:DigitOnlyInput.Enabled="True"
+                                                                     views:DigitOnlyInput.AllowDecimalPoint="True"
+                                                                     views:DigitOnlyInput.MaxValue="174" />
+                                                        </DataValidationErrors>
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Max Freq Of Auto Repeater1(VHF) [MHz]" ToolTip.Tip="136.00000-174.00000, matching the real radio's VHF band limits.">
+                                                        <DataValidationErrors>
+                                                            <TextBox Text="{Binding OptionalSettings.AutoRepeater1MaxFreqVhfText, UpdateSourceTrigger=PropertyChanged}"
+                                                                     Classes="PinDigits"
+                                                                     views:DigitOnlyInput.Enabled="True"
+                                                                     views:DigitOnlyInput.AllowDecimalPoint="True"
+                                                                     views:DigitOnlyInput.MaxValue="174" />
+                                                        </DataValidationErrors>
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Min Freq Of Auto Repeater1(UHF) [MHz]" ToolTip.Tip="400.00000-480.00000, matching the real radio's UHF band limits.">
+                                                        <DataValidationErrors>
+                                                            <TextBox Text="{Binding OptionalSettings.AutoRepeater1MinFreqUhfText, UpdateSourceTrigger=PropertyChanged}"
+                                                                     Classes="PinDigits"
+                                                                     views:DigitOnlyInput.Enabled="True"
+                                                                     views:DigitOnlyInput.AllowDecimalPoint="True"
+                                                                     views:DigitOnlyInput.MaxValue="480" />
+                                                        </DataValidationErrors>
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Max Freq Of Auto Repeater1(UHF) [MHz]" ToolTip.Tip="400.00000-480.00000, matching the real radio's UHF band limits.">
+                                                        <DataValidationErrors>
+                                                            <TextBox Text="{Binding OptionalSettings.AutoRepeater1MaxFreqUhfText, UpdateSourceTrigger=PropertyChanged}"
+                                                                     Classes="PinDigits"
+                                                                     views:DigitOnlyInput.Enabled="True"
+                                                                     views:DigitOnlyInput.AllowDecimalPoint="True"
+                                                                     views:DigitOnlyInput.MaxValue="480" />
+                                                        </DataValidationErrors>
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Min Freq Of Auto Repeater2(VHF) [MHz]" ToolTip.Tip="136.00000-174.00000, matching the real radio's VHF band limits.">
+                                                        <DataValidationErrors>
+                                                            <TextBox Text="{Binding OptionalSettings.AutoRepeater2MinFreqVhfText, UpdateSourceTrigger=PropertyChanged}"
+                                                                     Classes="PinDigits"
+                                                                     views:DigitOnlyInput.Enabled="True"
+                                                                     views:DigitOnlyInput.AllowDecimalPoint="True"
+                                                                     views:DigitOnlyInput.MaxValue="174" />
+                                                        </DataValidationErrors>
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Max Freq Of Auto Repeater2(VHF) [MHz]" ToolTip.Tip="136.00000-174.00000, matching the real radio's VHF band limits.">
+                                                        <DataValidationErrors>
+                                                            <TextBox Text="{Binding OptionalSettings.AutoRepeater2MaxFreqVhfText, UpdateSourceTrigger=PropertyChanged}"
+                                                                     Classes="PinDigits"
+                                                                     views:DigitOnlyInput.Enabled="True"
+                                                                     views:DigitOnlyInput.AllowDecimalPoint="True"
+                                                                     views:DigitOnlyInput.MaxValue="174" />
+                                                        </DataValidationErrors>
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Min Freq Of Auto Repeater2(UHF) [MHz]" ToolTip.Tip="400.00000-480.00000, matching the real radio's UHF band limits.">
+                                                        <DataValidationErrors>
+                                                            <TextBox Text="{Binding OptionalSettings.AutoRepeater2MinFreqUhfText, UpdateSourceTrigger=PropertyChanged}"
+                                                                     Classes="PinDigits"
+                                                                     views:DigitOnlyInput.Enabled="True"
+                                                                     views:DigitOnlyInput.AllowDecimalPoint="True"
+                                                                     views:DigitOnlyInput.MaxValue="480" />
+                                                        </DataValidationErrors>
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Max Freq Of Auto Repeater2(UHF) [MHz]" ToolTip.Tip="400.00000-480.00000, matching the real radio's UHF band limits.">
+                                                        <DataValidationErrors>
+                                                            <TextBox Text="{Binding OptionalSettings.AutoRepeater2MaxFreqUhfText, UpdateSourceTrigger=PropertyChanged}"
+                                                                     Classes="PinDigits"
+                                                                     views:DigitOnlyInput.Enabled="True"
+                                                                     views:DigitOnlyInput.AllowDecimalPoint="True"
+                                                                     views:DigitOnlyInput.MaxValue="480" />
+                                                        </DataValidationErrors>
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Repeater Mode">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.RepeaterModeText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Rep CC Limit">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.RepCcLimitOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.RepCcLimitText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Rep Slot PathA">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.RepSlotAOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.RepSlotAText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Rep Slot PathB">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.RepSlotBOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.RepSlotBText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Repeater Whitelist">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.RepeaterWhitelistText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Record">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <StackPanel Spacing="12" MaxWidth="360">
+                                                <HeaderedContentControl Header="Record Function">
+                                                    <ToggleSwitch IsChecked="{Binding OptionalSettings.RecordFunctionText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Record Delay (s)">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettings.RecordDelayOptions}"
+                                                              SelectedItem="{Binding OptionalSettings.RecordDelayText}" />
+                                                </HeaderedContentControl>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Volume/Audio">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+                                                <StackPanel Grid.Column="0" Spacing="12">
+                                                    <HeaderedContentControl Header="Maximum Volume">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.MaxVolumeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.MaxVolumeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Power On Volume Type">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.PowerOnVolumeTypeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.PowerOnVolumeTypeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Power On Volume">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.PowerOnVolumeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.PowerOnVolumeText}"
+                                                                  IsEnabled="{Binding OptionalSettings.IsPowerOnVolumeEnabled}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Max Headphone Volume">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.MaxVolumeOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.MaxHeadphoneVolumeText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="DMR Mic Gain">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.MicGainOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.DigiMicGainText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Sub SpkInTx">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.SubSpkInTxText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Spacing="12">
+                                                    <HeaderedContentControl Header="Enhanced Sound Quality">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.EnhancedSoundQualityText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="Ana Mic Gain">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.MicGainOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.AnalogMicGainText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="DRC Dynamic Range Control (Rx AGC)">
+                                                        <ToggleSwitch IsChecked="{Binding OptionalSettings.RxAgcText, Converter={x:Static converters:OnOffToBoolConverter.Instance}}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="NX Mic Gain">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.MicGainOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.NxMicGainText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="RX Noise Reduction">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.NoiseReductionOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.RxNoiseReductionText}" />
+                                                    </HeaderedContentControl>
+                                                    <HeaderedContentControl Header="TX Noise Reduction">
+                                                        <ComboBox ItemsSource="{Binding OptionalSettings.NoiseReductionOptions}"
+                                                                  SelectedItem="{Binding OptionalSettings.TxNoiseReductionText}" />
+                                                    </HeaderedContentControl>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                                <TabItem Header="Satellite">
+                                    <ScrollViewer>
+                                        <StackPanel Spacing="12" Margin="16">
+                                            <StackPanel Spacing="12" MaxWidth="360">
+                                                <HeaderedContentControl Header="Sat Location">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettings.SatLocationOptions}"
+                                                              SelectedItem="{Binding OptionalSettings.SatLocationText}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Sat TX Power">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettings.TxPowerOptions}"
+                                                              SelectedItem="{Binding OptionalSettings.SatTxPowerText}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Sat Ana SQL">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettings.SatAnaSqlOptions}"
+                                                              SelectedItem="{Binding OptionalSettings.SatAnaSqlText}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Sat AOS Limit">
+                                                    <ComboBox ItemsSource="{Binding OptionalSettings.SatAosLimitOptions}"
+                                                              SelectedItem="{Binding OptionalSettings.SatAosLimitText}" />
+                                                </HeaderedContentControl>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </TabItem>
+                            </TabControl>
+                        </Border>
+                    </Grid>
+</UserControl>

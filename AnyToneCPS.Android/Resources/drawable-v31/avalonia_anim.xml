@@ -1,0 +1,90 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="128dp"
+            android:height="128dp"
+            android:viewportWidth="128"
+            android:viewportHeight="128">
+            <path
+                android:name="outer_ring"
+                android:fillColor="#002B6EA6"
+                android:pathData="M64,4 A60,60 0,1 1,63.9 4 M64,14 A50,50 0,1 0,64.1 14" />
+            <path
+                android:name="middle_ring"
+                android:fillColor="#005AA3DD"
+                android:pathData="M64,18 A46,46 0,1 1,63.9 18 M64,28 A36,36 0,1 0,64.1 28" />
+            <path
+                android:name="tile"
+                android:fillColor="#002B6EA6"
+                android:pathData="M38,34 L90,34 Q98,34 98,42 L98,86 Q98,94 90,94 L38,94 Q30,94 30,86 L30,42 Q30,34 38,34" />
+            <path
+                android:name="radio"
+                android:fillColor="#00FFFFFF"
+                android:pathData="M49,51 L79,51 Q84,51 84,56 L84,78 Q84,83 79,83 L49,83 Q44,83 44,78 L44,56 Q44,51 49,51 M51,58 L77,58 L77,63 L51,63 Z M53,69 A5,5 0,1 0,53.1 69 M75,69 L79,69 L79,77 L75,77 Z" />
+            <path
+                android:name="antenna"
+                android:fillColor="#0083C4F4"
+                android:pathData="M61,50 L67,50 L67,35 L61,35 Z" />
+        </vector>
+    </aapt:attr>
+    <target android:name="outer_ring">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="fillColor"
+                android:duration="900"
+                android:valueFrom="#002B6EA6"
+                android:valueTo="#332B6EA6"
+                android:valueType="colorType"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+    <target android:name="middle_ring">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="fillColor"
+                android:startOffset="120"
+                android:duration="780"
+                android:valueFrom="#005AA3DD"
+                android:valueTo="#665AA3DD"
+                android:valueType="colorType"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+    <target android:name="tile">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="fillColor"
+                android:startOffset="80"
+                android:duration="520"
+                android:valueFrom="#002B6EA6"
+                android:valueTo="#FF2B6EA6"
+                android:valueType="colorType"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+    <target android:name="radio">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="fillColor"
+                android:startOffset="260"
+                android:duration="520"
+                android:valueFrom="#00FFFFFF"
+                android:valueTo="#FFFFFFFF"
+                android:valueType="colorType"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+    <target android:name="antenna">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="fillColor"
+                android:startOffset="340"
+                android:duration="460"
+                android:valueFrom="#0083C4F4"
+                android:valueTo="#FF83C4F4"
+                android:valueType="colorType"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+</animated-vector>

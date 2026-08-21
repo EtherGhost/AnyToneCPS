@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=AnyTone CPS
+Comment=Edit and export AnyTone D890UV codeplugs
+Exec=AnyToneCPS.Desktop
+Icon=se.tobbe.AnyToneCPS
+Terminal=false
+Categories=Utility;
+StartupWMClass=AnyToneCPS.Desktop
