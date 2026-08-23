@@ -38,6 +38,9 @@
                              views:DigitOnlyInput.Enabled="True"
                              ToolTip.Tip="Exactly 4 decimal digits" />
                 </HeaderedContentControl>
+                <Button Command="{Binding RegenerateDigitalEncryptionKeyCommand}"
+                        Content="Randomize"
+                        ToolTip.Tip="Replace this key's ID with a new random 4-digit value." />
             </StackPanel>
         </Border>
         <Border Classes="Panel" IsVisible="{Binding IsArc4KeysViewSelected}">
@@ -55,6 +58,9 @@
                              views:HexDigitInput.Enabled="True"
                              ToolTip.Tip="Up to 5 hex bytes (1-10 hex characters), or 'Off' - a shorter key is left-zero-padded to 5 bytes on write (confirmed 2026-07-20)." />
                 </HeaderedContentControl>
+                <Button Command="{Binding RegenerateArc4EncryptionKeyCommand}"
+                        Content="Randomize"
+                        ToolTip.Tip="Replace this key's value with a new random key." />
             </StackPanel>
         </Border>
         <Border Classes="Panel" IsVisible="{Binding IsAesKeysViewSelected}">
@@ -72,6 +78,9 @@
                              views:HexDigitInput.Enabled="True"
                              ToolTip.Tip="Exactly 64 hex characters, or 'Off'" />
                 </HeaderedContentControl>
+                <Button Command="{Binding RegenerateAesEncryptionKeyCommand}"
+                        Content="Randomize"
+                        ToolTip.Tip="Replace this key's value with a new random key." />
             </StackPanel>
         </Border>
     </Grid>

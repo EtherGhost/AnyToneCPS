@@ -1748,6 +1748,44 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    // Replaces the currently selected key's value with a fresh random one,
+    // in place - for rotating an already-assigned key without clearing the
+    // slot (which would also drop every channel's reference to it, unlike
+    // this). Reuses the exact same random-value generators Add already
+    // uses for a freshly revealed slot, and only touches the field that's
+    // actually confirmed to have a real radio address for each key type
+    // (Digital/AES: EncryptionId; ARC4: EncryptionKey - see
+    // KeysDetailView's own field layout for which column is which).
+    [RelayCommand(CanExecute = nameof(CanRemoveSelectedEncryptionKey))]
+    private void RegenerateDigitalEncryptionKey()
+    {
+        if (SelectedEncryptionKey is { } key)
+        {
+            key.EncryptionId = RandomNumberGenerator.GetInt32(0, 10000).ToString("0000", CultureInfo.InvariantCulture);
+            RefreshValidationAndPreview($"Digital key {key.Number} randomized");
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRemoveSelectedArc4EncryptionKey))]
+    private void RegenerateArc4EncryptionKey()
+    {
+        if (SelectedArc4EncryptionKey is { } key)
+        {
+            key.EncryptionKey = GenerateHex(5)(0);
+            RefreshValidationAndPreview($"ARC4 key {key.Number} randomized");
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRemoveSelectedAesEncryptionKey))]
+    private void RegenerateAesEncryptionKey()
+    {
+        if (SelectedAesEncryptionKey is { } key)
+        {
+            key.EncryptionId = GenerateHex(32)(0);
+            RefreshValidationAndPreview($"AES key {key.Number} randomized");
+        }
+    }
+
     // Bulk-aware: with 2+ channels selected (Desktop Ctrl/Shift-click, Mobile
     // long-press then tap-to-toggle - see SelectedChannels's doc comment)
     // duplicates every selected channel; otherwise falls back to the single
@@ -2638,16 +2676,19 @@ public partial class MainViewModel : ViewModelBase
     partial void OnSelectedEncryptionKeyChanged(EncryptionKeyEntry? value)
     {
         RemoveEncryptionKeyCommand.NotifyCanExecuteChanged();
+        RegenerateDigitalEncryptionKeyCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedArc4EncryptionKeyChanged(EncryptionKeyEntry? value)
     {
         RemoveArc4EncryptionKeyCommand.NotifyCanExecuteChanged();
+        RegenerateArc4EncryptionKeyCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedAesEncryptionKeyChanged(EncryptionKeyEntry? value)
     {
         RemoveAesEncryptionKeyCommand.NotifyCanExecuteChanged();
+        RegenerateAesEncryptionKeyCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnCurrentProjectLocationChanged(string value)

@@ -40,6 +40,8 @@ public static class Program
         Run("Invalid encryption key formats block save", InvalidEncryptionKeyFormatsBlockSave);
         Run("Validates dotted frequencies independent of current culture", ValidatesDottedFrequenciesIndependentOfCurrentCulture);
         Run("Adds one encryption key per type and selects it", AddsOneEncryptionKeyPerTypeAndSelectsIt);
+        Run("Randomize encryption key replaces value in place without changing slot", RandomizeEncryptionKeyReplacesValueInPlaceWithoutChangingSlot);
+        Run("Regenerate encryption key commands notify CanExecuteChanged on selection", RegenerateEncryptionKeyCommandsNotifyCanExecuteChangedOnSelection);
         Run("Adding encryption keys fills slots in order then stops", AddingEncryptionKeysFillsSlotsInOrderThenStops);
         Run("Removes unused encryption key", RemovesUnusedEncryptionKey);
         Run("Blocks removal of used encryption key", BlocksRemovalOfUsedEncryptionKey);
@@ -837,6 +839,74 @@ public static class Program
         AssertSame(digital, viewModel.SelectedEncryptionKey);
         AssertSame(arc4, viewModel.SelectedArc4EncryptionKey);
         AssertSame(aes, viewModel.SelectedAesEncryptionKey);
+    }
+
+    // Randomize replaces an already-assigned key's value in place - unlike
+    // Remove/Clear, it must NOT touch Number (the slot itself) or drop any
+    // channel's existing reference to this slot index.
+    private static void RandomizeEncryptionKeyReplacesValueInPlaceWithoutChangingSlot()
+    {
+        var viewModel = new MainViewModel();
+
+        viewModel.AddDigitalEncryptionKeyCommand.Execute(null);
+        viewModel.AddArc4EncryptionKeyCommand.Execute(null);
+        viewModel.AddAesEncryptionKeyCommand.Execute(null);
+
+        var digital = viewModel.SelectedEncryptionKey!;
+        var arc4 = viewModel.SelectedArc4EncryptionKey!;
+        var aes = viewModel.SelectedAesEncryptionKey!;
+        var digitalNumber = digital.Number;
+        var arc4Number = arc4.Number;
+        var aesNumber = aes.Number;
+        var previousDigitalId = digital.EncryptionId;
+        var previousArc4Key = arc4.EncryptionKey;
+        var previousAesId = aes.EncryptionId;
+
+        AssertTrue(viewModel.RegenerateDigitalEncryptionKeyCommand.CanExecute(null), "Randomize should be available once a digital key is selected");
+        AssertTrue(viewModel.RegenerateArc4EncryptionKeyCommand.CanExecute(null), "Randomize should be available once an ARC4 key is selected");
+        AssertTrue(viewModel.RegenerateAesEncryptionKeyCommand.CanExecute(null), "Randomize should be available once an AES key is selected");
+
+        viewModel.RegenerateDigitalEncryptionKeyCommand.Execute(null);
+        viewModel.RegenerateArc4EncryptionKeyCommand.Execute(null);
+        viewModel.RegenerateAesEncryptionKeyCommand.Execute(null);
+
+        AssertEqual(digitalNumber, digital.Number);
+        AssertEqual(arc4Number, arc4.Number);
+        AssertEqual(aesNumber, aes.Number);
+        AssertEqual(4, digital.EncryptionId.Length);
+        AssertTrue(digital.EncryptionId != previousDigitalId, "randomizing should produce a different digital code (astronomically unlikely to collide)");
+        AssertTrue(arc4.EncryptionKey.Length >= 10 && arc4.EncryptionKey != previousArc4Key, "randomizing should produce a different ARC4 key");
+        AssertEqual(64, aes.EncryptionId.Length);
+        AssertTrue(aes.EncryptionId != previousAesId, "randomizing should produce a different AES key");
+    }
+
+    // Regression test for a real bug: the Randomize buttons stayed
+    // permanently disabled in the actual UI because OnSelectedXxxEncryptionKeyChanged
+    // only called RemoveXxxEncryptionKeyCommand.NotifyCanExecuteChanged(),
+    // never the new Regenerate commands', even though both share the same
+    // CanExecute predicate. Calling .CanExecute(null) directly (as the
+    // other Randomize test above does) doesn't catch this - it always
+    // re-evaluates the predicate fresh regardless of notification wiring,
+    // the same way a bound Button.IsEnabled never would. This test instead
+    // watches CanExecuteChanged itself, the event Button.IsEnabled actually
+    // depends on.
+    private static void RegenerateEncryptionKeyCommandsNotifyCanExecuteChangedOnSelection()
+    {
+        var viewModel = new MainViewModel();
+        var digitalRaised = false;
+        var arc4Raised = false;
+        var aesRaised = false;
+        viewModel.RegenerateDigitalEncryptionKeyCommand.CanExecuteChanged += (_, _) => digitalRaised = true;
+        viewModel.RegenerateArc4EncryptionKeyCommand.CanExecuteChanged += (_, _) => arc4Raised = true;
+        viewModel.RegenerateAesEncryptionKeyCommand.CanExecuteChanged += (_, _) => aesRaised = true;
+
+        viewModel.AddDigitalEncryptionKeyCommand.Execute(null);
+        viewModel.AddArc4EncryptionKeyCommand.Execute(null);
+        viewModel.AddAesEncryptionKeyCommand.Execute(null);
+
+        AssertTrue(digitalRaised, "selecting a digital key should raise RegenerateDigitalEncryptionKeyCommand.CanExecuteChanged");
+        AssertTrue(arc4Raised, "selecting an ARC4 key should raise RegenerateArc4EncryptionKeyCommand.CanExecuteChanged");
+        AssertTrue(aesRaised, "selecting an AES key should raise RegenerateAesEncryptionKeyCommand.CanExecuteChanged");
     }
 
     private static void RemovesUnusedEncryptionKey()
