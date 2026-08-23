@@ -1,4 +1,12 @@
 <Project>
+    <PropertyGroup>
+        <!-- The SDK otherwise appends the exact git commit SHA to
+             AssemblyInformationalVersion for every build (e.g.
+             "0.1.2+1f2f1112fdf...") since this is a git repo - useful for
+             build traceability, not for the version string shown to a user
+             in Settings/About. -->
+        <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    </PropertyGroup>
     <ItemGroup>
         <!-- Pinned to match the official .NET SDK install's actual runtime
              (10.0.8, per DOTNET_NATIVEAOT_ROOT in scripts/publish-*-nativeaot.sh)

@@ -4,10 +4,10 @@
         <TargetFramework>net10.0-android</TargetFramework>
         <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
         <Nullable>enable</Nullable>
-        <Version>0.1.1</Version>
+        <Version>0.1.2</Version>
         <ApplicationId>com.companyname.anytonecps</ApplicationId>
-        <ApplicationVersion>5</ApplicationVersion>
-        <ApplicationDisplayVersion>0.1.1</ApplicationDisplayVersion>
+        <ApplicationVersion>6</ApplicationVersion>
+        <ApplicationDisplayVersion>0.1.2</ApplicationDisplayVersion>
         <AndroidPackageFormat>apk</AndroidPackageFormat>
         <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
         <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">android-arm64</RuntimeIdentifier>
