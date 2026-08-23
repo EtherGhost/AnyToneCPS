@@ -3330,18 +3330,28 @@ public partial class MainViewModel : ViewModelBase
         DetachZoneHandlers(e.OldItems?.OfType<ZoneEntry>());
         _projectStructureDirty = true;
         OnPropertyChanged(nameof(ZoneCount));
-        NotifyOptionalSettingsStartupOptionsChanged();
+        OnPropertyChanged(nameof(OptionalSettingsZoneOptions));
+        OnPropertyChanged(nameof(OptionalSettingsRoamingZoneOptions));
+        NotifyOptionalSettingsStartupNamesChanged();
         NotifyDirtyStateChanged();
         RefreshValidationAndPreview();
     }
 
     /// <summary>Refreshes every OptionalSettings Startup Zone/Channel A/B
-    /// AND Work Mode Mem Zone A/B picker property - needed whenever Zones
-    /// itself changes (add/remove/membership) or the OptionalSettings byte
-    /// fields they resolve against change (OnOptionalSettingsPropertyChanged).</summary>
-    private void NotifyOptionalSettingsStartupOptionsChanged()
+    /// AND Work Mode Mem Zone A/B picker NAME/cascading-options property -
+    /// needed whenever the OptionalSettings byte fields they resolve
+    /// against change (OnOptionalSettingsPropertyChanged). Deliberately
+    /// does NOT touch OptionalSettingsZoneOptions/OptionalSettingsRoamingZoneOptions
+    /// (the master picker ItemsSource lists) - those only change when Zones/
+    /// RoamingZones itself changes (see OnZonesChanged). Confirmed live
+    /// 2026-08-24: including them here made every Startup Zone A/B ComboBox
+    /// selection snap back to zone 1 - selecting a zone changed StartupZoneA,
+    /// which re-raised OptionalSettingsZoneOptions, which handed the
+    /// ComboBox a brand-new (if content-identical) list instance for its
+    /// ItemsSource in the middle of processing that same selection, and the
+    /// ComboBox reset its selection to index 0 rather than preserve it.</summary>
+    private void NotifyOptionalSettingsStartupNamesChanged()
     {
-        OnPropertyChanged(nameof(OptionalSettingsZoneOptions));
         OnPropertyChanged(nameof(OptionalSettingsStartupZoneAName));
         OnPropertyChanged(nameof(OptionalSettingsStartupZoneBName));
         OnPropertyChanged(nameof(OptionalSettingsStartupChannelAOptions));
@@ -3352,7 +3362,6 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(OptionalSettingsMemZoneBName));
         OnPropertyChanged(nameof(OptionalSettingsPriorityZoneAName));
         OnPropertyChanged(nameof(OptionalSettingsPriorityZoneBName));
-        OnPropertyChanged(nameof(OptionalSettingsRoamingZoneOptions));
         OnPropertyChanged(nameof(OptionalSettingsRoamingZoneName));
     }
 
@@ -3363,7 +3372,7 @@ public partial class MainViewModel : ViewModelBase
             or nameof(OptionalSettingsEntry.PriorityZoneA) or nameof(OptionalSettingsEntry.PriorityZoneB)
             or nameof(OptionalSettingsEntry.RoamingZone))
         {
-            NotifyOptionalSettingsStartupOptionsChanged();
+            NotifyOptionalSettingsStartupNamesChanged();
         }
 
         if (e.PropertyName == nameof(OptionalSettingsEntry.FmWorkChannel))
@@ -3623,7 +3632,7 @@ public partial class MainViewModel : ViewModelBase
         _projectStructureDirty = true;
         RefreshAvailableZoneChannels();
         OnPropertyChanged(nameof(SelectedZoneMemberOptions));
-        NotifyOptionalSettingsStartupOptionsChanged();
+        NotifyOptionalSettingsStartupNamesChanged();
         NotifyDirtyStateChanged();
         RefreshValidation();
     }

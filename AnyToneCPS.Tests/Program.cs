@@ -64,6 +64,7 @@ public static class Program
         Run("Remove channel with multiple selected removes all of them", RemoveChannelWithMultipleSelectedRemovesAllOfThem);
         Run("Selecting multiple channels hides the single channel editor", SelectingMultipleChannelsHidesTheSingleChannelEditor);
         Run("Reorder lists by number sorts channels ascending and keeps selection", ReorderListsByNumberSortsChannelsAscendingAndKeepsSelection);
+        Run("Setting startup zone A name updates the underlying zone index and round trips", SettingStartupZoneANameUpdatesTheUnderlyingZoneIndexAndRoundTrips);
         Run("Navigating to About raises PropertyChanged for IsAboutViewSelected", NavigatingToAboutRaisesPropertyChangedForIsAboutViewSelected);
         Run("Every IsViewSelected property notifies on SelectedTabIndex changed", EveryIsViewSelectedPropertyNotifiesOnSelectedTabIndexChanged);
         Run("Builds write block request matching a real captured write", BuildsWriteBlockRequestMatchingARealCapturedWrite);
@@ -440,6 +441,7 @@ public static class Program
         Run("Loading a project refreshes the filtered digital contacts list", LoadingAProjectRefreshesTheFilteredDigitalContactsList);
         Run("Aprs settings is marked synced after a read", AprsSettingsIsMarkedSyncedAfterARead);
         Run("Write changes to radio is available with nothing dirty once a snapshot exists", WriteChangesToRadioIsAvailableWithNothingDirtyOnceASnapshotExists);
+        Run("Refresh radio ports notifies write changes to radio CanExecuteChanged", RefreshRadioPortsNotifiesWriteChangesToRadioCanExecuteChanged);
         Run("Write changes to radio auto-captures a baseline without discarding unread prepared work", WriteChangesToRadioAutoCapturesABaselineWithoutDiscardingUnreadPreparedWork);
         Run("Dev force model to image marks every entity dirty without changing values", DevForceModelToImageMarksEveryEntityDirtyWithoutChangingValues);
         Run("Dev force model to image then write succeeds against a virtual radio", DevForceModelToImageThenWriteSucceedsAgainstAVirtualRadio);
@@ -1509,6 +1511,34 @@ public static class Program
         AssertTrue(numbers.SequenceEqual(sortedNumbers), "Channels should be in ascending Number order after reordering");
         AssertEqual(highestNumber + 1, viewModel.Channels[^1].Number);
         AssertSame(middle, viewModel.SelectedChannel);
+    }
+
+    // Regression test for a real bug reported live: Radio Settings > Power-on
+    // > Startup Zone A always snapped back to zone 1 no matter which zone
+    // was picked in the ComboBox.
+    private static void SettingStartupZoneANameUpdatesTheUnderlyingZoneIndexAndRoundTrips()
+    {
+        var viewModel = new MainViewModel();
+        var zones = viewModel.Zones.ToList();
+        AssertTrue(zones.Count >= 2, "seed data should have at least 2 zones");
+
+        var target = zones[1];
+
+        var zoneOptionsRenotified = false;
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.OptionalSettingsZoneOptions))
+            {
+                zoneOptionsRenotified = true;
+            }
+        };
+
+        viewModel.OptionalSettingsStartupZoneAName = target.DisplayLabel;
+
+        AssertEqual((byte)(target.Number - 1), viewModel.OptionalSettings.StartupZoneA);
+        AssertEqual(target.DisplayLabel, viewModel.OptionalSettingsStartupZoneAName);
+        AssertTrue(!zoneOptionsRenotified, "selecting a startup zone must not re-notify the master zone options list - " +
+            "that hands the ComboBox a brand-new ItemsSource instance mid-selection and resets it back to index 0");
     }
 
     // Regression test for a real bug: the About page rendered correctly
@@ -6766,6 +6796,33 @@ public static class Program
         viewModel.WriteChangesToRadioCommand.NotifyCanExecuteChanged();
 
         AssertTrue(viewModel.WriteChangesToRadioCommand.CanExecute(null), "must be available once connected, even with no prior read and nothing dirty - matches vendor CPS behavior");
+    }
+
+    /// <summary>Regression test for a real bug reported live on Android: the
+    /// Write to Radio button stayed permanently disabled even after the
+    /// radio was found and a port was selected. RefreshRadioPorts (the
+    /// method the USB scan retry loop actually calls - see
+    /// RetryPortScanAsync) re-evaluates ReadFromRadioCommand and
+    /// VerifyReadSaveRoundtripCommand but had never been updated to also
+    /// re-evaluate WriteChangesToRadioCommand, even though it depends on
+    /// the exact same _radioConnectionFactory/SelectedPort state. Watches
+    /// CanExecuteChanged directly (not just CanExecute(null), which always
+    /// re-evaluates fresh regardless of notification wiring) so this test
+    /// would have failed before the fix.</summary>
+    private static void RefreshRadioPortsNotifiesWriteChangesToRadioCanExecuteChanged()
+    {
+        var viewModel = new MainViewModel();
+        var ports = new List<string>();
+        viewModel.SetRadioServices(() => new FakeRadioConnection(), () => ports);
+
+        var writeRaised = false;
+        viewModel.WriteChangesToRadioCommand.CanExecuteChanged += (_, _) => writeRaised = true;
+
+        ports.Add("FAKE");
+        viewModel.RefreshRadioPortsCommand.Execute(null);
+
+        AssertTrue(writeRaised, "a port scan that finds a port should raise WriteChangesToRadioCommand.CanExecuteChanged");
+        AssertTrue(viewModel.WriteChangesToRadioCommand.CanExecute(null), "Write to Radio should become available once a port is found");
     }
 
     /// <summary>Proves the fix for a real scenario found 2026-08-16:

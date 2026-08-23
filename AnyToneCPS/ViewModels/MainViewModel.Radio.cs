@@ -179,6 +179,15 @@ public partial class MainViewModel
         // permanently stuck at its initial (false) construction-time
         // evaluation, i.e. always disabled regardless of actual state.
         VerifyReadSaveRoundtripCommand.NotifyCanExecuteChanged();
+        // Found live 2026-08-24 on Android: CanWriteChangesToRadio depends
+        // on the exact same _radioConnectionFactory/SelectedPort state as
+        // CanReadFromRadio, but was missing from this list - the first USB
+        // scan on Android often comes back empty right after launch (see
+        // RetryPortScanAsync's own doc comment), so Write to Radio stayed
+        // permanently disabled even after a later retry found the port and
+        // set SelectedPort, because nothing ever told the command to
+        // re-check.
+        WriteChangesToRadioCommand.NotifyCanExecuteChanged();
     }
 
     private bool CanReadFromRadio() =>
