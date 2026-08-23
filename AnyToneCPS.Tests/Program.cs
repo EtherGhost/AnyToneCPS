@@ -64,6 +64,8 @@ public static class Program
         Run("Remove channel with multiple selected removes all of them", RemoveChannelWithMultipleSelectedRemovesAllOfThem);
         Run("Selecting multiple channels hides the single channel editor", SelectingMultipleChannelsHidesTheSingleChannelEditor);
         Run("Reorder lists by number sorts channels ascending and keeps selection", ReorderListsByNumberSortsChannelsAscendingAndKeepsSelection);
+        Run("Navigating to About raises PropertyChanged for IsAboutViewSelected", NavigatingToAboutRaisesPropertyChangedForIsAboutViewSelected);
+        Run("Every IsViewSelected property notifies on SelectedTabIndex changed", EveryIsViewSelectedPropertyNotifiesOnSelectedTabIndexChanged);
         Run("Builds write block request matching a real captured write", BuildsWriteBlockRequestMatchingARealCapturedWrite);
         Run("Builds write block request matching the revert capture", BuildsWriteBlockRequestMatchingTheRevertCapture);
         Run("Rejects write block data of the wrong length", RejectsWriteBlockDataOfTheWrongLength);
@@ -1507,6 +1509,79 @@ public static class Program
         AssertTrue(numbers.SequenceEqual(sortedNumbers), "Channels should be in ascending Number order after reordering");
         AssertEqual(highestNumber + 1, viewModel.Channels[^1].Number);
         AssertSame(middle, viewModel.SelectedChannel);
+    }
+
+    // Regression test for a real bug: the About page rendered correctly
+    // when it happened to be the tab already selected at startup (a fresh
+    // binding evaluation reads IsAboutViewSelected's current value directly,
+    // no notification needed), but never appeared when actually navigated
+    // to afterward, on both Desktop and Mobile, because
+    // OnSelectedTabIndexChanged's hand-maintained list of
+    // OnPropertyChanged(nameof(IsXxxViewSelected)) calls was missing
+    // IsAboutViewSelected specifically - so the XAML binding never learned
+    // the computed property's value had changed. Watches PropertyChanged
+    // directly (not just the raw property value) so this test would have
+    // failed before the fix, the same lesson as the Randomize
+    // CanExecuteChanged test above.
+    private static void NavigatingToAboutRaisesPropertyChangedForIsAboutViewSelected()
+    {
+        var viewModel = new MainViewModel();
+        var aboutNode = viewModel.NavigationTree
+            .SelectMany(node => node.HasChildren ? node.Children : [node])
+            .First(node => node.Title == "About");
+
+        var raised = false;
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.IsAboutViewSelected))
+            {
+                raised = true;
+            }
+        };
+
+        viewModel.SelectedNavigationNode = aboutNode;
+
+        AssertTrue(raised, "navigating to About should raise PropertyChanged for IsAboutViewSelected");
+        AssertTrue(viewModel.IsAboutViewSelected, "SelectedTabIndex should now match the About tab");
+    }
+
+    // General-purpose guard against the same bug class as the About test
+    // above recurring for some OTHER tab in the future:
+    // OnSelectedTabIndexChanged is a hand-maintained list of
+    // OnPropertyChanged(nameof(IsXxxViewSelected)) calls, one per tab, with
+    // nothing enforcing it stays in sync with the properties actually
+    // declared - exactly how IsAboutViewSelected got silently missed.
+    // Reflection-based rather than hand-typed, same reasoning as
+    // FullRadioProjectDataRoundTripsThroughARealFile: catches a missing
+    // notification for ANY IsXxxViewSelected property, including ones
+    // added after this test was written.
+    private static void EveryIsViewSelectedPropertyNotifiesOnSelectedTabIndexChanged()
+    {
+        var viewModel = new MainViewModel();
+        var isViewSelectedProperties = typeof(MainViewModel).GetProperties()
+            .Where(p => p.Name.StartsWith("Is", StringComparison.Ordinal)
+                        && p.Name.EndsWith("ViewSelected", StringComparison.Ordinal)
+                        && p.PropertyType == typeof(bool))
+            .Select(p => p.Name)
+            .ToList();
+        AssertTrue(isViewSelectedProperties.Count > 10, "should find many IsXxxViewSelected properties via reflection - if this is low, the naming convention check itself may be broken");
+
+        var raisedProperties = new HashSet<string>();
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is { } name && isViewSelectedProperties.Contains(name))
+            {
+                raisedProperties.Add(name);
+            }
+        };
+
+        // Flip SelectedTabIndex away then back, twice, so every property
+        // gets a chance to raise regardless of its own current truth value.
+        viewModel.SelectedTabIndex = viewModel.SelectedTabIndex == 0 ? 1 : 0;
+        viewModel.SelectedTabIndex = viewModel.SelectedTabIndex == 0 ? 1 : 0;
+
+        var missing = isViewSelectedProperties.Except(raisedProperties).OrderBy(n => n).ToList();
+        AssertTrue(missing.Count == 0, $"OnSelectedTabIndexChanged is missing OnPropertyChanged calls for: {string.Join(", ", missing)}");
     }
 
     // Golden-value tests: exact bytes captured 2026-07-17 from a real USB capture of the

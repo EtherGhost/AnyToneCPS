@@ -2617,6 +2617,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsTwoToneDecodeViewSelected));
         OnPropertyChanged(nameof(IsDtmfViewSelected));
         OnPropertyChanged(nameof(IsDevOptionsViewSelected));
+        OnPropertyChanged(nameof(IsAboutViewSelected));
     }
 
     partial void OnSelectedOptionalSettingsSubTabIndexChanged(int value)

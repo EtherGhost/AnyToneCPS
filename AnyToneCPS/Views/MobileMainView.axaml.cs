@@ -3,6 +3,8 @@ using Avalonia.Controls;
 using Avalonia.Controls.Platform;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using AnyToneCPS.Models;
@@ -56,6 +58,22 @@ public partial class MobileMainView : UserControl
         ChannelList.AddHandler(InputElement.PointerMovedEvent, ChannelList_OnPointerMoved, RoutingStrategies.Tunnel);
         ChannelList.AddHandler(InputElement.PointerReleasedEvent, ChannelList_OnPointerReleased, RoutingStrategies.Tunnel);
         ChannelList.AddHandler(InputElement.PointerCaptureLostEvent, ChannelList_OnPointerCaptureLost, RoutingStrategies.Tunnel);
+
+        SetAboutLogoImage();
+    }
+
+    private void SetAboutLogoImage()
+    {
+        try
+        {
+            using var iconStream = AssetLoader.Open(new Uri("avares://AnyToneCPS/Assets/Icon.png"));
+            AboutLogoImage.Source = new Bitmap(iconStream);
+        }
+        catch
+        {
+            // No logo shown if the packaged resource is unavailable - see
+            // MainWindow.axaml.cs's identical fallback for the window icon.
+        }
     }
 
     protected override void OnLoaded(RoutedEventArgs e)

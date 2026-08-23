@@ -4860,7 +4860,7 @@
                     <StackPanel IsVisible="{Binding IsAboutViewSelected}" Spacing="12">
                         <Border Classes="Panel">
                             <StackPanel Spacing="10" HorizontalAlignment="Center">
-                                <Image Source="avares://AnyToneCPS/Assets/Icon.png"
+                                <Image x:Name="AboutLogoImage"
                                        Width="80" Height="80"
                                        HorizontalAlignment="Center" />
                                 <TextBlock Text="AnyToneCPS"
