@@ -1253,8 +1253,7 @@ public static class Program
     // Imports/Exports are disabled (not hidden) in the nav tree while CSV
     // support is disconnected - selecting them should not navigate away
     // from whatever tab is currently showing, matching how a disabled
-    // Button never fires Click. Dev Options is hidden entirely rather than
-    // disabled, so it isn't a leaf a user could select at all.
+    // Button never fires Click.
     private static void SelectingADisabledNavigationNodeDoesNotChangeTheSelectedTab()
     {
         var viewModel = new MainViewModel();
@@ -1270,12 +1269,6 @@ public static class Program
         viewModel.SelectedNavigationNode = importsNode;
 
         AssertEqual(0, viewModel.SelectedTabIndex);
-
-        var devOptionsNode = viewModel.NavigationTree
-            .SelectMany(node => node.HasChildren ? node.Children : [node])
-            .First(node => node.Title == "Dev Options");
-
-        AssertTrue(!devOptionsNode.IsVisible, "Dev Options should be hidden from the nav tree");
     }
 
     private static void EnablesSaveCommandsOnlyWhenDirty()

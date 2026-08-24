@@ -1040,7 +1040,7 @@ public partial class MainViewModel : ViewModelBase
         new NavigationTreeNode("Imports", TabIndex: 26) { IsEnabled = false, DisabledReason = "CSV import is disabled during the Channel canonical-model migration - not yet available in this version." },
         new NavigationTreeNode("Exports", TabIndex: 27) { IsEnabled = false, DisabledReason = "CSV export is disabled during the Channel canonical-model migration - not yet available in this version." },
         new NavigationTreeNode("Settings", TabIndex: 28),
-        new NavigationTreeNode("Dev Options", TabIndex: 39) { IsVisible = false },
+        new NavigationTreeNode("Dev Options", TabIndex: 39),
         new NavigationTreeNode("About", TabIndex: 43)
     ];
 
