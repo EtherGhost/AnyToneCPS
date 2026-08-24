@@ -3305,14 +3305,6 @@
                     </StackPanel>
 
                     <StackPanel IsVisible="{Binding IsAprsSettingsViewSelected}">
-                        <Border Background="{DynamicResource AppInfoBadgeBackgroundBrush}"
-                                BorderBrush="{DynamicResource AppInfoBadgeBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="10,6"
-                                Margin="0,0,0,8">
-                            <TextBlock Text="Not yet writable to the radio - edits here are saved to the project file only." TextWrapping="Wrap" />
-                        </Border>
                         <Border Classes="Panel">
                             <!-- No inner ScrollViewer (removed 2026-07-28) - see the
                                  same note on the Alarm Settings page above. -->
@@ -3496,8 +3488,8 @@
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
-                                    <HeaderedContentControl Header="Channel (raw)" ToolTip.Tip="Vendor CPS shows this as a dropdown (Current Channel + all digital channels + VFO A/VFO B), not a raw number - the real option list and its byte encoding are both still unconfirmed. Left as a raw index until the live-capture pass.">
-                                        <TextBox Text="{Binding SelectedDigitalReport.Channel}" />
+                                    <HeaderedContentControl Header="Channel" ToolTip.Tip="Vendor CPS shows this as a dropdown with more options (Current Channel + all digital channels + VFO A/VFO B) - only VFO A/VFO B are confirmed so far, the rest of the option list and its byte encoding are still unconfirmed. A real channel number already stored here (from outside this app) still displays as a plain number below.">
+                                        <ComboBox ItemsSource="{Binding SelectedDigitalReport.ChannelOptions}" SelectedItem="{Binding SelectedDigitalReport.ChannelText}" HorizontalAlignment="Stretch" />
                                     </HeaderedContentControl>
                                     <HeaderedContentControl Header="APRS TG">
                                         <TextBox Text="{Binding SelectedDigitalReport.TalkgroupIdText}"

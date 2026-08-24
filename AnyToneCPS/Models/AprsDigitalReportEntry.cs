@@ -24,12 +24,43 @@ public partial class AprsDigitalReportEntry : ObservableValidator
     /// this is a sentinel scheme, not a plain 1-based channel index. VFO A
     /// = 4000, VFO B = 4001 confirmed exactly; real channel numbers
     /// presumably occupy the range below 4000; "Current Channel"'s raw
-    /// value not yet confirmed. Still no ComboBox/Text pass-through here -
-    /// that needs a MainViewModel-level dynamic list (Current Channel +
-    /// digital channels + VFO A/B) plus confirming the "Current Channel"
-    /// sentinel and the real-channel-number range, not just this one
-    /// sentinel pair.</summary>
+    /// value not yet confirmed. <see cref="ChannelText"/> only covers the
+    /// two confirmed sentinels - a real channel number or "Current
+    /// Channel" still displays as a plain number (see that property's own
+    /// doc comment), not lost, just not pickable from the dropdown yet.
+    /// Full ComboBox coverage (Current Channel + digital channels + VFO
+    /// A/B) still needs a MainViewModel-level dynamic list plus confirming
+    /// the "Current Channel" sentinel and the real-channel-number range.</summary>
     [ObservableProperty] private int _channel;
+
+    private const int VfoAChannel = 4000;
+    private const int VfoBChannel = 4001;
+    public static IReadOnlyList<string> ChannelOptions { get; } = ["VFO A", "VFO B"];
+
+    /// <summary>Only the two confirmed sentinels (see <see cref="Channel"/>'s
+    /// own doc comment) are selectable here - a real channel number or the
+    /// unconfirmed "Current Channel" sentinel falls back to displaying the
+    /// raw number (matches this codebase's existing CallTypeText/SlotText
+    /// convention), not editable via this dropdown until those are
+    /// confirmed live.</summary>
+    public string ChannelText
+    {
+        get => Channel switch
+        {
+            VfoAChannel => "VFO A",
+            VfoBChannel => "VFO B",
+            _ => Channel.ToString(CultureInfo.InvariantCulture)
+        };
+        set
+        {
+            Channel = value switch
+            {
+                "VFO A" => VfoAChannel,
+                "VFO B" => VfoBChannel,
+                _ => Channel
+            };
+        }
+    }
     [ObservableProperty] private long _talkgroupId;
     [ObservableProperty] private byte _callType;
     [ObservableProperty] private byte _slot;
@@ -111,7 +142,11 @@ public partial class AprsDigitalReportEntry : ObservableValidator
         OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
-    partial void OnChannelChanged(int value) => OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    partial void OnChannelChanged(int value)
+    {
+        OnPropertyChanged(nameof(ChannelText));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
 
     partial void OnCallTypeChanged(byte value)
     {

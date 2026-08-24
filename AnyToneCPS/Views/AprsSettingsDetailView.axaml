@@ -17,18 +17,10 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <Grid RowDefinitions="Auto,*">
-        <Border Background="{DynamicResource AppInfoBadgeBackgroundBrush}"
-                BorderBrush="{DynamicResource AppInfoBadgeBorderBrush}"
-                BorderThickness="1"
-                CornerRadius="6"
-                Padding="10,6"
-                Margin="4,4,4,0">
-            <TextBlock Text="Not yet writable to the radio - edits here are saved to the project file only." TextWrapping="Wrap" />
-        </Border>
-        <Border Grid.Row="1" Classes="Panel">
+    <Grid RowDefinitions="*">
+        <Border Grid.Row="0" Classes="Panel">
             <ScrollViewer>
-                <StackPanel Margin="8" Spacing="10" MaxWidth="480">
+                <StackPanel Margin="8" Spacing="10">
                     <TextBlock Classes="Label"
                                TextWrapping="Wrap"
                                Text="Callsign/path fields are narrow ASCII, not the UTF-16LE used elsewhere. Most raw-byte fields' exact enum meaning is not confirmed - see Field_Reference.md §16 and the codec's doc comments." />
@@ -239,8 +231,8 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
                     <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
-                        <HeaderedContentControl Header="Channel (raw)" ToolTip.Tip="Vendor CPS shows this as a dropdown (Current Channel + all digital channels + VFO A/VFO B), not a raw number - the real option list and its byte encoding are both still unconfirmed. Left as a raw index until the live-capture pass.">
-                            <TextBox Text="{Binding SelectedDigitalReport.Channel}" />
+                        <HeaderedContentControl Header="Channel" ToolTip.Tip="Vendor CPS shows this as a dropdown with more options (Current Channel + all digital channels + VFO A/VFO B) - only VFO A/VFO B are confirmed so far, the rest of the option list and its byte encoding are still unconfirmed. A real channel number already stored here (from outside this app) still displays as a plain number below.">
+                            <ComboBox ItemsSource="{Binding SelectedDigitalReport.ChannelOptions}" SelectedItem="{Binding SelectedDigitalReport.ChannelText}" HorizontalAlignment="Stretch" />
                         </HeaderedContentControl>
                         <HeaderedContentControl Grid.Column="1" Header="APRS TG">
                             <TextBox Text="{Binding SelectedDigitalReport.TalkgroupIdText}"
