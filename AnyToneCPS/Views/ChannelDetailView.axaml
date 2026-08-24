@@ -41,16 +41,7 @@
                     <Border Classes="Panel">
                         <Grid RowDefinitions="Auto,Auto,Auto,Auto"
                       RowSpacing="18">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Classes="SectionTitle" Text="Channel Data" />
-                        <StackPanel Grid.Column="1"
-                                    Spacing="2"
-                                    HorizontalAlignment="Right">
-                            <TextBlock Text="{Binding StatusMessage}"
-                                       Foreground="{DynamicResource AppMutedTextBrush}"
-                                       HorizontalAlignment="Right" />
-                        </StackPanel>
-                    </Grid>
+                    <TextBlock Classes="SectionTitle" Text="Channel Data" />
 
                     <GroupBox Grid.Row="1" Header="Both Analog and Digital">
                     <Grid ColumnDefinitions="*,*,*,*,*"
