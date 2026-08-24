@@ -40,7 +40,7 @@
                     </HeaderedContentControl>
                     <HeaderedContentControl Grid.Column="2" Header="A Channel">
                         <ComboBox ItemsSource="{Binding SelectedZoneMemberOptions}"
-                                  SelectedItem="{Binding SelectedZone.AChannel}"
+                                  SelectedItem="{Binding SelectedZoneAChannel}"
                                   FontWeight="{Binding SelectedZone.AChannelFontWeight}"
                                   HorizontalAlignment="Stretch">
                             <ComboBox.ItemTemplate>
@@ -52,7 +52,7 @@
                     </HeaderedContentControl>
                     <HeaderedContentControl Grid.Column="3" Header="B Channel">
                         <ComboBox ItemsSource="{Binding SelectedZoneMemberOptions}"
-                                  SelectedItem="{Binding SelectedZone.BChannel}"
+                                  SelectedItem="{Binding SelectedZoneBChannel}"
                                   FontWeight="{Binding SelectedZone.BChannelFontWeight}"
                                   HorizontalAlignment="Stretch">
                             <ComboBox.ItemTemplate>

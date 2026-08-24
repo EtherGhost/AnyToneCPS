@@ -63,6 +63,8 @@ public static class Program
         Run("Duplicate channel with multiple selected duplicates all of them", DuplicateChannelWithMultipleSelectedDuplicatesAllOfThem);
         Run("Remove channel with multiple selected removes all of them", RemoveChannelWithMultipleSelectedRemovesAllOfThem);
         Run("Selecting multiple channels hides the single channel editor", SelectingMultipleChannelsHidesTheSingleChannelEditor);
+        Run("Switching away from a zone and back keeps its A and B channel selection", SwitchingAwayFromAZoneAndBackKeepsItsAAndBChannelSelection);
+        Run("Setting A and B channel on a second zone does not affect the first zone", SettingAAndBChannelOnASecondZoneDoesNotAffectTheFirstZone);
         Run("Reorder lists by number sorts channels ascending and keeps selection", ReorderListsByNumberSortsChannelsAscendingAndKeepsSelection);
         Run("Setting startup zone A name updates the underlying zone index and round trips", SettingStartupZoneANameUpdatesTheUnderlyingZoneIndexAndRoundTrips);
         Run("Navigating to About raises PropertyChanged for IsAboutViewSelected", NavigatingToAboutRaisesPropertyChangedForIsAboutViewSelected);
@@ -1479,6 +1481,121 @@ public static class Program
 
         viewModel.SetSelectedChannels([channels[0]]);
         AssertTrue(viewModel.IsSingleChannelSelected, "editor should come back once only 1 is selected again");
+    }
+
+    // Regression test for a real bug found live 2026-08-24: setting A/B
+    // Channel on a zone, switching to a different zone, then switching back
+    // reset the ComboBox's own selection - and because SelectedItem is a
+    // two-way binding, that reset wrote back through the binding and
+    // genuinely nulled AChannel/BChannel (confirmed live by the Save button
+    // lighting up on nothing but re-selecting the zone). Fixed via
+    // MainViewModel-level SelectedZoneAChannel/BChannel proxies, explicitly
+    // re-notified in OnSelectedZoneChanged right after SelectedZoneMemberOptions.
+    //
+    // No GUI automation exists for this app (see this codebase's own
+    // established limitation), so this can't reproduce Avalonia's own
+    // ComboBox selection-reset behavior directly - it instead verifies the
+    // two things actually under this app's control: the underlying model
+    // data survives a switch-away-and-back, and (like the About page/
+    // Randomize button regressions earlier this session) that switching
+    // zones actually RAISES PropertyChanged for the proxies a bound
+    // ComboBox would need to hear to reassert its selection - watching the
+    // event directly, not just the value, so a missing notification would
+    // have failed this test before the fix.
+    private static void SwitchingAwayFromAZoneAndBackKeepsItsAAndBChannelSelection()
+    {
+        var viewModel = new MainViewModel();
+        var zones = viewModel.Zones.ToList();
+        AssertTrue(zones.Count >= 2, "seed data should have at least 2 zones");
+
+        var zoneA = zones[0];
+        var otherZone = zones[1];
+        AssertTrue(zoneA.Members.Count >= 2, "the first seeded zone should have at least 2 members");
+
+        viewModel.SelectedZone = zoneA;
+        var intendedAChannel = zoneA.Members[1];
+        var intendedBChannel = zoneA.Members[0];
+        viewModel.SelectedZoneAChannel = intendedAChannel;
+        viewModel.SelectedZoneBChannel = intendedBChannel;
+
+        AssertSame(intendedAChannel, zoneA.AChannel);
+        AssertSame(intendedBChannel, zoneA.BChannel);
+
+        var aChannelRaised = false;
+        var bChannelRaised = false;
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.SelectedZoneAChannel))
+            {
+                aChannelRaised = true;
+            }
+
+            if (e.PropertyName == nameof(MainViewModel.SelectedZoneBChannel))
+            {
+                bChannelRaised = true;
+            }
+        };
+
+        // Switch away, then back - this is exactly the sequence that lost
+        // the selection before the fix.
+        viewModel.SelectedZone = otherZone;
+        viewModel.SelectedZone = zoneA;
+
+        AssertTrue(aChannelRaised, "switching back to a zone should raise PropertyChanged for SelectedZoneAChannel");
+        AssertTrue(bChannelRaised, "switching back to a zone should raise PropertyChanged for SelectedZoneBChannel");
+        AssertSame(intendedAChannel, zoneA.AChannel);
+        AssertSame(intendedBChannel, zoneA.BChannel);
+        AssertSame(intendedAChannel, viewModel.SelectedZoneAChannel);
+        AssertSame(intendedBChannel, viewModel.SelectedZoneBChannel);
+    }
+
+    private static void SettingAAndBChannelOnASecondZoneDoesNotAffectTheFirstZone()
+    {
+        var viewModel = new MainViewModel();
+        var channels = viewModel.Channels.ToList();
+        AssertTrue(channels.Count >= 4, "seed data should have at least 4 channels");
+
+        // Two brand new zones, each with its own distinct members - matches
+        // the live report exactly: "both are brand new zones added via
+        // 'Add Zone'".
+        var zoneA = new ZoneEntry { Number = 900, Name = "Test Zone A" };
+        zoneA.Members.Add(channels[0]);
+        zoneA.Members.Add(channels[1]);
+        zoneA.MarkClean();
+
+        var zoneB = new ZoneEntry { Number = 901, Name = "Test Zone B" };
+        zoneB.Members.Add(channels[2]);
+        zoneB.Members.Add(channels[3]);
+        zoneB.MarkClean();
+
+        viewModel.Zones.Add(zoneA);
+        viewModel.Zones.Add(zoneB);
+
+        viewModel.SelectedZone = zoneA;
+        var zoneAChannel = zoneA.Members[1];
+        var zoneBChannel = zoneA.Members[0];
+        viewModel.SelectedZoneAChannel = zoneAChannel;
+        viewModel.SelectedZoneBChannel = zoneBChannel;
+
+        // Switch to a second zone and pick different channels there - this
+        // is the exact sequence that failed live: the second zone's pick
+        // didn't stick (Save stayed disabled), and returning to the first
+        // zone emptied its own AChannel/BChannel.
+        viewModel.SelectedZone = zoneB;
+        var zoneBAChannel = zoneB.Members[1];
+        var zoneBBChannel = zoneB.Members[0];
+        viewModel.SelectedZoneAChannel = zoneBAChannel;
+        viewModel.SelectedZoneBChannel = zoneBBChannel;
+
+        AssertSame(zoneBAChannel, zoneB.AChannel);
+        AssertSame(zoneBBChannel, zoneB.BChannel);
+
+        viewModel.SelectedZone = zoneA;
+
+        AssertSame(zoneAChannel, zoneA.AChannel);
+        AssertSame(zoneBChannel, zoneA.BChannel);
+        AssertSame(zoneBAChannel, zoneB.AChannel);
+        AssertSame(zoneBBChannel, zoneB.BChannel);
     }
 
     // Hand-editing a channel's "No" field (or duplicating one that lands a

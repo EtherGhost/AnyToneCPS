@@ -904,8 +904,50 @@ public partial class MainViewModel : ViewModelBase
     public bool IsSettingsViewSelected => SelectedTabIndex == 28;
     public bool IsDevOptionsViewSelected => SelectedTabIndex == 39;
     public bool IsAboutViewSelected => SelectedTabIndex == 43;
-    public IReadOnlyList<ChannelEntry> SelectedZoneMemberOptions => SelectedZone?.Members.ToList() ?? [];
-    public IReadOnlyList<AmAirEntry> SelectedAmZoneMemberOptions => SelectedAmZone?.Members.ToList() ?? [];
+    // Deliberately the SAME ObservableCollection instance every time
+    // (not .ToList(), which handed the A/B Channel ComboBoxes a brand-new
+    // list object every time SelectedZone/SelectedAmZone changed, even when
+    // switching back to a zone the user was already on). Found live
+    // 2026-08-24: this reset the ComboBox's own selection when returning to
+    // a zone whose AChannel/BChannel had just been set, and because
+    // SelectedItem is a two-way binding, that reset selection wrote back
+    // through the binding and genuinely nulled AChannel/BChannel out (the
+    // zone's Save button lighting up on nothing but re-selecting it was the
+    // tell - real data loss, not just a stale display) - the exact same
+    // "swap the ComboBox's ItemsSource mid-selection" bug class as the
+    // Startup Zone A/B fix earlier this session, just for a different
+    // ComboBox. Returning the SAME collection object when re-selecting the
+    // same zone lets Avalonia recognize nothing actually changed.
+    public IReadOnlyList<ChannelEntry> SelectedZoneMemberOptions => SelectedZone?.Members ?? (IReadOnlyList<ChannelEntry>)[];
+    public IReadOnlyList<AmAirEntry> SelectedAmZoneMemberOptions => SelectedAmZone?.Members ?? (IReadOnlyList<AmAirEntry>)[];
+
+    /// <summary>MainViewModel-level proxy for SelectedZone.AChannel/BChannel -
+    /// see <see cref="OnSelectedZoneChanged"/>'s doc comment for why a plain
+    /// binding straight to the nested "SelectedZone.AChannel" path isn't
+    /// enough on its own.</summary>
+    public ChannelEntry? SelectedZoneAChannel
+    {
+        get => SelectedZone?.AChannel;
+        set
+        {
+            if (SelectedZone is not null)
+            {
+                SelectedZone.AChannel = value;
+            }
+        }
+    }
+
+    public ChannelEntry? SelectedZoneBChannel
+    {
+        get => SelectedZone?.BChannel;
+        set
+        {
+            if (SelectedZone is not null)
+            {
+                SelectedZone.BChannel = value;
+            }
+        }
+    }
 
     /// <summary>ItemsSource for the Priority Channel 1/2 ComboBoxes - "None"
     /// plus SelectedScanList's own Members only (see ScanListEntry.
@@ -2650,12 +2692,33 @@ public partial class MainViewModel : ViewModelBase
 
     partial void OnSelectedZoneChanged(ZoneEntry? value)
     {
+        var correctAChannel = value?.AChannel;
+        var correctBChannel = value?.BChannel;
+
         SelectedZoneMember = value?.Members.FirstOrDefault();
         RemoveZoneCommand.NotifyCanExecuteChanged();
         SetSelectedAvailableZoneChannels([]);
         SetSelectedZoneMembers([]);
         RefreshAvailableZoneChannels();
         OnPropertyChanged(nameof(SelectedZoneMemberOptions));
+
+        // See SelectedZoneAChannel/BChannel's own doc comment - the
+        // OnPropertyChanged above makes the A/B Channel ComboBoxes rebuild
+        // their ItemsSource synchronously, and each one's SelectionModel
+        // still remembers the PREVIOUS zone's selected channel, which isn't
+        // a member of the new zone - so it clears its selection and, since
+        // SelectedItem is two-way bound, writes that null straight back
+        // into this zone's AChannel/BChannel before we ever get here. Put
+        // the real value back now that the ComboBoxes have settled on the
+        // new ItemsSource and the real value is actually present in it.
+        if (value is not null)
+        {
+            value.AChannel = correctAChannel;
+            value.BChannel = correctBChannel;
+        }
+
+        OnPropertyChanged(nameof(SelectedZoneAChannel));
+        OnPropertyChanged(nameof(SelectedZoneBChannel));
         AddZoneMembersCommand.NotifyCanExecuteChanged();
         RemoveZoneMembersCommand.NotifyCanExecuteChanged();
         MoveZoneMemberUpCommand.NotifyCanExecuteChanged();
@@ -3695,6 +3758,20 @@ public partial class MainViewModel : ViewModelBase
         {
             OnPropertyChanged(nameof(BusyLockTxPermitValues));
             OnPropertyChanged(nameof(BusyLockTxPermitHeaderText));
+        }
+
+        // Keeps SelectedZoneAChannel/BChannel in sync when AChannel/BChannel
+        // change through some path OTHER than their own proxy setter (e.g.
+        // ReassignZoneChannels reassigning A/B as a side effect of
+        // membership changing) - see those proxies' own doc comment.
+        if (e.PropertyName == nameof(ZoneEntry.AChannel))
+        {
+            OnPropertyChanged(nameof(SelectedZoneAChannel));
+        }
+
+        if (e.PropertyName == nameof(ZoneEntry.BChannel))
+        {
+            OnPropertyChanged(nameof(SelectedZoneBChannel));
         }
     }
 

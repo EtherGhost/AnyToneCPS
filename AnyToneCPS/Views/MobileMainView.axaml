@@ -766,7 +766,7 @@
                                 </HeaderedContentControl>
                                 <HeaderedContentControl Header="A Channel">
                                     <ComboBox ItemsSource="{Binding SelectedZoneMemberOptions}"
-                                              SelectedItem="{Binding SelectedZone.AChannel}"
+                                              SelectedItem="{Binding SelectedZoneAChannel}"
                                               FontWeight="{Binding SelectedZone.AChannelFontWeight}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:ChannelEntry">
@@ -777,7 +777,7 @@
                                 </HeaderedContentControl>
                                 <HeaderedContentControl Header="B Channel">
                                     <ComboBox ItemsSource="{Binding SelectedZoneMemberOptions}"
-                                              SelectedItem="{Binding SelectedZone.BChannel}"
+                                              SelectedItem="{Binding SelectedZoneBChannel}"
                                               FontWeight="{Binding SelectedZone.BChannelFontWeight}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:ChannelEntry">
