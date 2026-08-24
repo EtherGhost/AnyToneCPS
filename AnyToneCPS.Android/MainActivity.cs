@@ -1,8 +1,10 @@
-﻿using Android.App;
+﻿using System.IO;
+using Android.App;
 using Android.Content.PM;
 using Android.OS;
 using Android.Views;
 using AnyToneCPS.Android.Services;
+using AnyToneCPS.Services;
 using AnyToneCPS.Services.Radio;
 using Avalonia;
 using Avalonia.Android;
@@ -20,6 +22,10 @@ public class MainActivity : AvaloniaMainActivity
 {
     protected override void OnCreate(Bundle? savedInstanceState)
     {
+        // Diagnostic-only radio protocol trace, same as the Desktop head's
+        // own Program.cs - see RadioProtocolLog's own doc comment.
+        RadioProtocolLog.Start(Path.Combine(AppSettingsStore.SettingsDirectory, "radio-protocol.log"));
+
         // Must be set BEFORE base.OnCreate() - that call builds and attaches
         // the Avalonia view tree synchronously, and MainView.axaml.cs reads
         // RadioConnectionProvider.Factory the moment it attaches. Setting it
