@@ -1328,54 +1328,79 @@ public partial class MainViewModel
             var (result, patchedSnapshot) = await Task.Run(() =>
             {
                 var connection = _radioConnectionFactory();
-                if (baseSnapshot is null)
+
+                // The baseline capture and every AddMissingXxx top-up below
+                // each normally open and close their own session - and every
+                // real close makes the radio physically reboot (see
+                // RadioWriteVerification's own doc comment). Batched through
+                // one wrapper so a write that needs several different entity
+                // types topped up (a few edited zones, a new scan list, a
+                // new radio ID, say) reboots the radio once here, not once
+                // per entity type - found live 2026-08-24 rebooting 3-4+
+                // times back to back before a write even started. See
+                // BatchedRadioConnection's own doc comment. FinishAndClose
+                // (which does the real, single close/reboot) runs even on an
+                // exception, so a failure partway through this sequence
+                // still lets the radio recover instead of leaving the port
+                // open.
+                var readConnection = new BatchedRadioConnection(connection);
+                RadioCodeplugRawSnapshot snapshot;
+                try
                 {
-                    // No Read From Radio has happened yet this session - capture
-                    // a baseline directly, WITHOUT calling ApplyRadioReadResult,
-                    // so any codeplug already prepared in the live ViewModel
-                    // (channels/zones/etc. added or edited before ever reading)
-                    // is left completely untouched. Decided 2026-08-16: requiring
-                    // a full Read (which does call ApplyRadioReadResult and
-                    // overwrites the live view with the radio's own data) before
-                    // every write destroyed exactly that kind of prepared-but-
-                    // never-read work for no reason - RMW only needs a raw byte
-                    // baseline to patch against, not a loaded view.
-                    progress.Report("No baseline read yet - capturing one from the radio before writing...");
-                    baseSnapshot = RadioCodeplugRawSnapshotReader.Capture(connection, portName, progress: progress);
+                    if (baseSnapshot is null)
+                    {
+                        // No Read From Radio has happened yet this session - capture
+                        // a baseline directly, WITHOUT calling ApplyRadioReadResult,
+                        // so any codeplug already prepared in the live ViewModel
+                        // (channels/zones/etc. added or edited before ever reading)
+                        // is left completely untouched. Decided 2026-08-16: requiring
+                        // a full Read (which does call ApplyRadioReadResult and
+                        // overwrites the live view with the radio's own data) before
+                        // every write destroyed exactly that kind of prepared-but-
+                        // never-read work for no reason - RMW only needs a raw byte
+                        // baseline to patch against, not a loaded view.
+                        progress.Report("No baseline read yet - capturing one from the radio before writing...");
+                        baseSnapshot = RadioCodeplugRawSnapshotReader.Capture(readConnection, portName, progress: progress);
+                    }
+
+                    // Extend the cached snapshot with any brand-new channels/
+                    // zones it doesn't cover yet - a small, targeted read, NOT a
+                    // full re-capture (see AddMissingChannels/AddMissingZones's
+                    // doc comments). Returns the same snapshot unchanged if
+                    // everything dirty is already covered, which is the common
+                    // case.
+                    progress.Report("Checking for any new channels not yet cached...");
+                    snapshot = RadioCodeplugRawSnapshotReader.AddMissingChannels(baseSnapshot, readConnection, portName, patches.Select(entry => entry.RadioIndex).Concat(deleteIndices));
+                    progress.Report("Checking for any new zones not yet cached...");
+                    snapshot = RadioCodeplugRawSnapshotReader.AddMissingZones(snapshot, readConnection, portName, zonePatches.Select(entry => entry.RadioIndex).Concat(deleteZoneIndices));
+                    progress.Report("Checking for any new scan lists not yet cached...");
+                    snapshot = RadioCodeplugRawSnapshotReader.AddMissingScanLists(snapshot, readConnection, portName, scanListValues.Select(entry => entry.RadioIndex).Concat(deleteScanListIndices));
+                    progress.Report("Checking for any new AM Air channels not yet cached...");
+                    snapshot = RadioCodeplugRawSnapshotReader.AddMissingAmAir(snapshot, readConnection, portName, amAirValues.Select(entry => entry.RadioIndex).Concat(deleteAmAirIndices));
+                    progress.Report("Checking for any new AM Zones not yet cached...");
+                    snapshot = RadioCodeplugRawSnapshotReader.AddMissingAmZones(snapshot, readConnection, portName, amZoneValues.Select(entry => entry.RadioIndex).Concat(deleteAmZoneIndices));
+                    progress.Report("Checking for any new prefabricated SMS not yet cached...");
+                    snapshot = RadioCodeplugRawSnapshotReader.AddMissingPrefabricatedSms(snapshot, readConnection, portName, allActiveSlotIds.Count, dirtyPrefabricatedSms.Select(entry => entry.Number - 1).Concat(deletePrefabricatedSmsIndices));
+                    progress.Report("Checking for any new FM channels not yet cached...");
+                    snapshot = RadioCodeplugRawSnapshotReader.AddMissingFmChannels(snapshot, readConnection, portName, fmChannelValues.Select(entry => entry.RadioIndex).Concat(deleteFmChannelIndices));
+                    progress.Report("Checking for any new Analog Addresses not yet cached...");
+                    snapshot = RadioCodeplugRawSnapshotReader.AddMissingAnalogAddresses(snapshot, readConnection, portName, analogAddressValues.Select(entry => entry.RadioIndex).Concat(deleteAnalogAddressIndices));
+                    progress.Report("Checking for any new Radio IDs not yet cached...");
+                    snapshot = RadioCodeplugRawSnapshotReader.AddMissingRadioIds(snapshot, readConnection, portName, radioIdValues.Select(entry => entry.RadioIndex).Concat(deleteRadioIdIndices));
+                    progress.Report("Checking for any new Talkgroups not yet cached...");
+                    snapshot = RadioCodeplugRawSnapshotReader.AddMissingTalkgroups(snapshot, readConnection, portName, talkgroupValues.Select(entry => entry.RadioIndex).Concat(deleteTalkgroupIndices));
+                    progress.Report("Checking for any new Receive Group Lists not yet cached...");
+                    snapshot = RadioCodeplugRawSnapshotReader.AddMissingReceiveGroupLists(snapshot, readConnection, portName, receiveGroupListValues.Select(entry => entry.RadioIndex).Concat(deleteReceiveGroupListIndices));
+                    progress.Report("Checking for any new Roaming Channels not yet cached...");
+                    snapshot = RadioCodeplugRawSnapshotReader.AddMissingRoamingChannels(snapshot, readConnection, portName, roamingChannelValues.Select(entry => entry.RadioIndex).Concat(deleteRoamingChannelIndices));
+                    progress.Report("Checking for any new Roaming Zones not yet cached...");
+                    snapshot = RadioCodeplugRawSnapshotReader.AddMissingRoamingZones(snapshot, readConnection, portName, roamingZoneValues.Select(entry => entry.RadioIndex).Concat(deleteRoamingZoneIndices));
+                }
+                finally
+                {
+                    readConnection.FinishAndClose();
                 }
 
-                // Extend the cached snapshot with any brand-new channels/
-                // zones it doesn't cover yet - a small, targeted read, NOT a
-                // full re-capture (see AddMissingChannels/AddMissingZones's
-                // doc comments). Returns the same snapshot unchanged if
-                // everything dirty is already covered, which is the common
-                // case.
-                progress.Report("Checking for any new channels not yet cached...");
-                var snapshot = RadioCodeplugRawSnapshotReader.AddMissingChannels(baseSnapshot, connection, portName, patches.Select(entry => entry.RadioIndex).Concat(deleteIndices));
-                progress.Report("Checking for any new zones not yet cached...");
-                snapshot = RadioCodeplugRawSnapshotReader.AddMissingZones(snapshot, connection, portName, zonePatches.Select(entry => entry.RadioIndex).Concat(deleteZoneIndices));
-                progress.Report("Checking for any new scan lists not yet cached...");
-                snapshot = RadioCodeplugRawSnapshotReader.AddMissingScanLists(snapshot, connection, portName, scanListValues.Select(entry => entry.RadioIndex).Concat(deleteScanListIndices));
-                progress.Report("Checking for any new AM Air channels not yet cached...");
-                snapshot = RadioCodeplugRawSnapshotReader.AddMissingAmAir(snapshot, connection, portName, amAirValues.Select(entry => entry.RadioIndex).Concat(deleteAmAirIndices));
-                progress.Report("Checking for any new AM Zones not yet cached...");
-                snapshot = RadioCodeplugRawSnapshotReader.AddMissingAmZones(snapshot, connection, portName, amZoneValues.Select(entry => entry.RadioIndex).Concat(deleteAmZoneIndices));
-                progress.Report("Checking for any new prefabricated SMS not yet cached...");
-                snapshot = RadioCodeplugRawSnapshotReader.AddMissingPrefabricatedSms(snapshot, connection, portName, allActiveSlotIds.Count, dirtyPrefabricatedSms.Select(entry => entry.Number - 1).Concat(deletePrefabricatedSmsIndices));
-                progress.Report("Checking for any new FM channels not yet cached...");
-                snapshot = RadioCodeplugRawSnapshotReader.AddMissingFmChannels(snapshot, connection, portName, fmChannelValues.Select(entry => entry.RadioIndex).Concat(deleteFmChannelIndices));
-                progress.Report("Checking for any new Analog Addresses not yet cached...");
-                snapshot = RadioCodeplugRawSnapshotReader.AddMissingAnalogAddresses(snapshot, connection, portName, analogAddressValues.Select(entry => entry.RadioIndex).Concat(deleteAnalogAddressIndices));
-                progress.Report("Checking for any new Radio IDs not yet cached...");
-                snapshot = RadioCodeplugRawSnapshotReader.AddMissingRadioIds(snapshot, connection, portName, radioIdValues.Select(entry => entry.RadioIndex).Concat(deleteRadioIdIndices));
-                progress.Report("Checking for any new Talkgroups not yet cached...");
-                snapshot = RadioCodeplugRawSnapshotReader.AddMissingTalkgroups(snapshot, connection, portName, talkgroupValues.Select(entry => entry.RadioIndex).Concat(deleteTalkgroupIndices));
-                progress.Report("Checking for any new Receive Group Lists not yet cached...");
-                snapshot = RadioCodeplugRawSnapshotReader.AddMissingReceiveGroupLists(snapshot, connection, portName, receiveGroupListValues.Select(entry => entry.RadioIndex).Concat(deleteReceiveGroupListIndices));
-                progress.Report("Checking for any new Roaming Channels not yet cached...");
-                snapshot = RadioCodeplugRawSnapshotReader.AddMissingRoamingChannels(snapshot, connection, portName, roamingChannelValues.Select(entry => entry.RadioIndex).Concat(deleteRoamingChannelIndices));
-                progress.Report("Checking for any new Roaming Zones not yet cached...");
-                snapshot = RadioCodeplugRawSnapshotReader.AddMissingRoamingZones(snapshot, connection, portName, roamingZoneValues.Select(entry => entry.RadioIndex).Concat(deleteRoamingZoneIndices));
                 var patched = patches.Aggregate(snapshot, (snap, entry) => RadioCodeplugPatcher.ApplyChannelPatch(snap, entry.RadioIndex, entry.Patch));
                 patched = deleteIndices.Aggregate(patched, RadioCodeplugPatcher.ApplyChannelDelete);
                 patched = zonePatches.Aggregate(patched, (snap, entry) => RadioCodeplugPatcher.ApplyZonePatch(snap, entry.RadioIndex, entry.Patch));
