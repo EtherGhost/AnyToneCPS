@@ -194,11 +194,8 @@ public static class RadioCodeplugRawSnapshotReader
             CaptureRegion(D890UvMemoryMap.ZoneAChannel, ZoneSlotCount * 2);
             CaptureRegion(D890UvMemoryMap.ZoneBChannel, ZoneSlotCount * 2);
             CaptureRegion(D890UvMemoryMap.ZoneHide, ZoneBitmapBytes);
-            foreach (var idx in zoneIndices)
-            {
-                CaptureRegion(D890UvMemoryMap.ZonesName + idx * D890UvMemoryMap.ZoneDataOffset, D890UvMemoryMap.ZoneDataLength);
-                CaptureRegion(D890UvMemoryMap.ZoneChannels + idx * ZoneChannelsRecordBytes, ZoneChannelsRecordBytes);
-            }
+            CaptureIndexedRecordsCoalesced(CaptureRegion, zoneIndices, D890UvMemoryMap.ZonesName, D890UvMemoryMap.ZoneDataOffset, D890UvMemoryMap.ZoneDataLength);
+            CaptureIndexedRecordsCoalesced(CaptureRegion, zoneIndices, D890UvMemoryMap.ZoneChannels, ZoneChannelsRecordBytes, ZoneChannelsRecordBytes);
 
             // --- Simple bitmap-driven entities (RadioIds, Talkgroups, ScanLists, RoamingChannels/Zones, ReceiveGroupLists) ---
             CaptureSimpleEntities(CaptureRegion, D890UvMemoryMap.RadioIdSet, D890UvMemoryMap.RadioIdData, D890UvMemoryMap.RadioIdDataOffset, D890UvMemoryMap.RadioIdDataLength, invertedBitmap: false, bitmapBytes: 0x20);
@@ -359,8 +356,41 @@ public static class RadioCodeplugRawSnapshotReader
             // opt-in-only status on read, and the reference project's own
             // separate DIGITAL_CONTACTS write toggle.
 
-            return new RadioCodeplugRawSnapshot { Regions = regions.Select(kv => new CodeplugRawRegion(kv.Key, kv.Value)).OrderBy(r => r.Address).ToList() };
+            return new RadioCodeplugRawSnapshot { Regions = DropSubsumedRegions(regions.Select(kv => new CodeplugRawRegion(kv.Key, kv.Value))) };
         }
+    }
+
+    /// <summary>Removes any captured region whose whole byte range already
+    /// falls inside a bigger region captured under a different address key -
+    /// CaptureRegion's own dedup only catches an exact-same-aligned-start
+    /// repeat (see its doc comment), not this case. Found live 2026-08-24:
+    /// DtmfTransmittingTimeIndexData's own 16-byte-aligned block (0x3500020)
+    /// lands entirely inside the much bigger shared OptionalSettings read at
+    /// the same 0x3500000 base - both survived into the region list, and the
+    /// smaller one (sorted after the bigger one, so written moments later)
+    /// silently reverted one byte the bigger write had just correctly set.
+    /// Sorting by address first guarantees any region that fully contains
+    /// another always appears before it, since containment requires starting
+    /// at or before what it contains.</summary>
+    private static IReadOnlyList<CodeplugRawRegion> DropSubsumedRegions(IEnumerable<CodeplugRawRegion> regions)
+    {
+        var sorted = regions.OrderBy(r => r.Address).ToList();
+        var kept = new List<CodeplugRawRegion>(sorted.Count);
+        foreach (var region in sorted)
+        {
+            if (kept.Count > 0)
+            {
+                var previous = kept[^1];
+                if (region.Address >= previous.Address && region.Address + region.Length <= previous.Address + previous.Length)
+                {
+                    continue;
+                }
+            }
+
+            kept.Add(region);
+        }
+
+        return kept;
     }
 
     /// <summary>
@@ -457,14 +487,19 @@ public static class RadioCodeplugRawSnapshotReader
                     $"Unrecognized radio (model='{identity.Model}', version='{identity.Version}'). Expected D890UV V100. Refusing to read memory.");
             }
 
-            foreach (var idx in missing)
-            {
-                var nameAddress = D890UvMemoryMap.ZonesName + idx * D890UvMemoryMap.ZoneDataOffset;
-                newRegions.Add(new CodeplugRawRegion(nameAddress, connection.ReadMemoryStrict(nameAddress, D890UvMemoryMap.ZoneDataLength)));
-
-                var channelsAddress = D890UvMemoryMap.ZoneChannels + idx * ZoneChannelsRecordBytes;
-                newRegions.Add(new CodeplugRawRegion(channelsAddress, connection.ReadMemoryStrict(channelsAddress, ZoneChannelsRecordBytes)));
-            }
+            // Merged with any already-captured neighboring zone's region,
+            // not just coalesced among themselves - same "narrow writes to
+            // the same table silently lose everything but the last one" bug
+            // this fix applies to Capture()/CaptureSimpleEntities above (see
+            // MergeMissingRecordsWithNeighbors's own doc comment). Confirmed
+            // live 2026-08-24: a zone the radio's own presence bitmap didn't
+            // mark as populated (so it came through here) sat directly next
+            // to the main Capture's combined region for the other 8 zones -
+            // coalescing only among the missing indices themselves left
+            // those two regions separate and reproduced the exact bug this
+            // whole mechanism exists to prevent.
+            MergeMissingRecordsWithNeighbors(newRegions, connection, missing, D890UvMemoryMap.ZonesName, D890UvMemoryMap.ZoneDataOffset, D890UvMemoryMap.ZoneDataLength);
+            MergeMissingRecordsWithNeighbors(newRegions, connection, missing, D890UvMemoryMap.ZoneChannels, ZoneChannelsRecordBytes, ZoneChannelsRecordBytes);
         }
         finally
         {
@@ -506,11 +541,8 @@ public static class RadioCodeplugRawSnapshotReader
                     $"Unrecognized radio (model='{identity.Model}', version='{identity.Version}'). Expected D890UV V100. Refusing to read memory.");
             }
 
-            foreach (var idx in missing)
-            {
-                var address = RadioCodeplugPatcher.ScanListAddress(idx);
-                newRegions.Add(new CodeplugRawRegion(address, connection.ReadMemoryStrict(address, ScanListCodec.RecordLength)));
-            }
+            // See AddMissingZones's own comment on MergeMissingRecordsWithNeighbors.
+            MergeMissingRecordsWithNeighbors(newRegions, connection, missing, D890UvMemoryMap.ScanListData, D890UvMemoryMap.ScanListDataOffset, ScanListCodec.RecordLength);
         }
         finally
         {
@@ -995,9 +1027,179 @@ public static class RadioCodeplugRawSnapshotReader
     {
         var bitmap = captureRegion(bitmapAddress, bitmapBytes);
         var indices = invertedBitmap ? EnumerateUnsetBits(bitmap) : EnumerateSetBits(bitmap);
-        foreach (var idx in indices)
+        CaptureIndexedRecordsCoalesced(captureRegion, indices, dataBase, stride, recordLength);
+    }
+
+    /// <summary>Largest gap (in bytes) between two consecutive records that's
+    /// still worth bridging into one combined capture/write - see
+    /// <see cref="CaptureIndexedRecordsCoalesced"/>.</summary>
+    private const int MaxCoalesceGapBytes = 0x1000;
+
+    /// <summary>Defense-in-depth safety net against the exact "narrow writes
+    /// clobber each other" bug this whole file exists to prevent (see this
+    /// class's own doc comment, <see cref="CaptureIndexedRecordsCoalesced"/>'s,
+    /// and <see cref="MergeMissingRecordsWithNeighbors"/>'s) - checks that
+    /// every per-index table this file coalesces ended up as fully-merged
+    /// regions in <paramref name="snapshot"/>, not left fragmented. Confirmed
+    /// live 2026-08-24 (twice, independently) that a fragmented table
+    /// silently loses every write but the last one to it. This check exists
+    /// so that if some future code path ever adds a region to one of these
+    /// tables without going through the coalescing/merging helpers, the
+    /// write aborts with a clear diagnostic BEFORE opening a connection,
+    /// rather than silently corrupting the radio. Deliberately only checks
+    /// these specific known per-index tables, not "any two regions in the
+    /// whole snapshot that are close together" - several OTHER entities
+    /// (e.g. DTMF's Settings/BOT/EOT/Remotely Kill/Remotely Stun cluster)
+    /// are captured as separate, adjacent-by-design regions on purpose and
+    /// would false-positive a blanket check. Each table's search window is
+    /// its OWN real max-slot-count times its stride (derived from the same
+    /// bitmap size passed to CaptureSimpleEntities for it above), not a
+    /// generic byte distance - a generic window originally used here
+    /// wrongly caught Roaming Channels'/Zones' own presence bitmaps
+    /// (RoamingChannelSet/RoamingZoneSet, which sit right after the real
+    /// 256-slot table) as if they were fragments of the table itself.</summary>
+    public static void AssertNoFragmentedTables(RadioCodeplugRawSnapshot snapshot)
+    {
+        const int standard256SlotBitmapSlots = 0x20 * 8;
+        var tables = new (string Name, int BaseAddress, int WindowBytes)[]
         {
-            captureRegion(dataBase + idx * stride, recordLength);
+            ("Zone names", D890UvMemoryMap.ZonesName, ZoneSlotCount * D890UvMemoryMap.ZoneDataOffset),
+            ("Zone channel lists", D890UvMemoryMap.ZoneChannels, ZoneSlotCount * ZoneChannelsRecordBytes),
+            ("Scan lists", D890UvMemoryMap.ScanListData, standard256SlotBitmapSlots * D890UvMemoryMap.ScanListDataOffset),
+            ("Radio IDs", D890UvMemoryMap.RadioIdData, standard256SlotBitmapSlots * D890UvMemoryMap.RadioIdDataOffset),
+            ("Talkgroups", D890UvMemoryMap.TalkgroupData, 0x4F0 * 8 * D890UvMemoryMap.TalkgroupDataOffset),
+            ("Roaming channels", D890UvMemoryMap.RoamingChannelData, standard256SlotBitmapSlots * D890UvMemoryMap.RoamingChannelDataOffset),
+            ("Roaming zones", D890UvMemoryMap.RoamingZoneData, standard256SlotBitmapSlots * D890UvMemoryMap.RoamingZoneDataOffset),
+            ("Receive group lists", D890UvMemoryMap.ReceiveGroupData, standard256SlotBitmapSlots * D890UvMemoryMap.ReceiveGroupDataOffset),
+        };
+
+        foreach (var (name, baseAddress, windowBytes) in tables)
+        {
+            var regionsForTable = snapshot.Regions
+                .Where(r => r.Address >= baseAddress && r.Address < baseAddress + windowBytes)
+                .OrderBy(r => r.Address)
+                .ToList();
+
+            for (var i = 0; i + 1 < regionsForTable.Count; i++)
+            {
+                var current = regionsForTable[i];
+                var next = regionsForTable[i + 1];
+                var gap = next.Address - (current.Address + current.Length);
+                if (gap <= MaxCoalesceGapBytes)
+                {
+                    throw new InvalidOperationException(
+                        $"{name}: write plan has two regions close enough to plausibly share a physical flash " +
+                        $"page (0x{current.Address:X8}/{current.Length}B and 0x{next.Address:X8}/{next.Length}B, " +
+                        $"{gap}B apart) that should have been merged into one - refusing to write, since writing " +
+                        "them separately would very likely silently lose one of them. Some code path added a " +
+                        "region to this table without going through the coalescing/merging helpers.");
+                }
+            }
+        }
+    }
+
+    /// <summary>Captures <paramref name="indices"/>' records as few combined
+    /// regions as possible, instead of one <paramref name="captureRegion"/>
+    /// call per index. Confirmed live 2026-08-24: writing many separate
+    /// small regions to the same underlying table within one session
+    /// silently loses every one of them except the very last - each
+    /// subsequent write to a nearby address in the same table reverted the
+    /// previous one back to blank (0xFF) flash, even though every write was
+    /// individually ACKed. A live differential write of a 9-zone project
+    /// showed exactly this: zones 1-8's name/channel-list records all read
+    /// back blank after the write, while zone 9 (written last) was the only
+    /// one that survived. This is the same "narrow writes erase neighboring
+    /// flash sharing a physical erase block" bug class this snapshot
+    /// mechanism already exists to prevent (see this class's own doc
+    /// comment) - it just wasn't applied at this granularity for
+    /// per-index tables like Zones/Scan Lists/Radio IDs/Talkgroups/Roaming
+    /// Channels & Zones/Receive Group Lists.
+    ///
+    /// Groups <paramref name="indices"/> into runs where the gap between
+    /// consecutive records stays within <see cref="MaxCoalesceGapBytes"/>,
+    /// and captures each run as ONE contiguous read spanning from its first
+    /// record's start to its last record's end - this naturally picks up
+    /// any inter-record padding and any not-yet-populated slots inside the
+    /// run too, no special-casing needed. Runs separated by a bigger gap
+    /// stay as separate captures, same as before this fix - bounds the read
+    /// size for a genuinely sparse index set (e.g. Radio ID 1 and Radio ID
+    /// 9000) instead of blindly reading everything in between.</summary>
+    private static void CaptureIndexedRecordsCoalesced(Func<int, int, byte[]> captureRegion, IEnumerable<int> indices, int baseAddress, int stride, int recordLength)
+    {
+        var sorted = indices.Distinct().OrderBy(i => i).ToList();
+        var i = 0;
+        while (i < sorted.Count)
+        {
+            var runStart = i;
+            while (i + 1 < sorted.Count)
+            {
+                var thisRecordEnd = baseAddress + sorted[i] * stride + recordLength;
+                var nextRecordStart = baseAddress + sorted[i + 1] * stride;
+                if (nextRecordStart - thisRecordEnd > MaxCoalesceGapBytes)
+                {
+                    break;
+                }
+
+                i++;
+            }
+
+            var runAddress = baseAddress + sorted[runStart] * stride;
+            var runEnd = baseAddress + sorted[i] * stride + recordLength;
+            captureRegion(runAddress, runEnd - runAddress);
+            i++;
+        }
+    }
+
+    /// <summary>Same coalescing as <see cref="CaptureIndexedRecordsCoalesced"/>,
+    /// for a caller (an AddMissingXxx function) that's topping up a snapshot
+    /// which may ALREADY hold a region for a neighboring record of the same
+    /// table - captured separately, on the main <see cref="Capture"/> pass.
+    /// Found live 2026-08-24: a zone the radio's own presence bitmap didn't
+    /// mark as populated came through here alone, landing right next to
+    /// (but as a separate region from) the main capture's combined region
+    /// for the other 8 zones - coalescing only among the missing indices
+    /// themselves isn't enough, since the pre-existing neighbor was never
+    /// part of that set. Repeatedly absorbs any already-captured region in
+    /// <paramref name="regions"/> that ends up within
+    /// <see cref="MaxCoalesceGapBytes"/> of the growing run (removing it
+    /// from <paramref name="regions"/>), then does ONE fresh combined read
+    /// spanning the union and adds that as the replacement.</summary>
+    private static void MergeMissingRecordsWithNeighbors(List<CodeplugRawRegion> regions, IRadioConnection connection, IReadOnlyCollection<int> missingIndices, int baseAddress, int stride, int recordLength)
+    {
+        var sorted = missingIndices.Distinct().OrderBy(i => i).ToList();
+        var i = 0;
+        while (i < sorted.Count)
+        {
+            var runStart = i;
+            while (i + 1 < sorted.Count)
+            {
+                var thisRecordEnd = baseAddress + sorted[i] * stride + recordLength;
+                var nextRecordStart = baseAddress + sorted[i + 1] * stride;
+                if (nextRecordStart - thisRecordEnd > MaxCoalesceGapBytes)
+                {
+                    break;
+                }
+
+                i++;
+            }
+
+            var runAddress = baseAddress + sorted[runStart] * stride;
+            var runEnd = baseAddress + sorted[i] * stride + recordLength;
+
+            CodeplugRawRegion? neighbor;
+            while ((neighbor = regions.FirstOrDefault(r =>
+                       (r.Address + r.Length <= runAddress && runAddress - (r.Address + r.Length) <= MaxCoalesceGapBytes)
+                       || (r.Address >= runEnd && r.Address - runEnd <= MaxCoalesceGapBytes))) is not null)
+            {
+                runAddress = Math.Min(runAddress, neighbor.Address);
+                runEnd = Math.Max(runEnd, neighbor.Address + neighbor.Length);
+                regions.Remove(neighbor);
+            }
+
+            var data = connection.ReadMemoryStrict(runAddress, runEnd - runAddress);
+            regions.Add(new CodeplugRawRegion(runAddress, data));
+
+            i++;
         }
     }
 

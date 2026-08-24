@@ -443,6 +443,10 @@ public static class Program
         Run("Write changes to radio is available with nothing dirty once a snapshot exists", WriteChangesToRadioIsAvailableWithNothingDirtyOnceASnapshotExists);
         Run("Refresh radio ports notifies write changes to radio CanExecuteChanged", RefreshRadioPortsNotifiesWriteChangesToRadioCanExecuteChanged);
         Run("Write changes to radio auto-captures a baseline without discarding unread prepared work", WriteChangesToRadioAutoCapturesABaselineWithoutDiscardingUnreadPreparedWork);
+        Run("Capturing multiple zones coalesces their name and channel regions into one write each", CapturingMultipleZonesCoalescesTheirNameAndChannelRegionsIntoOneWriteEach);
+        Run("Capture drops a region fully subsumed by a bigger overlapping region", CaptureDropsARegionFullySubsumedByABiggerOverlappingRegion);
+        Run("Add missing zone merges with the neighboring zone region the main capture already produced", AddMissingZoneMergesWithTheNeighboringZoneRegionTheMainCaptureAlreadyProduced);
+        Run("Assert no fragmented tables passes for a real capture and rejects an artificially split zone table", AssertNoFragmentedTablesPassesForARealCaptureAndRejectsAnArtificiallySplitZoneTable);
         Run("Dev force model to image marks every entity dirty without changing values", DevForceModelToImageMarksEveryEntityDirtyWithoutChangingValues);
         Run("Dev force model to image then write succeeds against a virtual radio", DevForceModelToImageThenWriteSucceedsAgainstAVirtualRadio);
 
@@ -6835,6 +6839,152 @@ public static class Program
     /// WriteChangesToRadioAsync captures its own RMW baseline straight from
     /// the radio (<see cref="RadioCodeplugRawSnapshotReader.Capture"/>)
     /// without ever touching the live ViewModel.</summary>
+    /// <summary>Regression test for a real bug found live 2026-08-24: a real
+    /// 9-zone write showed zones 1-8's name/channel-list records reading
+    /// back as blank (0xFF) flash after the write, while only zone 9
+    /// (written last) survived - each per-zone WriteMemory call was
+    /// silently reverting whatever a sibling zone's write in the same table
+    /// had just set moments earlier. Root cause: the capture side built one
+    /// separate small region per zone instead of one combined region per
+    /// table. Asserts the fixed capture produces exactly one region for
+    /// ZonesName and one for ZoneChannels, covering all zones, rather than
+    /// one per zone.</summary>
+    private static void CapturingMultipleZonesCoalescesTheirNameAndChannelRegionsIntoOneWriteEach()
+    {
+        var connection = new FakeRadioConnection();
+
+        var zoneSetBitmap = new byte[0x20];
+        zoneSetBitmap[0] = 0xFF; // zones 0-7
+        zoneSetBitmap[1] = 0x01; // zone 8 - 9 zones total
+        connection.WriteMemory(D890UvMemoryMap.ZoneSet, zoneSetBitmap);
+
+        const int zoneChannelsStride = 0x200;
+        for (var idx = 0; idx < 9; idx++)
+        {
+            var name = new byte[D890UvMemoryMap.ZoneDataLength];
+            name[0] = (byte)(0x41 + idx); // distinguishable per-zone byte
+            connection.WriteMemory(D890UvMemoryMap.ZonesName + idx * D890UvMemoryMap.ZoneDataOffset, name);
+
+            var channels = new byte[zoneChannelsStride];
+            channels[0] = (byte)(0x61 + idx);
+            connection.WriteMemory(D890UvMemoryMap.ZoneChannels + idx * zoneChannelsStride, channels);
+        }
+
+        var snapshot = RadioCodeplugRawSnapshotReader.Capture(connection, "FAKE");
+
+        var nameRegions = snapshot.Regions.Where(r => r.Address >= D890UvMemoryMap.ZonesName && r.Address < D890UvMemoryMap.ZonesName + 9 * D890UvMemoryMap.ZoneDataOffset).ToList();
+        var channelRegions = snapshot.Regions.Where(r => r.Address >= D890UvMemoryMap.ZoneChannels && r.Address < D890UvMemoryMap.ZoneChannels + 9 * zoneChannelsStride).ToList();
+
+        AssertEqual(1, nameRegions.Count);
+        AssertEqual(1, channelRegions.Count);
+        // Only needs to span up to the LAST zone's record end, not a full
+        // extra stride past it - 8 full strides plus the 9th zone's own
+        // record length, not 9 full strides.
+        AssertTrue(nameRegions[0].Length >= 8 * D890UvMemoryMap.ZoneDataOffset + D890UvMemoryMap.ZoneDataLength, "the single ZonesName region should cover all 9 zones");
+        AssertTrue(channelRegions[0].Length >= 8 * zoneChannelsStride + zoneChannelsStride, "the single ZoneChannels region should cover all 9 zones");
+
+        // The combined region must still carry every zone's real bytes, not
+        // just be big enough.
+        for (var idx = 0; idx < 9; idx++)
+        {
+            var nameRegion = snapshot.FindRegionContaining(D890UvMemoryMap.ZonesName + idx * D890UvMemoryMap.ZoneDataOffset)!;
+            var offset = D890UvMemoryMap.ZonesName + idx * D890UvMemoryMap.ZoneDataOffset - nameRegion.Address;
+            AssertEqual((byte)(0x41 + idx), nameRegion.Data[offset]);
+
+            var channelRegion = snapshot.FindRegionContaining(D890UvMemoryMap.ZoneChannels + idx * zoneChannelsStride)!;
+            var channelOffset = D890UvMemoryMap.ZoneChannels + idx * zoneChannelsStride - channelRegion.Address;
+            AssertEqual((byte)(0x61 + idx), channelRegion.Data[channelOffset]);
+        }
+    }
+
+    /// <summary>Regression test for a real bug found live 2026-08-24:
+    /// DtmfTransmittingTimeIndexData's own 16-byte-aligned capture (a single
+    /// byte at an offset inside the shared 0x3500000 OptionalSettings block)
+    /// survived as its own separate region alongside the much bigger
+    /// OptionalSettings region that already fully covered it - the smaller
+    /// one, written moments after the bigger one, silently reverted a byte
+    /// the bigger write had just correctly set. Asserts a small region fully
+    /// inside a bigger one gets dropped, leaving only the bigger region.</summary>
+    private static void CaptureDropsARegionFullySubsumedByABiggerOverlappingRegion()
+    {
+        var connection = new FakeRadioConnection();
+        var snapshot = RadioCodeplugRawSnapshotReader.Capture(connection, "FAKE");
+
+        var regionsCoveringDtmfTime = snapshot.Regions.Where(r =>
+            D890UvMemoryMap.DtmfTransmittingTimeIndexData >= r.Address
+            && D890UvMemoryMap.DtmfTransmittingTimeIndexData < r.Address + r.Length).ToList();
+
+        AssertEqual(1, regionsCoveringDtmfTime.Count);
+        AssertTrue(regionsCoveringDtmfTime[0].Length > 16, "the surviving region should be the big OptionalSettings read, not the 16-byte aligned DTMF-only block");
+    }
+
+    /// <summary>Regression test for a real bug found live 2026-08-24, on the
+    /// SAME project as the sibling coalescing test above but this time
+    /// through AddMissingZones: zone index 0 wasn't marked populated in the
+    /// radio's own presence bitmap (so the main Capture never read it),
+    /// while zones 1-8 were - Capture's own coalescing correctly combined
+    /// those 8 into one region, but AddMissingZones's fresh read for zone 0
+    /// landed as its OWN separate region right next to it, reproducing the
+    /// exact "narrow writes clobber each other" bug this whole mechanism
+    /// exists to prevent. Asserts the two end up merged into one.</summary>
+    private static void AddMissingZoneMergesWithTheNeighboringZoneRegionTheMainCaptureAlreadyProduced()
+    {
+        var connection = new FakeRadioConnection();
+
+        var zoneSetBitmap = new byte[0x20];
+        zoneSetBitmap[0] = 0xFE; // zones 1-7 populated, zone 0 NOT populated
+        zoneSetBitmap[1] = 0x01; // zone 8 populated - 8 populated zones total
+        connection.WriteMemory(D890UvMemoryMap.ZoneSet, zoneSetBitmap);
+
+        const int zoneChannelsStride = 0x200;
+        for (var idx = 1; idx <= 8; idx++)
+        {
+            connection.WriteMemory(D890UvMemoryMap.ZonesName + idx * D890UvMemoryMap.ZoneDataOffset, new byte[D890UvMemoryMap.ZoneDataLength]);
+            connection.WriteMemory(D890UvMemoryMap.ZoneChannels + idx * zoneChannelsStride, new byte[zoneChannelsStride]);
+        }
+
+        var snapshot = RadioCodeplugRawSnapshotReader.Capture(connection, "FAKE");
+        AssertTrue(snapshot.FindRegionContaining(D890UvMemoryMap.ZonesName) is null, "zone 0's name should not be captured yet - the bitmap didn't mark it populated");
+
+        // Zone 0 is now being added/edited this write, so it needs topping up.
+        snapshot = RadioCodeplugRawSnapshotReader.AddMissingZones(snapshot, connection, "FAKE", [0]);
+
+        var nameRegions = snapshot.Regions.Where(r => r.Address >= D890UvMemoryMap.ZonesName && r.Address < D890UvMemoryMap.ZonesName + 9 * D890UvMemoryMap.ZoneDataOffset).ToList();
+        var channelRegions = snapshot.Regions.Where(r => r.Address >= D890UvMemoryMap.ZoneChannels && r.Address < D890UvMemoryMap.ZoneChannels + 9 * zoneChannelsStride).ToList();
+
+        AssertEqual(1, nameRegions.Count);
+        AssertEqual(1, channelRegions.Count);
+        AssertEqual(D890UvMemoryMap.ZonesName, nameRegions[0].Address);
+        AssertEqual(D890UvMemoryMap.ZoneChannels, channelRegions[0].Address);
+    }
+
+    /// <summary>Proves the pre-write safety net added 2026-08-24: a snapshot
+    /// from a real capture (already coalesced) must pass cleanly, and a
+    /// snapshot with an artificially-fragmented zone table (simulating some
+    /// future code path that adds a region without going through the
+    /// coalescing/merging helpers) must be rejected before any connection
+    /// opens.</summary>
+    private static void AssertNoFragmentedTablesPassesForARealCaptureAndRejectsAnArtificiallySplitZoneTable()
+    {
+        var connection = new FakeRadioConnection();
+        var zoneSetBitmap = new byte[0x20];
+        zoneSetBitmap[0] = 0xFF;
+        zoneSetBitmap[1] = 0x01;
+        connection.WriteMemory(D890UvMemoryMap.ZoneSet, zoneSetBitmap);
+        var snapshot = RadioCodeplugRawSnapshotReader.Capture(connection, "FAKE");
+
+        RadioCodeplugRawSnapshotReader.AssertNoFragmentedTables(snapshot);
+
+        var fragmentedRegions = snapshot.Regions
+            .Where(r => r.Address != D890UvMemoryMap.ZonesName)
+            .Append(new CodeplugRawRegion(D890UvMemoryMap.ZonesName, new byte[D890UvMemoryMap.ZoneDataLength]))
+            .Append(new CodeplugRawRegion(D890UvMemoryMap.ZonesName + D890UvMemoryMap.ZoneDataOffset, new byte[D890UvMemoryMap.ZoneDataLength]))
+            .ToList();
+        var fragmentedSnapshot = new RadioCodeplugRawSnapshot { Regions = fragmentedRegions };
+
+        AssertThrows<InvalidOperationException>(() => RadioCodeplugRawSnapshotReader.AssertNoFragmentedTables(fragmentedSnapshot));
+    }
+
     private static void WriteChangesToRadioAutoCapturesABaselineWithoutDiscardingUnreadPreparedWork()
     {
         var viewModel = new MainViewModel();

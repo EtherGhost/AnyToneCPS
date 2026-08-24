@@ -62,6 +62,14 @@ public static class RadioCodeplugWriter
             RadioProtocolLog.Write($"  planned region 0x{planned.Address:X8}, {planned.Data.Length}B");
         }
 
+        // Checked before opening any connection - a pure in-memory sanity
+        // check that the write plan doesn't have the exact fragmentation
+        // bug this whole snapshot mechanism exists to prevent (see
+        // AssertNoFragmentedTables's own doc comment). Failing fast here,
+        // never having touched the radio, is far better than writing
+        // something that silently loses data.
+        RadioCodeplugRawSnapshotReader.AssertNoFragmentedTables(snapshot);
+
         if (!RadioWriteVerification.TryOpenInitial(connection, portName, progress, out var openError))
         {
             RadioProtocolLog.Write($"=== RadioCodeplugWriter.Write ABORTED: initial open failed: {openError} ===");
