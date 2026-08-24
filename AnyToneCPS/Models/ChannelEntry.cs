@@ -1218,6 +1218,7 @@ public partial class ChannelEntry : ObservableValidator
     {
         OnPropertyChanged(nameof(TransmitFrequencyMHzText));
         OnPropertyChanged(nameof(FrequencyLabel));
+        NotifyInfoBadgeChanged();
         NotifyDirtyProperties();
         NotifyPendingRadioWriteProperties();
     }
@@ -1227,6 +1228,7 @@ public partial class ChannelEntry : ObservableValidator
         OnPropertyChanged(nameof(OffsetDirectionSelection));
         OnPropertyChanged(nameof(TransmitFrequencyMHzText));
         OnPropertyChanged(nameof(FrequencyLabel));
+        NotifyInfoBadgeChanged();
         NotifyDirtyProperties();
         NotifyPendingRadioWriteProperties();
 
