@@ -42,6 +42,28 @@ exists in the codebase but is currently disabled while the channel data
 model is being migrated to a stronger typed representation; it is not a
 supported workflow right now.
 
+## Disclaimer
+
+This is a hobby project, built and maintained in spare time - not an
+official or supported product.
+
+- **Built and tested against the AnyTone D890UV specifically.** Other
+  AnyTone models have their own codeplug layout and protocol quirks that
+  are not accounted for here - do not point this app at a different model.
+- **Use it at your own risk.** Writing to a radio can go wrong: during
+  development, a failed write left a test D890UV showing a programming
+  error and factory-reset. Back up your codeplug with the vendor CPS (or at
+  least do a Read From Radio and save the project file) before writing
+  anything you'd be upset to lose.
+- **No support is offered.** Issues and pull requests are welcome, but
+  there's no guaranteed response time and no obligation to fix, triage, or
+  merge anything.
+- **Not affiliated with, endorsed by, or supported by AnyTone** in any way.
+  All protocol and codeplug details here come from independent reverse
+  engineering against real hardware, not from AnyTone documentation.
+- Provided under the MIT license (see [`LICENSE`](LICENSE)): no warranty of
+  any kind, used entirely at your own risk.
+
 ## Platforms
 
 - **Desktop** - the primary development target. Tested on Linux (Fedora),
@@ -234,3 +256,7 @@ and export support solidify.
   not enough on this radio.
 - Keep general radio data separate from model- and export-specific
   details.
+
+## License
+
+MIT - see [`LICENSE`](LICENSE).
