@@ -71,15 +71,21 @@ public static class RadioWriteVerification
     {
         var stopwatch = Stopwatch.StartNew();
         var reportedWaiting = false;
+        var attempt = 0;
         while (true)
         {
+            attempt++;
             if (connection.TryOpen(portName, out error))
             {
+                RadioProtocolLog.Write($"PollUntilOpen: succeeded on attempt {attempt} after {stopwatch.ElapsedMilliseconds}ms");
                 return true;
             }
 
+            RadioProtocolLog.Write($"PollUntilOpen: attempt {attempt} failed at {stopwatch.ElapsedMilliseconds}ms: {error}");
+
             if (stopwatch.ElapsedMilliseconds >= MaxWaitMs)
             {
+                RadioProtocolLog.Write($"PollUntilOpen: giving up after {stopwatch.ElapsedMilliseconds}ms ({attempt} attempts)");
                 return false;
             }
 

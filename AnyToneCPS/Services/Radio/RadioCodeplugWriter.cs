@@ -56,8 +56,15 @@ public static class RadioCodeplugWriter
         RadioCodeplugRawSnapshot snapshot,
         IProgress<string>? progress = null)
     {
+        RadioProtocolLog.Write($"=== RadioCodeplugWriter.Write starting: {snapshot.Regions.Count} regions, port '{portName}' ===");
+        foreach (var planned in snapshot.Regions)
+        {
+            RadioProtocolLog.Write($"  planned region 0x{planned.Address:X8}, {planned.Data.Length}B");
+        }
+
         if (!RadioWriteVerification.TryOpenInitial(connection, portName, progress, out var openError))
         {
+            RadioProtocolLog.Write($"=== RadioCodeplugWriter.Write ABORTED: initial open failed: {openError} ===");
             return new CodeplugWriteResult { Success = false, Error = $"Could not open port '{portName}' (gave up after {RadioWriteVerification.MaxWaitMs}ms waiting for the radio to respond): {openError}" };
         }
 
@@ -67,6 +74,7 @@ public static class RadioCodeplugWriter
             var identity = connection.Identify();
             if (!identity.IsRecognizedD890UV)
             {
+                RadioProtocolLog.Write($"=== RadioCodeplugWriter.Write ABORTED: unrecognized radio model='{identity.Model}' version='{identity.Version}' ===");
                 return new CodeplugWriteResult
                 {
                     Success = false,
@@ -86,6 +94,7 @@ public static class RadioCodeplugWriter
                 }
             }
 
+            RadioProtocolLog.Write($"=== All {total} regions written, closing to trigger reboot+reconnect ===");
             writeCompleted = true;
 
             // Mandatory verification - but NOT on this same connection (see
@@ -95,6 +104,7 @@ public static class RadioCodeplugWriter
 
             if (RadioWriteVerification.ReopenAndIdentifyForVerify(connection, portName, progress, out var reopenError) is null)
             {
+                RadioProtocolLog.Write($"=== RadioCodeplugWriter.Write: verify reopen FAILED: {reopenError} ===");
                 return new CodeplugWriteResult
                 {
                     Success = false,
@@ -102,6 +112,7 @@ public static class RadioCodeplugWriter
                 };
             }
 
+            RadioProtocolLog.Write("=== Verify reopen succeeded, reading every region back ===");
             var mismatches = new List<(int, int)>();
             var verified = 0;
             foreach (var region in snapshot.Regions)
@@ -117,6 +128,12 @@ public static class RadioCodeplugWriter
 
                 if (regionMismatches.Count > 0)
                 {
+                    RadioProtocolLog.Write($"  region 0x{region.Address:X8} MISMATCH on first verify read at offset(s): {string.Join(",", regionMismatches)}");
+                    foreach (var offset in regionMismatches)
+                    {
+                        RadioProtocolLog.Write($"    offset {offset}: intended 0x{region.Data[offset]:X2}, read back 0x{readBack[offset]:X2}");
+                    }
+
                     // Don't trust a mismatch on the first read - re-check
                     // this specific region once more after a short settle
                     // before treating it as real (see MismatchRecheckDelayMs's
@@ -125,19 +142,23 @@ public static class RadioCodeplugWriter
                     Thread.Sleep(MismatchRecheckDelayMs);
                     var recheck = connection.ReadMemoryStrict(region.Address, region.Length);
                     regionMismatches = FindMismatches(region.Data, recheck);
+                    RadioProtocolLog.Write($"  region 0x{region.Address:X8} recheck: {(regionMismatches.Count == 0 ? "settled, no real mismatch" : $"STILL MISMATCHED at offset(s): {string.Join(",", regionMismatches)}")}");
                 }
 
                 mismatches.AddRange(regionMismatches.Select(offset => (region.Address, offset)));
             }
 
+            RadioProtocolLog.Write($"=== RadioCodeplugWriter.Write COMPLETE: success, {mismatches.Count} real mismatch byte(s) ===");
             return new CodeplugWriteResult { Success = true, Mismatches = mismatches };
         }
         catch (RadioWriteFailedException ex)
         {
+            RadioProtocolLog.Write($"=== RadioCodeplugWriter.Write FAILED (RadioWriteFailedException at 0x{ex.Address:X8}): {ex.Message} ===");
             return new CodeplugWriteResult { Success = false, Error = ex.Message };
         }
         catch (RadioReadVerificationFailedException ex)
         {
+            RadioProtocolLog.Write($"=== RadioCodeplugWriter.Write FAILED (RadioReadVerificationFailedException, writeCompleted={writeCompleted}): {ex.Message} ===");
             var error = writeCompleted
                 ? $"Write was sent, but the verification read was unreliable and could not confirm it ({ex.Message}). Do a plain Read From Radio to check the codeplug's actual state before writing again."
                 : $"Could not reliably read the codeplug's current state before writing - aborted without writing anything ({ex.Message}). Try again.";

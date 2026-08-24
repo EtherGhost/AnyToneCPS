@@ -41,6 +41,7 @@ public sealed class SerialRadioConnection : IRadioConnection
 
     public bool TryOpen(string portName, out string? error)
     {
+        RadioProtocolLog.Write($"TryOpen '{portName}'");
         SerialPort? port = null;
         try
         {
@@ -56,20 +57,24 @@ public sealed class SerialRadioConnection : IRadioConnection
             var programBytes = Encoding.ASCII.GetBytes("PROGRAM");
             port.Write(programBytes, 0, programBytes.Length);
             var response = ReadExactly(3);
+            RadioProtocolLog.WriteHex("  PROGRAM handshake response", response);
 
             if (response.Length != 3 || response[0] != 0x51 || response[1] != 0x58 || response[2] != 0x06)
             {
                 error = "Radio did not respond to the PROGRAM handshake as expected.";
+                RadioProtocolLog.Write($"  TryOpen FAILED: {error}");
                 ClosePortOnly();
                 return false;
             }
 
             error = null;
+            RadioProtocolLog.Write("  TryOpen succeeded");
             return true;
         }
         catch (Exception ex)
         {
             error = ex.Message;
+            RadioProtocolLog.Write($"  TryOpen threw: {ex}");
             ClosePortOnly();
             return false;
         }
@@ -84,8 +89,10 @@ public sealed class SerialRadioConnection : IRadioConnection
 
         _port.Write([0x02], 0, 1);
         var response = ReadExactly(16);
+        RadioProtocolLog.WriteHex("Identify response", response);
         if (response.Length < 16)
         {
+            RadioProtocolLog.Write($"  Identify: short response ({response.Length}/16 bytes) - reporting unrecognized");
             return new RadioIdentity("", "", false);
         }
 
@@ -98,6 +105,7 @@ public sealed class SerialRadioConnection : IRadioConnection
         var version = Encoding.ASCII.GetString(response, 9, 6).TrimEnd('\0', ' ');
 
         var isRecognized = modelGateField == "ID890UV" && versionGateField == "V100";
+        RadioProtocolLog.Write($"  Identify: model='{model}' version='{version}' modelGate='{modelGateField}' versionGate='{versionGateField}' recognized={isRecognized}");
         return new RadioIdentity(model, version, isRecognized);
     }
 
@@ -158,6 +166,7 @@ public sealed class SerialRadioConnection : IRadioConnection
             throw new ArgumentException($"Data length {data.Length} is not a multiple of 16 bytes.", nameof(data));
         }
 
+        RadioProtocolLog.Write($"WriteMemory region 0x{address:X8}, {data.Length}B");
         for (var offset = 0; offset < data.Length; offset += MemoryBlockLength)
         {
             WriteMemoryBlock(address + offset, data.AsSpan(offset, MemoryBlockLength));
@@ -171,18 +180,20 @@ public sealed class SerialRadioConnection : IRadioConnection
             return;
         }
 
+        RadioProtocolLog.Write("Close");
         try
         {
             if (_port.IsOpen)
             {
                 var endBytes = Encoding.ASCII.GetBytes("END");
                 _port.Write(endBytes, 0, endBytes.Length);
-                ReadExactly(1); // Drain the ack; content is not validated.
+                var ack = ReadExactly(1); // Drain the ack; content is not validated.
+                RadioProtocolLog.WriteHex("  END ack", ack);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Best-effort: we're tearing the connection down regardless.
+            RadioProtocolLog.Write($"  Close threw (ignored, tearing down anyway): {ex}");
         }
         finally
         {
@@ -255,6 +266,7 @@ public sealed class SerialRadioConnection : IRadioConnection
 
         if (malformed)
         {
+            RadioProtocolLog.WriteHex($"ReadBlock 0x{address:X8} MALFORMED response", response);
             return (data, false, $"Malformed read-memory response ({response.Length} bytes received)");
         }
 
@@ -267,6 +279,8 @@ public sealed class SerialRadioConnection : IRadioConnection
         var checksum = (byte)(sum & 0xFF);
         if (checksum != response[6 + length])
         {
+            RadioProtocolLog.Write($"ReadBlock 0x{address:X8} CHECKSUM MISMATCH: computed 0x{checksum:X2}, received 0x{response[6 + length]:X2}");
+            RadioProtocolLog.WriteHex($"  response", response);
             return (data, false, "Checksum mismatch reading memory");
         }
 
@@ -287,11 +301,13 @@ public sealed class SerialRadioConnection : IRadioConnection
     private void WriteMemoryBlock(int address, ReadOnlySpan<byte> data)
     {
         var request = RadioWriteProtocol.BuildBlockRequest(address, data);
+        RadioProtocolLog.WriteHex($"  WriteBlock 0x{address:X8} data", data);
         _port!.Write(request, 0, request.Length);
 
         var response = ReadExactly(1);
         if (response.Length != 1 || response[0] != 0x06)
         {
+            RadioProtocolLog.Write($"  WriteBlock 0x{address:X8} NOT ACKED (received {response.Length} byte(s): {Convert.ToHexString(response)})");
             throw new RadioWriteFailedException(
                 $"Write to 0x{address:X8} was not acknowledged (received {response.Length} byte(s): {Convert.ToHexString(response)}).",
                 address);
