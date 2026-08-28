@@ -55,6 +55,18 @@ public partial class MainViewModel
     [ObservableProperty] private string _radioWriteStatusText = "";
     public ObservableCollection<string> RadioWriteWarnings { get; } = [];
 
+    /// <summary>Copies the status text plus every warning line as one block
+    /// of text - each warning renders as its own SelectableTextBlock (so a
+    /// mismatch list with hundreds of lines stays readable), which limits
+    /// plain text selection to one line at a time. This is the only way to
+    /// get the whole message out in one action.</summary>
+    [RelayCommand]
+    private async Task CopyRadioWriteWarningsAsync()
+    {
+        var text = string.Join(Environment.NewLine, new[] { RadioWriteStatusText }.Concat(RadioWriteWarnings));
+        await _storagePicker.CopyToClipboardAsync(text);
+    }
+
     partial void OnIsWritingToRadioChanged(bool value)
     {
         OnPropertyChanged(nameof(IsBusyOverlayVisible));

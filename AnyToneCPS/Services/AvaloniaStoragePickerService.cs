@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using AnyToneCPS.Models;
 using AnyToneCPS.Views;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 
@@ -213,6 +214,16 @@ public sealed class AvaloniaStoragePickerService(TopLevel topLevel) : IStoragePi
 
         result = await dialog.ShowDialog<bool>(owner);
         return result;
+    }
+
+    public async Task CopyToClipboardAsync(string text)
+    {
+        if (topLevel.Clipboard is { } clipboard)
+        {
+            using var dataTransfer = new DataTransfer();
+            dataTransfer.Add(DataTransferItem.CreateText(text));
+            await clipboard.SetDataAsync(dataTransfer);
+        }
     }
 
     private static async Task<IProjectStorage?> CreateProjectStorageAsync(IStorageFile? file)

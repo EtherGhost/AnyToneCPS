@@ -59,6 +59,16 @@ public partial class MainViewModel
     public ObservableCollection<string> AvailablePorts { get; } = [];
     public ObservableCollection<string> RadioReadWarnings { get; } = [];
 
+    /// <summary>See <see cref="CopyRadioWriteWarningsAsync"/>'s own doc
+    /// comment - same "whole message in one action" fix, for Read's own
+    /// status/warnings.</summary>
+    [RelayCommand]
+    private async Task CopyRadioReadWarningsAsync()
+    {
+        var text = string.Join(Environment.NewLine, new[] { RadioReadStatusText }.Concat(RadioReadWarnings));
+        await _storagePicker.CopyToClipboardAsync(text);
+    }
+
     [ObservableProperty] private string? _selectedPort;
     [ObservableProperty] private bool _isReadingFromRadio;
     [ObservableProperty] private string _radioReadStatusText = "";

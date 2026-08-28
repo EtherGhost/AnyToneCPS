@@ -4591,6 +4591,11 @@
                                     </StackPanel>
 
                                     <SelectableTextBlock Text="{Binding RadioReadStatusText}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <Button Content="Copy full message"
+                                            HorizontalAlignment="Left"
+                                            Padding="8,3"
+                                            FontSize="11"
+                                            Command="{Binding CopyRadioReadWarningsCommand}" />
                                     <SelectableTextBlock Text="{Binding RadioIdentitySummary}"
                                                IsVisible="{Binding HasRadioIdentitySummary}"
                                                Foreground="{DynamicResource AppMutedTextBrush}"
@@ -4715,6 +4720,11 @@
                                     <Button Command="{Binding WriteChangesToRadioCommand}" Content="Write Changes to Radio" />
 
                                     <SelectableTextBlock Text="{Binding RadioWriteStatusText}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <Button Content="Copy full message"
+                                            HorizontalAlignment="Left"
+                                            Padding="8,3"
+                                            FontSize="11"
+                                            Command="{Binding CopyRadioWriteWarningsCommand}" />
                                     <ItemsControl ItemsSource="{Binding RadioWriteWarnings}" IsVisible="{Binding RadioWriteWarnings.Count}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="x:String">

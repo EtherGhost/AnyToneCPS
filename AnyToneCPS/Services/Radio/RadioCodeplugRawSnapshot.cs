@@ -170,22 +170,30 @@ public static class RadioCodeplugRawSnapshotReader
 
         {
             // --- Channels ---
+            // Found live 2026-08-28 (via a memory-map adjacency audit
+            // prompted by the Radio-ID/Master-ID boundary bug): this used to
+            // be a raw per-index CaptureRegion loop, same as the pre-fix
+            // Radio ID bug, just never covered by the 2026-08-24 fix -
+            // any real project with several channels in a row (the normal
+            // case) wrote each channel as its own separate region. Channel
+            // addresses aren't a simple baseAddress+index*stride like other
+            // tables - see RadioCodeplugPatcher.ChannelAddress - they're
+            // blocked (128 channels per 0x80000-byte block), so indices are
+            // grouped by block first and coalesced within each block; blocks
+            // themselves are always far enough apart (0x80000 vs the 0x1000
+            // "same page" threshold) that they never need merging with each
+            // other.
             var channelBitmap = CaptureRegion(D890UvMemoryMap.ChannelSet, ChannelBitmapBytes);
             var populatedChannelIndices = new HashSet<int>(EnumerateSetBits(channelBitmap));
-            foreach (var idx in populatedChannelIndices)
-            {
-                CaptureRegion(RadioCodeplugPatcher.ChannelAddress(idx), 0x80);
-            }
+            var allChannelIndices = additionalChannelIndices is null
+                ? populatedChannelIndices
+                : populatedChannelIndices.Union(additionalChannelIndices);
 
-            if (additionalChannelIndices is not null)
+            foreach (var blockGroup in allChannelIndices.GroupBy(idx => idx / D890UvMemoryMap.ChannelDataBlockSize))
             {
-                foreach (var idx in additionalChannelIndices)
-                {
-                    if (!populatedChannelIndices.Contains(idx))
-                    {
-                        CaptureRegion(RadioCodeplugPatcher.ChannelAddress(idx), 0x80);
-                    }
-                }
+                var blockBaseAddress = D890UvMemoryMap.ChannelData + blockGroup.Key * D890UvMemoryMap.ChannelDataBlockOffset;
+                var indicesInBlock = blockGroup.Select(idx => idx % D890UvMemoryMap.ChannelDataBlockSize);
+                CaptureIndexedRecordsCoalesced(CaptureRegion, indicesInBlock, blockBaseAddress, D890UvMemoryMap.ChannelDataOffset, D890UvMemoryMap.ChannelDataOffset);
             }
 
             // --- Zones ---
@@ -203,6 +211,13 @@ public static class RadioCodeplugRawSnapshotReader
             CaptureSimpleEntities(CaptureRegion, D890UvMemoryMap.ScanListSet, D890UvMemoryMap.ScanListData, D890UvMemoryMap.ScanListDataOffset, D890UvMemoryMap.ScanListDataLength, invertedBitmap: false, bitmapBytes: 0x20);
             CaptureSimpleEntities(CaptureRegion, D890UvMemoryMap.RoamingChannelSet, D890UvMemoryMap.RoamingChannelData, D890UvMemoryMap.RoamingChannelDataOffset, D890UvMemoryMap.RoamingChannelDataLength, invertedBitmap: false, bitmapBytes: 0x20);
             CaptureSimpleEntities(CaptureRegion, D890UvMemoryMap.RoamingZoneSet, D890UvMemoryMap.RoamingZoneData, D890UvMemoryMap.RoamingZoneDataOffset, D890UvMemoryMap.RoamingZoneDataLength, invertedBitmap: false, bitmapBytes: 0x20);
+            // RoamingChannelData's coalesced tail touches RoamingChannelSet
+            // (0-byte gap), which sits close to RoamingZoneSet, which sits
+            // close to RoamingZoneData's own coalesced start - found live
+            // 2026-08-28, same bug class as Master ID. Anchor on
+            // RoamingChannelSet (already captured) and let the neighbor
+            // absorption walk the whole chain in both directions.
+            CaptureRegionMergedWithNeighbors(regions, CaptureRegion, D890UvMemoryMap.RoamingChannelSet, 0x20);
             CaptureSimpleEntities(CaptureRegion, D890UvMemoryMap.ReceiveGroupSet, D890UvMemoryMap.ReceiveGroupData, D890UvMemoryMap.ReceiveGroupDataOffset, D890UvMemoryMap.ReceiveGroupDataLength, invertedBitmap: false, bitmapBytes: 0x20);
 
             // --- Auto Repeater Offsets (flat, no bitmap) ---
@@ -266,14 +281,15 @@ public static class RadioCodeplugRawSnapshotReader
             CaptureRegion(D890UvMemoryMap.DtmfTransmittingTimeIndexData, 1);
 
             // --- Analog Address Book ---
+            // Same bug as Channels/AM Air/FM Channels above - raw per-entry
+            // loop, no coalescing.
             var analogIdList = CaptureRegion(D890UvMemoryMap.AnalogBookId, D890UvMemoryMap.AnalogBookIdLength);
-            foreach (var b in analogIdList)
-            {
-                if (b != 0xff)
-                {
-                    CaptureRegion(D890UvMemoryMap.AnalogBookData + b * D890UvMemoryMap.AnalogBookDataStride, D890UvMemoryMap.AnalogBookDataLength);
-                }
-            }
+            var analogBookIndices = analogIdList.Where(b => b != 0xff).Select(b => (int)b);
+            CaptureIndexedRecordsCoalesced(CaptureRegion, analogBookIndices, D890UvMemoryMap.AnalogBookData, D890UvMemoryMap.AnalogBookDataStride, D890UvMemoryMap.AnalogBookDataLength);
+            // AnalogBookId's own list (0x3800000) ends only 0xF00 bytes before
+            // AnalogBookData's lowest populated entry can start (0x3801000) -
+            // found live 2026-08-28, same bug class as Master ID.
+            CaptureRegionMergedWithNeighbors(regions, CaptureRegion, D890UvMemoryMap.AnalogBookId, D890UvMemoryMap.AnalogBookIdLength);
 
             // --- GPS Roaming (flat, no bitmap) ---
             CaptureRegion(D890UvMemoryMap.GpsRoamingData, D890UvMemoryMap.GpsRoamingDataLength);
@@ -281,47 +297,73 @@ public static class RadioCodeplugRawSnapshotReader
             // --- Whitelists ---
             CaptureWhitelist(CaptureRegion, D890UvMemoryMap.TalkgroupWhitelistData);
             CaptureWhitelist(CaptureRegion, D890UvMemoryMap.DigitalContactWhitelistData);
+            // The two whitelists sit only 0xC0 bytes apart - found live
+            // 2026-08-28, same bug class as Master ID.
+            CaptureRegionMergedWithNeighbors(regions, CaptureRegion, D890UvMemoryMap.DigitalContactWhitelistData, TalkgroupWhitelistCodec.MaxBlocks * TalkgroupWhitelistCodec.BlockLength);
 
             // --- Prefabricated SMS (linked-list walk) ---
             CapturePrefabricatedSms(CaptureRegion);
 
             // --- AM Air ---
+            // Found live 2026-08-28 (same audit as Channels above): the
+            // per-index loop here never went through the coalescing helper
+            // either.
             var amAirBitmap = CaptureRegion(D890UvMemoryMap.AmAirSet, 0x20);
-            foreach (var idx in EnumerateSetBits(amAirBitmap))
-            {
-                CaptureRegion(D890UvMemoryMap.AmAirData + idx * D890UvMemoryMap.AmAirDataStride, D890UvMemoryMap.AmAirDataLength);
-            }
+            CaptureIndexedRecordsCoalesced(CaptureRegion, EnumerateSetBits(amAirBitmap), D890UvMemoryMap.AmAirData, D890UvMemoryMap.AmAirDataStride, D890UvMemoryMap.AmAirDataLength);
             CaptureRegion(D890UvMemoryMap.AmAirVfo, D890UvMemoryMap.AmAirDataLength);
 
             // --- AM Zones ---
             var amZoneBitmap = CaptureRegion(D890UvMemoryMap.AmZoneSet, 0x10);
             CaptureRegion(D890UvMemoryMap.AmZoneAChannel, D890UvMemoryMap.AmZoneCount * 2);
-            foreach (var idx in EnumerateSetBits(amZoneBitmap))
-            {
-                if (idx >= D890UvMemoryMap.AmZoneCount)
-                {
-                    continue;
-                }
+            var amZoneIndices = EnumerateSetBits(amZoneBitmap).Where(idx => idx < D890UvMemoryMap.AmZoneCount).ToList();
+            CaptureIndexedRecordsCoalesced(CaptureRegion, amZoneIndices, D890UvMemoryMap.AmZoneData, D890UvMemoryMap.AmZoneDataStride, D890UvMemoryMap.AmZoneDataLength);
+            CaptureIndexedRecordsCoalesced(CaptureRegion, amZoneIndices, D890UvMemoryMap.AmZoneScan, D890UvMemoryMap.AmZoneScanStride, D890UvMemoryMap.AmZoneScanLength);
 
-                CaptureRegion(D890UvMemoryMap.AmZoneData + idx * D890UvMemoryMap.AmZoneDataStride, D890UvMemoryMap.AmZoneDataLength);
-                CaptureRegion(D890UvMemoryMap.AmZoneScan + idx * D890UvMemoryMap.AmZoneScanStride, D890UvMemoryMap.AmZoneScanLength);
-            }
+            // AmAirData/AmAirVfo/AmAirSet/AmZoneSet/AmZoneAChannel/AmZoneScan
+            // all sit within MaxCoalesceGapBytes of each other in a row -
+            // AmZoneData is the one exception, far enough away (0x3700+
+            // bytes) not to need merging with this cluster. Anchor on
+            // AmZoneAChannel (already captured, roughly in the middle of the
+            // chain) and let the neighbor absorption walk both directions.
+            CaptureRegionMergedWithNeighbors(regions, CaptureRegion, D890UvMemoryMap.AmZoneAChannel, D890UvMemoryMap.AmZoneCount * 2);
 
             // --- FM Channels ---
+            // Same bug as AM Air above - raw per-index loop, no coalescing.
             var fmMeta = CaptureRegion(D890UvMemoryMap.FmMeta, D890UvMemoryMap.FmMetaLength);
+            var activeFmChannelIndices = new List<int>();
             for (var idx = 0; idx < D890UvMemoryMap.FmChannelCount; idx++)
             {
                 var byteIndex = idx / 8;
                 var bit = idx % 8;
-                var active = (fmMeta[D890UvMemoryMap.FmActiveMaskOffset + byteIndex] & (1 << bit)) != 0;
-                if (active)
+                if ((fmMeta[D890UvMemoryMap.FmActiveMaskOffset + byteIndex] & (1 << bit)) != 0)
                 {
-                    CaptureRegion(D890UvMemoryMap.FmChannelData + idx * D890UvMemoryMap.FmChannelDataStride, 0x40);
+                    activeFmChannelIndices.Add(idx);
                 }
             }
 
+            CaptureIndexedRecordsCoalesced(CaptureRegion, activeFmChannelIndices, D890UvMemoryMap.FmChannelData, D890UvMemoryMap.FmChannelDataStride, 0x40);
+            // FM Channels' coalesced tail (when all 100 channels are active)
+            // sits only 0x700 bytes before FmMeta - found live 2026-08-28,
+            // same bug class as Master ID.
+            CaptureRegionMergedWithNeighbors(regions, CaptureRegion, D890UvMemoryMap.FmMeta, D890UvMemoryMap.FmMetaLength);
+
             // --- Master ID ---
-            CaptureRegion(D890UvMemoryMap.MasterIdData, 0x40);
+            // Always captured together with the ENTIRE Radio ID table (not
+            // just whatever falls within MaxCoalesceGapBytes of it). First
+            // found live 2026-08-27 with Radio ID slot 255 populated (a
+            // 0-byte gap to Master ID) - fixed with a proximity-based merge.
+            // Found AGAIN live 2026-08-28 with only 2 of 256 Radio ID slots
+            // populated (leaving a 0x3F80-byte gap to Master ID, well over
+            // the 0x1000 "same page" threshold that works everywhere else in
+            // this file): the real radio still corrupted Master ID after a
+            // later, separate write to the Radio ID table, proving the true
+            // erase block here is bigger than that threshold. Rather than
+            // guess at a bigger number, this pairing gets the most
+            // conservative possible treatment - always one combined read
+            // over the WHOLE fixed 0x3680000-0x3684040 span, regardless of
+            // gap or how many slots are actually populated. Cheap - the
+            // whole span is only ~16KB.
+            CaptureRegion(D890UvMemoryMap.RadioIdData, D890UvMemoryMap.MasterIdData + 0x40 - D890UvMemoryMap.RadioIdData);
 
             // --- Talk Alias Settings ---
             CaptureRegion(D890UvMemoryMap.TalkAliasSettingsBase, D890UvMemoryMap.TalkAliasSettingsReadLength);
@@ -350,11 +392,46 @@ public static class RadioCodeplugRawSnapshotReader
             // erase block as AES/ARC4/Basic. Captured here purely for byte-for-byte
             // preservation, never decoded/interpreted.
             CaptureRegion(0x3585000, 0x100);
-            CaptureRegion(D890UvMemoryMap.BasicEncryptionCodeData, D890UvMemoryMap.BasicEncryptionCodeStride * D890UvMemoryMap.BasicEncryptionCodeMaxSlots);
+            // AES/ARC4/the gap above/Basic all sit within MaxCoalesceGapBytes
+            // of each other (confirmed live 2026-08-28) - flagged as "very
+            // plausibly in the same physical erase block" back in 2026-07-18
+            // but never actually merged until now. This call both captures
+            // Basic's own bytes and absorbs the three regions just captured
+            // above into one combined region.
+            CaptureRegionMergedWithNeighbors(regions, CaptureRegion, D890UvMemoryMap.BasicEncryptionCodeData, D890UvMemoryMap.BasicEncryptionCodeStride * D890UvMemoryMap.BasicEncryptionCodeMaxSlots);
 
             // Digital Contacts deliberately excluded - matches its existing
             // opt-in-only status on read, and the reference project's own
             // separate DIGITAL_CONTACTS write toggle.
+
+            // --- Cross-entity adjacency cleanup ---
+            // Found live 2026-08-28 (memory-map adjacency audit prompted by
+            // the Radio-ID/Master-ID boundary bug): several unrelated
+            // entities, captured at scattered points throughout this method,
+            // turn out to sit within MaxCoalesceGapBytes of each other on the
+            // real radio. Placed here, after every other section has run,
+            // rather than inline at each entity's own capture step, since
+            // each cluster's members are captured in a different order than
+            // their physical addresses - only here is every member of every
+            // cluster guaranteed to already be in <c>regions</c>.
+            //
+            // Cluster 1: the whole 5Tone/DTMF/2Tone run, the Channel/Zone/
+            // Radio ID/Scan List presence bitmaps (all 4 packed back-to-back
+            // with 0-byte gaps), and Auto Repeater Offsets/2 of the 3 Alarm
+            // Settings blocks - one continuous chain from FiveToneIdData
+            // (0x3480000) to AutoRepeaterData's end (0x34835F0).
+            CaptureRegionMergedWithNeighbors(regions, CaptureRegion, D890UvMemoryMap.ChannelSet, ChannelBitmapBytes);
+            // Cluster 2: Zone A-Channel/B-Channel, DTMF Encode/Transmitting
+            // Time Index, Optional Settings/Talk Alias/one Alarm Settings
+            // block (all aliased to the same 0x3500000 base), APRS Settings,
+            // and GPS Roaming - one continuous chain from 0x3500000 to GPS
+            // Roaming's end (0x3502400).
+            CaptureRegionMergedWithNeighbors(regions, CaptureRegion, D890UvMemoryMap.OptionalSettingsData3500000, OptionalSettingsCodec.MainDataLength);
+            // Cluster 3: Analog Quick Call/State Information/Hot Key, the
+            // Receive Group List presence bitmap, and both QDC 1200 blocks -
+            // one continuous chain from 0x3700000 to Qdc1200SettingsData's
+            // end.
+            CaptureRegionMergedWithNeighbors(regions, CaptureRegion, D890UvMemoryMap.HotKeyData, HotKeyCodec.KeyCount * HotKeyCodec.RecordLength);
 
             return new RadioCodeplugRawSnapshot { Regions = DropSubsumedRegions(regions.Select(kv => new CodeplugRawRegion(kv.Key, kv.Value))) };
         }
@@ -435,11 +512,15 @@ public static class RadioCodeplugRawSnapshotReader
                     $"Unrecognized radio (model='{identity.Model}', version='{identity.Version}'). Expected D890UV V100. Refusing to read memory.");
             }
 
-            foreach (var idx in missing)
+            // See the "--- Channels ---" capture step's own comment - channel
+            // addresses are blocked (128 per 0x80000-byte block), so missing
+            // indices are grouped by block before merging with neighbors,
+            // same reasoning as CaptureFromOpenConnection's own channel loop.
+            foreach (var blockGroup in missing.GroupBy(idx => idx / D890UvMemoryMap.ChannelDataBlockSize))
             {
-                var address = RadioCodeplugPatcher.ChannelAddress(idx);
-                var data = connection.ReadMemoryStrict(address, ChannelCodec.RecordLength);
-                newRegions.Add(new CodeplugRawRegion(address, data));
+                var blockBaseAddress = D890UvMemoryMap.ChannelData + blockGroup.Key * D890UvMemoryMap.ChannelDataBlockOffset;
+                var indicesInBlock = blockGroup.Select(idx => idx % D890UvMemoryMap.ChannelDataBlockSize).ToList();
+                MergeMissingRecordsWithNeighbors(newRegions, connection, indicesInBlock, blockBaseAddress, D890UvMemoryMap.ChannelDataOffset, ChannelCodec.RecordLength);
             }
         }
         finally
@@ -586,11 +667,8 @@ public static class RadioCodeplugRawSnapshotReader
                     $"Unrecognized radio (model='{identity.Model}', version='{identity.Version}'). Expected D890UV V100. Refusing to read memory.");
             }
 
-            foreach (var idx in missing)
-            {
-                var address = RadioCodeplugPatcher.AmAirAddress(idx);
-                newRegions.Add(new CodeplugRawRegion(address, connection.ReadMemoryStrict(address, AmAirCodec.RecordLength)));
-            }
+            // See AddMissingZones's own comment on MergeMissingRecordsWithNeighbors.
+            MergeMissingRecordsWithNeighbors(newRegions, connection, missing, D890UvMemoryMap.AmAirData, D890UvMemoryMap.AmAirDataStride, AmAirCodec.RecordLength);
         }
         finally
         {
@@ -629,11 +707,8 @@ public static class RadioCodeplugRawSnapshotReader
                     $"Unrecognized radio (model='{identity.Model}', version='{identity.Version}'). Expected D890UV V100. Refusing to read memory.");
             }
 
-            foreach (var idx in missing)
-            {
-                var address = RadioCodeplugPatcher.AnalogAddressAddress(idx);
-                newRegions.Add(new CodeplugRawRegion(address, connection.ReadMemoryStrict(address, AnalogAddressCodec.RecordLength)));
-            }
+            // See AddMissingZones's own comment on MergeMissingRecordsWithNeighbors.
+            MergeMissingRecordsWithNeighbors(newRegions, connection, missing, D890UvMemoryMap.AnalogBookData, D890UvMemoryMap.AnalogBookDataStride, AnalogAddressCodec.RecordLength);
         }
         finally
         {
@@ -672,11 +747,8 @@ public static class RadioCodeplugRawSnapshotReader
                     $"Unrecognized radio (model='{identity.Model}', version='{identity.Version}'). Expected D890UV V100. Refusing to read memory.");
             }
 
-            foreach (var idx in missing)
-            {
-                var address = RadioCodeplugPatcher.RadioIdAddress(idx);
-                newRegions.Add(new CodeplugRawRegion(address, connection.ReadMemoryStrict(address, RadioIdCodec.RecordLength)));
-            }
+            // See AddMissingZones's own comment on MergeMissingRecordsWithNeighbors.
+            MergeMissingRecordsWithNeighbors(newRegions, connection, missing, D890UvMemoryMap.RadioIdData, D890UvMemoryMap.RadioIdDataOffset, RadioIdCodec.RecordLength);
         }
         finally
         {
@@ -716,11 +788,8 @@ public static class RadioCodeplugRawSnapshotReader
                     $"Unrecognized radio (model='{identity.Model}', version='{identity.Version}'). Expected D890UV V100. Refusing to read memory.");
             }
 
-            foreach (var idx in missing)
-            {
-                var address = RadioCodeplugPatcher.TalkgroupAddress(idx);
-                newRegions.Add(new CodeplugRawRegion(address, connection.ReadMemoryStrict(address, TalkgroupCodec.RecordLength)));
-            }
+            // See AddMissingZones's own comment on MergeMissingRecordsWithNeighbors.
+            MergeMissingRecordsWithNeighbors(newRegions, connection, missing, D890UvMemoryMap.TalkgroupData, D890UvMemoryMap.TalkgroupDataOffset, TalkgroupCodec.RecordLength);
         }
         finally
         {
@@ -760,11 +829,8 @@ public static class RadioCodeplugRawSnapshotReader
                     $"Unrecognized radio (model='{identity.Model}', version='{identity.Version}'). Expected D890UV V100. Refusing to read memory.");
             }
 
-            foreach (var idx in missing)
-            {
-                var address = RadioCodeplugPatcher.ReceiveGroupListAddress(idx);
-                newRegions.Add(new CodeplugRawRegion(address, connection.ReadMemoryStrict(address, ReceiveGroupListCodec.RecordLength)));
-            }
+            // See AddMissingZones's own comment on MergeMissingRecordsWithNeighbors.
+            MergeMissingRecordsWithNeighbors(newRegions, connection, missing, D890UvMemoryMap.ReceiveGroupData, D890UvMemoryMap.ReceiveGroupDataOffset, ReceiveGroupListCodec.RecordLength);
         }
         finally
         {
@@ -804,11 +870,8 @@ public static class RadioCodeplugRawSnapshotReader
                     $"Unrecognized radio (model='{identity.Model}', version='{identity.Version}'). Expected D890UV V100. Refusing to read memory.");
             }
 
-            foreach (var idx in missing)
-            {
-                var address = RadioCodeplugPatcher.RoamingChannelAddress(idx);
-                newRegions.Add(new CodeplugRawRegion(address, connection.ReadMemoryStrict(address, RoamingChannelCodec.RecordLength)));
-            }
+            // See AddMissingZones's own comment on MergeMissingRecordsWithNeighbors.
+            MergeMissingRecordsWithNeighbors(newRegions, connection, missing, D890UvMemoryMap.RoamingChannelData, D890UvMemoryMap.RoamingChannelDataOffset, RoamingChannelCodec.RecordLength);
         }
         finally
         {
@@ -848,11 +911,8 @@ public static class RadioCodeplugRawSnapshotReader
                     $"Unrecognized radio (model='{identity.Model}', version='{identity.Version}'). Expected D890UV V100. Refusing to read memory.");
             }
 
-            foreach (var idx in missing)
-            {
-                var address = RadioCodeplugPatcher.RoamingZoneAddress(idx);
-                newRegions.Add(new CodeplugRawRegion(address, connection.ReadMemoryStrict(address, RoamingZoneCodec.RecordLength)));
-            }
+            // See AddMissingZones's own comment on MergeMissingRecordsWithNeighbors.
+            MergeMissingRecordsWithNeighbors(newRegions, connection, missing, D890UvMemoryMap.RoamingZoneData, D890UvMemoryMap.RoamingZoneDataOffset, RoamingZoneCodec.RecordLength);
         }
         finally
         {
@@ -895,14 +955,9 @@ public static class RadioCodeplugRawSnapshotReader
                     $"Unrecognized radio (model='{identity.Model}', version='{identity.Version}'). Expected D890UV V100. Refusing to read memory.");
             }
 
-            foreach (var idx in missing)
-            {
-                var address = RadioCodeplugPatcher.AmZoneAddress(idx);
-                newRegions.Add(new CodeplugRawRegion(address, connection.ReadMemoryStrict(address, AmZoneCodec.RecordLength)));
-
-                var scanChannelAddress = D890UvMemoryMap.AmZoneScan + idx * D890UvMemoryMap.AmZoneScanStride;
-                newRegions.Add(new CodeplugRawRegion(scanChannelAddress, connection.ReadMemoryStrict(scanChannelAddress, D890UvMemoryMap.AmZoneScanLength)));
-            }
+            // See AddMissingZones's own comment on MergeMissingRecordsWithNeighbors.
+            MergeMissingRecordsWithNeighbors(newRegions, connection, missing, D890UvMemoryMap.AmZoneData, D890UvMemoryMap.AmZoneDataStride, AmZoneCodec.RecordLength);
+            MergeMissingRecordsWithNeighbors(newRegions, connection, missing, D890UvMemoryMap.AmZoneScan, D890UvMemoryMap.AmZoneScanStride, D890UvMemoryMap.AmZoneScanLength);
         }
         finally
         {
@@ -1002,11 +1057,8 @@ public static class RadioCodeplugRawSnapshotReader
                     $"Unrecognized radio (model='{identity.Model}', version='{identity.Version}'). Expected D890UV V100. Refusing to read memory.");
             }
 
-            foreach (var idx in missing)
-            {
-                var address = RadioCodeplugPatcher.FmChannelAddress(idx);
-                newRegions.Add(new CodeplugRawRegion(address, connection.ReadMemoryStrict(address, FmChannelCodec.RecordLength)));
-            }
+            // See AddMissingZones's own comment on MergeMissingRecordsWithNeighbors.
+            MergeMissingRecordsWithNeighbors(newRegions, connection, missing, D890UvMemoryMap.FmChannelData, D890UvMemoryMap.FmChannelDataStride, FmChannelCodec.RecordLength);
         }
         finally
         {
@@ -1063,14 +1115,33 @@ public static class RadioCodeplugRawSnapshotReader
         const int standard256SlotBitmapSlots = 0x20 * 8;
         var tables = new (string Name, int BaseAddress, int WindowBytes)[]
         {
+            // Window spans every block (128 channels each, see
+            // D890UvMemoryMap.ChannelDataBlockSize/BlockOffset) - the big
+            // (0x80000, way over MaxCoalesceGapBytes) gaps between blocks
+            // never trip this check, only a real fragmented boundary within
+            // one block would.
+            ("Channels", D890UvMemoryMap.ChannelData, ChannelBitmapBytes * 8 / D890UvMemoryMap.ChannelDataBlockSize * D890UvMemoryMap.ChannelDataBlockOffset),
             ("Zone names", D890UvMemoryMap.ZonesName, ZoneSlotCount * D890UvMemoryMap.ZoneDataOffset),
             ("Zone channel lists", D890UvMemoryMap.ZoneChannels, ZoneSlotCount * ZoneChannelsRecordBytes),
             ("Scan lists", D890UvMemoryMap.ScanListData, standard256SlotBitmapSlots * D890UvMemoryMap.ScanListDataOffset),
-            ("Radio IDs", D890UvMemoryMap.RadioIdData, standard256SlotBitmapSlots * D890UvMemoryMap.RadioIdDataOffset),
+            // Window includes Master ID's 0x40 bytes too - it sits with a
+            // 0-byte gap right after Radio ID slot 255 (see the "--- Master
+            // ID ---" capture step's own comment), so a fragmented boundary
+            // between the two needs to be caught here as well.
+            ("Radio IDs", D890UvMemoryMap.RadioIdData, standard256SlotBitmapSlots * D890UvMemoryMap.RadioIdDataOffset + D890UvMemoryMap.MasterIdDataLength),
             ("Talkgroups", D890UvMemoryMap.TalkgroupData, 0x4F0 * 8 * D890UvMemoryMap.TalkgroupDataOffset),
-            ("Roaming channels", D890UvMemoryMap.RoamingChannelData, standard256SlotBitmapSlots * D890UvMemoryMap.RoamingChannelDataOffset),
-            ("Roaming zones", D890UvMemoryMap.RoamingZoneData, standard256SlotBitmapSlots * D890UvMemoryMap.RoamingZoneDataOffset),
+            // One combined window, not two - RoamingChannelSet/RoamingZoneSet
+            // (their own presence bitmaps) sit in the small gaps between
+            // RoamingChannelData and RoamingZoneData, and the whole cluster
+            // is merged into one region by the "--- Simple bitmap-driven
+            // entities ---" step's own trailing merge call.
+            ("Roaming channels & zones", D890UvMemoryMap.RoamingChannelData, D890UvMemoryMap.RoamingZoneData + standard256SlotBitmapSlots * D890UvMemoryMap.RoamingZoneDataOffset - D890UvMemoryMap.RoamingChannelData),
             ("Receive group lists", D890UvMemoryMap.ReceiveGroupData, standard256SlotBitmapSlots * D890UvMemoryMap.ReceiveGroupDataOffset),
+            ("FM Channels", D890UvMemoryMap.FmChannelData, D890UvMemoryMap.FmChannelCount * D890UvMemoryMap.FmChannelDataStride),
+            ("AM Air", D890UvMemoryMap.AmAirData, standard256SlotBitmapSlots * D890UvMemoryMap.AmAirDataStride),
+            ("AM Zone data", D890UvMemoryMap.AmZoneData, D890UvMemoryMap.AmZoneCount * D890UvMemoryMap.AmZoneDataStride),
+            ("AM Zone scan", D890UvMemoryMap.AmZoneScan, D890UvMemoryMap.AmZoneCount * D890UvMemoryMap.AmZoneScanStride),
+            ("Analog Address Book", D890UvMemoryMap.AnalogBookData, 256 * D890UvMemoryMap.AnalogBookDataStride),
         };
 
         foreach (var (name, baseAddress, windowBytes) in tables)
@@ -1201,6 +1272,47 @@ public static class RadioCodeplugRawSnapshotReader
 
             i++;
         }
+    }
+
+    /// <summary>General, capture-time form of the same neighbor-absorption
+    /// <see cref="MergeMissingRecordsWithNeighbors"/> does for a per-index
+    /// top-up, for a flat/singleton entity found live to sit close to
+    /// another already-captured entity (Master ID next to the Radio ID
+    /// table, presence bitmaps packed against each other, the 5Tone/DTMF/
+    /// 2Tone/GPS Roaming/Alarm Settings run, etc). Repeatedly absorbs any
+    /// already-captured region within <see cref="MaxCoalesceGapBytes"/> of
+    /// <paramref name="address"/>/<paramref name="length"/>, in either
+    /// direction, into a growing span, then does one fresh combined read
+    /// over the union. Doesn't need to remove the absorbed regions' own
+    /// dictionary entries - they end up fully contained within the new
+    /// bigger region, and <see cref="DropSubsumedRegions"/> (run once, at
+    /// the very end of <see cref="CaptureFromOpenConnection"/>) drops them
+    /// for free.</summary>
+    private static void CaptureRegionMergedWithNeighbors(IReadOnlyDictionary<int, byte[]> regions, Func<int, int, byte[]> captureRegion, int address, int length)
+    {
+        var start = address;
+        var end = address + length;
+        var absorbedAny = true;
+        while (absorbedAny)
+        {
+            absorbedAny = false;
+            foreach (var (key, data) in regions)
+            {
+                var keyEnd = key + data.Length;
+                if (keyEnd <= start && start - keyEnd <= MaxCoalesceGapBytes)
+                {
+                    start = Math.Min(start, key);
+                    absorbedAny = true;
+                }
+                else if (key >= end && key - end <= MaxCoalesceGapBytes)
+                {
+                    end = Math.Max(end, keyEnd);
+                    absorbedAny = true;
+                }
+            }
+        }
+
+        captureRegion(start, end - start);
     }
 
     /// <summary>Captures the WHOLE fixed-size whitelist region in one shot

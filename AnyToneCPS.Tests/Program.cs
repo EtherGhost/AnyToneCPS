@@ -448,7 +448,16 @@ public static class Program
         Run("Capturing multiple zones coalesces their name and channel regions into one write each", CapturingMultipleZonesCoalescesTheirNameAndChannelRegionsIntoOneWriteEach);
         Run("Capture drops a region fully subsumed by a bigger overlapping region", CaptureDropsARegionFullySubsumedByABiggerOverlappingRegion);
         Run("Add missing zone merges with the neighboring zone region the main capture already produced", AddMissingZoneMergesWithTheNeighboringZoneRegionTheMainCaptureAlreadyProduced);
+        Run("Capture always captures the whole Radio ID table and Master ID together regardless of population", CaptureAlwaysCapturesTheWholeRadioIdTableAndMasterIdTogetherRegardlessOfPopulation);
+        Run("Capturing multiple channels in the same block coalesces them into one region", CapturingMultipleChannelsInTheSameBlockCoalescesThemIntoOneRegion);
+        Run("Add missing channels merges within a block but not across the block boundary", AddMissingChannelsMergesWithinABlockButNotAcrossTheBlockBoundary);
+        Run("Capturing multiple FM channels coalesces them into one region", CapturingMultipleFmChannelsCoalescesThemIntoOneRegion);
+        Run("Capturing multiple AM Air channels coalesces them into one region", CapturingMultipleAmAirChannelsCoalescesThemIntoOneRegion);
+        Run("Capturing an AM Zone coalesces its records and merges with the AM Air cluster", CapturingAnAmZoneCoalescesItsRecordsAndMergesWithTheAmAirCluster);
+        Run("Capturing multiple analog addresses coalesces them into one region", CapturingMultipleAnalogAddressesCoalescesThemIntoOneRegion);
+        Run("Capture keeps Radio IDs and Master ID together even when only a few slots are populated", CaptureKeepsRadioIdsAndMasterIdTogetherEvenWhenOnlyAFewSlotsArePopulated);
         Run("Assert no fragmented tables passes for a real capture and rejects an artificially split zone table", AssertNoFragmentedTablesPassesForARealCaptureAndRejectsAnArtificiallySplitZoneTable);
+        Run("Capturing a fully populated radio leaves no unmerged adjacent regions anywhere", CapturingAFullyPopulatedRadioLeavesNoUnmergedAdjacentRegionsAnywhere);
         Run("Dev force model to image marks every entity dirty without changing values", DevForceModelToImageMarksEveryEntityDirtyWithoutChangingValues);
         Run("Dev force model to image then write succeeds against a virtual radio", DevForceModelToImageThenWriteSucceedsAgainstAVirtualRadio);
 
@@ -7068,6 +7077,389 @@ public static class Program
         AssertEqual(D890UvMemoryMap.ZoneChannels, channelRegions[0].Address);
     }
 
+    /// <summary>Regression test for a live write failure on 2026-08-27,
+    /// updated 2026-08-28 after a second, wider real failure: the Radio ID
+    /// table and Master ID are now ALWAYS captured together as one fixed
+    /// 0x3680000-0x3684040 span (see the "--- Master ID ---" capture step's
+    /// own comment), not merged conditionally by proximity - a live test
+    /// with only 2 of 256 Radio ID slots populated (a 0x3F80-byte gap to
+    /// Master ID, well over the usual 0x1000 "same page" merge threshold)
+    /// still corrupted Master ID on the real radio. Asserts every Radio ID
+    /// index is captured even with NONE populated, and that Radio ID 0 and
+    /// Master ID always end up in the very same region object.</summary>
+    private static void CaptureAlwaysCapturesTheWholeRadioIdTableAndMasterIdTogetherRegardlessOfPopulation()
+    {
+        var connection = new FakeRadioConnection();
+
+        // No Radio ID slots populated at all - the emptiest possible case.
+        var snapshot = RadioCodeplugRawSnapshotReader.Capture(connection, "FAKE");
+
+        for (var idx = 0; idx < 256; idx += 51) // spot-check across the whole range, not all 256
+        {
+            AssertTrue(snapshot.FindRegionContaining(RadioCodeplugPatcher.RadioIdAddress(idx)) is not null, $"Radio ID slot {idx} should always be captured, populated or not");
+        }
+
+        var radioId0Region = snapshot.FindRegionContaining(D890UvMemoryMap.RadioIdData)!;
+        var masterIdRegion = snapshot.FindRegionContaining(D890UvMemoryMap.MasterIdData)!;
+        AssertTrue(ReferenceEquals(radioId0Region, masterIdRegion), "Radio ID data and Master ID should always be the same region, even with nothing populated");
+
+        RadioCodeplugRawSnapshotReader.AssertNoFragmentedTables(snapshot);
+    }
+
+    /// <summary>Regression test for a fragmentation bug found via a
+    /// memory-map adjacency audit on 2026-08-28 (the Radio-ID/Master-ID
+    /// boundary fix above prompted checking for other instances of the same
+    /// bug class): Channels were captured via a raw per-index foreach loop,
+    /// never routed through CaptureIndexedRecordsCoalesced the way Zones
+    /// already are - so any real project with several channels in a row (the
+    /// overwhelmingly common case) wrote each channel as its own separate
+    /// 128-byte region, the exact "narrow writes sharing a flash erase
+    /// block erase each other" bug, on the single most commonly populated
+    /// and edited entity in the app. Asserts several same-block channels
+    /// merge into one region, and that every channel's real bytes survive
+    /// the merge (not just that the region is big enough).</summary>
+    private static void CapturingMultipleChannelsInTheSameBlockCoalescesThemIntoOneRegion()
+    {
+        var connection = new FakeRadioConnection();
+
+        var channelBitmap = new byte[0x200];
+        channelBitmap[0] = 0xFF; // channels 0-7
+        channelBitmap[1] = 0x01; // channel 8 - 9 channels total, all in block 0
+        connection.WriteMemory(D890UvMemoryMap.ChannelSet, channelBitmap);
+
+        for (var idx = 0; idx < 9; idx++)
+        {
+            var data = new byte[0x80];
+            data[0] = (byte)(0x41 + idx); // distinguishable per-channel byte
+            connection.WriteMemory(RadioCodeplugPatcher.ChannelAddress(idx), data);
+        }
+
+        var snapshot = RadioCodeplugRawSnapshotReader.Capture(connection, "FAKE");
+
+        var channelRegions = snapshot.Regions.Where(r => r.Address >= D890UvMemoryMap.ChannelData && r.Address < D890UvMemoryMap.ChannelData + 9 * D890UvMemoryMap.ChannelDataOffset).ToList();
+
+        AssertEqual(1, channelRegions.Count);
+        AssertTrue(channelRegions[0].Length >= 8 * D890UvMemoryMap.ChannelDataOffset + D890UvMemoryMap.ChannelDataOffset, "the single Channels region should cover all 9 channels");
+
+        for (var idx = 0; idx < 9; idx++)
+        {
+            var region = snapshot.FindRegionContaining(RadioCodeplugPatcher.ChannelAddress(idx))!;
+            var offset = RadioCodeplugPatcher.ChannelAddress(idx) - region.Address;
+            AssertEqual((byte)(0x41 + idx), region.Data[offset]);
+        }
+    }
+
+    /// <summary>Same bug/fix as the test above, but for the top-up
+    /// (AddMissingChannels) path, and specifically exercising the channel
+    /// address scheme's block structure (128 channels per 0x80000-byte
+    /// block, see D890UvMemoryMap.ChannelDataBlockSize/BlockOffset): channel
+    /// 127 is the LAST channel in block 0, channel 128 is the FIRST channel
+    /// in block 1, physically 0x7C080 bytes apart on the radio - nowhere
+    /// near sharing a flash page. A block-unaware merge helper could
+    /// miscompute an address across that boundary; this proves channel 127
+    /// merges with its real block-0 neighbor while channel 128 stays in its
+    /// own separate block-1 region.</summary>
+    private static void AddMissingChannelsMergesWithinABlockButNotAcrossTheBlockBoundary()
+    {
+        var connection = new FakeRadioConnection();
+
+        var channelBitmap = new byte[0x200];
+        channelBitmap[15] = 0x40; // channel 126 (bit 6 of byte 15) populated
+        connection.WriteMemory(D890UvMemoryMap.ChannelSet, channelBitmap);
+        connection.WriteMemory(RadioCodeplugPatcher.ChannelAddress(126), new byte[0x80]);
+
+        var snapshot = RadioCodeplugRawSnapshotReader.Capture(connection, "FAKE");
+        AssertTrue(snapshot.FindRegionContaining(RadioCodeplugPatcher.ChannelAddress(127)) is null, "channel 127 should not be captured yet");
+
+        // Channels 127 (block 0's last slot) and 128 (block 1's first slot)
+        // are both now being added/edited this write.
+        snapshot = RadioCodeplugRawSnapshotReader.AddMissingChannels(snapshot, connection, "FAKE", [127, 128]);
+
+        var block0Region = snapshot.FindRegionContaining(RadioCodeplugPatcher.ChannelAddress(126))!;
+        var block1Region = snapshot.FindRegionContaining(RadioCodeplugPatcher.ChannelAddress(128))!;
+
+        AssertTrue(!ReferenceEquals(block0Region, block1Region), "block 0 and block 1 channels must stay in separate regions - they are 0x7C080 bytes apart on the real radio");
+        AssertEqual(block0Region.Address, RadioCodeplugPatcher.ChannelAddress(126));
+        AssertTrue(block0Region.Length >= 2 * D890UvMemoryMap.ChannelDataOffset, "channel 126's region should have absorbed channel 127 right next to it");
+        AssertEqual(RadioCodeplugPatcher.ChannelAddress(128), block1Region.Address);
+
+        RadioCodeplugRawSnapshotReader.AssertNoFragmentedTables(snapshot);
+    }
+
+    /// <summary>Regression test for the same fragmentation bug class as
+    /// Channels, found via the 2026-08-28 memory-map adjacency audit: FM
+    /// Channels used a raw per-index CaptureRegion loop with no coalescing.
+    /// Asserts several adjacent active FM channels merge into one region,
+    /// with every channel's real bytes surviving the merge.</summary>
+    private static void CapturingMultipleFmChannelsCoalescesThemIntoOneRegion()
+    {
+        var connection = new FakeRadioConnection();
+
+        var fmMeta = new byte[D890UvMemoryMap.FmMetaLength];
+        fmMeta[D890UvMemoryMap.FmActiveMaskOffset] = 0x07; // FM channels 0-2 active
+        connection.WriteMemory(D890UvMemoryMap.FmMeta, fmMeta);
+
+        for (var idx = 0; idx < 3; idx++)
+        {
+            var data = new byte[0x40];
+            data[0] = (byte)(0x41 + idx);
+            connection.WriteMemory(RadioCodeplugPatcher.FmChannelAddress(idx), data);
+        }
+
+        var snapshot = RadioCodeplugRawSnapshotReader.Capture(connection, "FAKE");
+
+        var fmChannelRegions = snapshot.Regions.Where(r => r.Address >= D890UvMemoryMap.FmChannelData && r.Address < D890UvMemoryMap.FmChannelData + 3 * D890UvMemoryMap.FmChannelDataStride).ToList();
+        AssertEqual(1, fmChannelRegions.Count);
+
+        for (var idx = 0; idx < 3; idx++)
+        {
+            var region = snapshot.FindRegionContaining(RadioCodeplugPatcher.FmChannelAddress(idx))!;
+            var offset = RadioCodeplugPatcher.FmChannelAddress(idx) - region.Address;
+            AssertEqual((byte)(0x41 + idx), region.Data[offset]);
+        }
+    }
+
+    /// <summary>Same bug/fix as FM Channels above, for AM Air.</summary>
+    private static void CapturingMultipleAmAirChannelsCoalescesThemIntoOneRegion()
+    {
+        var connection = new FakeRadioConnection();
+
+        var amAirBitmap = new byte[0x20];
+        amAirBitmap[0] = 0x07; // AM Air 0-2 populated
+        connection.WriteMemory(D890UvMemoryMap.AmAirSet, amAirBitmap);
+
+        for (var idx = 0; idx < 3; idx++)
+        {
+            var data = new byte[D890UvMemoryMap.AmAirDataLength];
+            data[0] = (byte)(0x41 + idx);
+            connection.WriteMemory(RadioCodeplugPatcher.AmAirAddress(idx), data);
+        }
+
+        var snapshot = RadioCodeplugRawSnapshotReader.Capture(connection, "FAKE");
+
+        var amAirRegions = snapshot.Regions.Where(r => r.Address >= D890UvMemoryMap.AmAirData && r.Address < D890UvMemoryMap.AmAirData + 3 * D890UvMemoryMap.AmAirDataStride).ToList();
+        AssertEqual(1, amAirRegions.Count);
+
+        for (var idx = 0; idx < 3; idx++)
+        {
+            var region = snapshot.FindRegionContaining(RadioCodeplugPatcher.AmAirAddress(idx))!;
+            var offset = RadioCodeplugPatcher.AmAirAddress(idx) - region.Address;
+            AssertEqual((byte)(0x41 + idx), region.Data[offset]);
+        }
+    }
+
+    /// <summary>Same bug/fix as FM Channels above, for AM Zone data and scan
+    /// records - and for the wider AmAirData/AmAirVfo/AmAirSet/AmZoneSet/
+    /// AmZoneAChannel/AmZoneScan cluster boundary merge alongside it (found
+    /// live 2026-08-28): asserts a populated AM Zone's AChannel region
+    /// (always captured, sitting in the middle of that whole chain) ends up
+    /// merged with AM Air's data too, not just its own AM Zone neighbors.</summary>
+    private static void CapturingAnAmZoneCoalescesItsRecordsAndMergesWithTheAmAirCluster()
+    {
+        var connection = new FakeRadioConnection();
+
+        var amAirBitmap = new byte[0x20];
+        amAirBitmap[0] = 0x01; // AM Air 0 populated
+        connection.WriteMemory(D890UvMemoryMap.AmAirSet, amAirBitmap);
+        connection.WriteMemory(RadioCodeplugPatcher.AmAirAddress(0), new byte[D890UvMemoryMap.AmAirDataLength]);
+
+        var amZoneBitmap = new byte[0x10];
+        amZoneBitmap[0] = 0x03; // AM Zones 0-1 populated
+        connection.WriteMemory(D890UvMemoryMap.AmZoneSet, amZoneBitmap);
+
+        for (var idx = 0; idx < 2; idx++)
+        {
+            var zoneData = new byte[D890UvMemoryMap.AmZoneDataLength];
+            zoneData[0] = (byte)(0x41 + idx);
+            connection.WriteMemory(RadioCodeplugPatcher.AmZoneAddress(idx), zoneData);
+
+            var scanData = new byte[D890UvMemoryMap.AmZoneScanLength];
+            scanData[0] = (byte)(0x61 + idx);
+            connection.WriteMemory(D890UvMemoryMap.AmZoneScan + idx * D890UvMemoryMap.AmZoneScanStride, scanData);
+        }
+
+        var snapshot = RadioCodeplugRawSnapshotReader.Capture(connection, "FAKE");
+
+        // AmZoneData stays its own separate region (far enough from the
+        // AmAir/AmZoneAChannel/AmZoneScan cluster not to need merging with
+        // it), so a plain address-range count still applies here.
+        var amZoneDataRegions = snapshot.Regions.Where(r => r.Address >= D890UvMemoryMap.AmZoneData && r.Address < D890UvMemoryMap.AmZoneData + 2 * D890UvMemoryMap.AmZoneDataStride).ToList();
+        AssertEqual(1, amZoneDataRegions.Count);
+        // AmZoneScan, unlike AmZoneData, DOES merge into the wider cluster -
+        // its resulting region starts well before its own address, so prove
+        // it merged via FindRegionContaining/ReferenceEquals below instead
+        // of an address-range count.
+        AssertTrue(ReferenceEquals(snapshot.FindRegionContaining(D890UvMemoryMap.AmZoneScan), snapshot.FindRegionContaining(D890UvMemoryMap.AmZoneScan + D890UvMemoryMap.AmZoneScanStride)), "the two AM Zone scan records should be in the same region");
+
+        for (var idx = 0; idx < 2; idx++)
+        {
+            var zoneRegion = snapshot.FindRegionContaining(RadioCodeplugPatcher.AmZoneAddress(idx))!;
+            AssertEqual((byte)(0x41 + idx), zoneRegion.Data[RadioCodeplugPatcher.AmZoneAddress(idx) - zoneRegion.Address]);
+
+            var scanAddress = D890UvMemoryMap.AmZoneScan + idx * D890UvMemoryMap.AmZoneScanStride;
+            var scanRegion = snapshot.FindRegionContaining(scanAddress)!;
+            AssertEqual((byte)(0x61 + idx), scanRegion.Data[scanAddress - scanRegion.Address]);
+        }
+
+        // AmAirVfo/AmAirSet/AmZoneSet/AmZoneAChannel are all unconditionally
+        // captured (regardless of how many AM Air/Zone slots are populated)
+        // and sit within MaxCoalesceGapBytes of each other - same region
+        // proves the whole cluster merge. (AmAirData itself only reaches
+        // AmAirVfo when ALL 256 AM Air slots are populated - not exercised
+        // by this test's single populated channel, see the fully-populated
+        // sweep test instead for that edge case.)
+        var amAirVfoRegion = snapshot.FindRegionContaining(D890UvMemoryMap.AmAirVfo)!;
+        var amZoneAChannelRegion = snapshot.FindRegionContaining(D890UvMemoryMap.AmZoneAChannel)!;
+        AssertTrue(ReferenceEquals(amAirVfoRegion, amZoneAChannelRegion), "AM Air VFO and AM Zone AChannel should have merged into the same region");
+    }
+
+    /// <summary>Same bug/fix as FM Channels above, for the Analog Address
+    /// Book.</summary>
+    private static void CapturingMultipleAnalogAddressesCoalescesThemIntoOneRegion()
+    {
+        var connection = new FakeRadioConnection();
+
+        var bookIds = new byte[D890UvMemoryMap.AnalogBookIdLength];
+        for (var i = 0; i < bookIds.Length; i++)
+        {
+            bookIds[i] = 0xff;
+        }
+
+        bookIds[0] = 0;
+        bookIds[1] = 1;
+        bookIds[2] = 2;
+        connection.WriteMemory(D890UvMemoryMap.AnalogBookId, bookIds);
+
+        for (var idx = 0; idx < 3; idx++)
+        {
+            var data = new byte[D890UvMemoryMap.AnalogBookDataLength];
+            data[0] = (byte)(0x41 + idx);
+            connection.WriteMemory(RadioCodeplugPatcher.AnalogAddressAddress(idx), data);
+        }
+
+        var snapshot = RadioCodeplugRawSnapshotReader.Capture(connection, "FAKE");
+
+        // The 3 records merge into one region, but that region also merges
+        // with AnalogBookId's own list (0xF00 bytes before it, same bug
+        // class as Master ID) - so its address starts at AnalogBookId, not
+        // AnalogBookData. Prove the 3 records share one region via
+        // FindRegionContaining/ReferenceEquals rather than an address-range
+        // count.
+        var region0 = snapshot.FindRegionContaining(RadioCodeplugPatcher.AnalogAddressAddress(0))!;
+        var region1 = snapshot.FindRegionContaining(RadioCodeplugPatcher.AnalogAddressAddress(1))!;
+        var region2 = snapshot.FindRegionContaining(RadioCodeplugPatcher.AnalogAddressAddress(2))!;
+        AssertTrue(ReferenceEquals(region0, region1) && ReferenceEquals(region1, region2), "all 3 analog address records should be in the same region");
+
+        for (var idx = 0; idx < 3; idx++)
+        {
+            var region = snapshot.FindRegionContaining(RadioCodeplugPatcher.AnalogAddressAddress(idx))!;
+            var offset = RadioCodeplugPatcher.AnalogAddressAddress(idx) - region.Address;
+            AssertEqual((byte)(0x41 + idx), region.Data[offset]);
+        }
+
+        // AnalogBookId's own list ends only 0xF00 bytes before AnalogBookData
+        // can start - found live 2026-08-28, same bug class as Master ID.
+        var idListRegion = snapshot.FindRegionContaining(D890UvMemoryMap.AnalogBookId)!;
+        AssertTrue(ReferenceEquals(idListRegion, region0), "AnalogBookId's list should have merged with AnalogBookData");
+    }
+
+    /// <summary>Regression test for the exact real live write failure on
+    /// 2026-08-28: only 2 of 256 Radio ID slots populated (a 0x3F80-byte gap
+    /// to Master ID - well over the 0x1000 "same page" threshold used
+    /// everywhere else in this file), yet the real radio still corrupted
+    /// Master ID after a later, separate write to the Radio ID table.
+    /// Asserts Radio ID 0 and Master ID are in the same region regardless -
+    /// this is the sparse-population case the original 2026-08-27 fix
+    /// (proximity-based merge) did NOT cover, since the gap here is too big
+    /// for that merge to have triggered.</summary>
+    private static void CaptureKeepsRadioIdsAndMasterIdTogetherEvenWhenOnlyAFewSlotsArePopulated()
+    {
+        var connection = new FakeRadioConnection();
+
+        var radioIdSetBitmap = new byte[0x20];
+        radioIdSetBitmap[0] = 0x03; // only Radio IDs 0-1 populated
+        connection.WriteMemory(D890UvMemoryMap.RadioIdSet, radioIdSetBitmap);
+        connection.WriteMemory(RadioCodeplugPatcher.RadioIdAddress(0), new byte[RadioIdCodec.RecordLength]);
+        connection.WriteMemory(RadioCodeplugPatcher.RadioIdAddress(1), new byte[RadioIdCodec.RecordLength]);
+        connection.WriteMemory(D890UvMemoryMap.MasterIdData, new byte[D890UvMemoryMap.MasterIdDataLength]);
+
+        var snapshot = RadioCodeplugRawSnapshotReader.Capture(connection, "FAKE");
+
+        var radioId0Region = snapshot.FindRegionContaining(RadioCodeplugPatcher.RadioIdAddress(0))!;
+        var masterIdRegion = snapshot.FindRegionContaining(D890UvMemoryMap.MasterIdData)!;
+        AssertTrue(ReferenceEquals(radioId0Region, masterIdRegion), "Radio ID data and Master ID should be the same region even with only 2 slots populated");
+
+        RadioCodeplugRawSnapshotReader.AssertNoFragmentedTables(snapshot);
+    }
+
+    /// <summary>Broad, whole-memory-map version of
+    /// <see cref="RadioCodeplugRawSnapshotReader.AssertNoFragmentedTables"/>'s
+    /// per-table check: fully populates every bitmap-driven entity (so every
+    /// real address adjacency in the memory map gets exercised, not just the
+    /// ones a specific table window happens to cover) and asserts no two
+    /// captured regions anywhere end up within the "same physical flash
+    /// page" gap threshold unmerged. Built live 2026-08-28 to hunt down the
+    /// rest of the erase-block-sharing bug class after the Radio-ID/
+    /// Master-ID boundary fix - found and fixed several more instances
+    /// (Channels/FM Channels/AM Air/AM Zone/Analog Address Book's own
+    /// per-index loops, plus half a dozen cross-entity boundary clusters).
+    /// Kept as a permanent regression test since it catches a much wider
+    /// class of fragmentation bug than AssertNoFragmentedTables's specific
+    /// per-table allowlist does.</summary>
+    private static void CapturingAFullyPopulatedRadioLeavesNoUnmergedAdjacentRegionsAnywhere()
+    {
+        var connection = new FakeRadioConnection();
+
+        void SetAllBits(int address, int byteLength)
+        {
+            connection.WriteMemory(address, Enumerable.Repeat((byte)0xFF, byteLength).ToArray());
+        }
+
+        SetAllBits(D890UvMemoryMap.ChannelSet, 0x200);
+        SetAllBits(D890UvMemoryMap.ZoneSet, 0x20);
+        SetAllBits(D890UvMemoryMap.RadioIdSet, 0x20);
+        SetAllBits(D890UvMemoryMap.ScanListSet, 0x20);
+        SetAllBits(D890UvMemoryMap.RoamingChannelSet, 0x20);
+        SetAllBits(D890UvMemoryMap.RoamingZoneSet, 0x20);
+        SetAllBits(D890UvMemoryMap.ReceiveGroupSet, 0x20);
+        SetAllBits(D890UvMemoryMap.AmAirSet, 0x20);
+        SetAllBits(D890UvMemoryMap.AmZoneSet, 0x10);
+        // TalkgroupSet is inverted - default all-zero already means "all populated".
+
+        var fmMeta = new byte[D890UvMemoryMap.FmMetaLength];
+        for (var i = D890UvMemoryMap.FmActiveMaskOffset; i < fmMeta.Length; i++)
+        {
+            fmMeta[i] = 0xFF;
+        }
+
+        connection.WriteMemory(D890UvMemoryMap.FmMeta, fmMeta);
+
+        var bookIds = new byte[D890UvMemoryMap.AnalogBookIdLength];
+        for (var i = 0; i < bookIds.Length; i++)
+        {
+            bookIds[i] = 0xFF;
+        }
+
+        bookIds[0] = 0;
+        bookIds[^1] = 200;
+        connection.WriteMemory(D890UvMemoryMap.AnalogBookId, bookIds);
+
+        var snapshot = RadioCodeplugRawSnapshotReader.CaptureFromOpenConnection(connection);
+
+        var sorted = snapshot.Regions.OrderBy(r => r.Address).ToList();
+        var violations = new List<string>();
+        foreach (var (cur, next) in sorted.Zip(sorted.Skip(1)))
+        {
+            var gap = next.Address - (cur.Address + cur.Length);
+            if (gap <= 0x1000)
+            {
+                violations.Add($"0x{gap:X} bytes between 0x{cur.Address:X8}/{cur.Length:X}B and 0x{next.Address:X8}/{next.Length:X}B");
+            }
+        }
+
+        AssertTrue(violations.Count == 0, "unmerged adjacent regions found: " + string.Join("; ", violations));
+    }
+
     /// <summary>Proves the pre-write safety net added 2026-08-24: a snapshot
     /// from a real capture (already coalesced) must pass cleanly, and a
     /// snapshot with an artificially-fragmented zone table (simulating some
@@ -11144,5 +11536,6 @@ public static class Program
             Task.FromResult(fiveToneSpecialCallHandler?.Invoke(request) ?? false);
         public Task<bool> ConfirmResetFiveToneSpecialCallAsync() => Task.FromResult(confirmResetFiveToneSpecialCall);
         public Task<bool> ShowDtmfSpecialCallDialogAsync(DtmfSpecialCallDialogRequest request) => Task.FromResult(false);
+        public Task CopyToClipboardAsync(string text) => Task.CompletedTask;
     }
 }

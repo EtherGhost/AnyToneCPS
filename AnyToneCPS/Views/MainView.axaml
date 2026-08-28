@@ -401,7 +401,10 @@
                                 <Border Classes="Panel" Padding="8" MaxWidth="480">
                                     <ScrollViewer MaxHeight="420">
                                         <StackPanel Spacing="8">
-                                            <TextBlock Classes="SectionTitle" Text="Read From Radio" />
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Grid.Column="0" Classes="SectionTitle" Text="Read From Radio" />
+                                                <Button Grid.Column="1" Content="Copy" Padding="6,2" FontSize="11" Command="{Binding CopyRadioReadWarningsCommand}" ToolTip.Tip="Copy the full message to the clipboard" />
+                                            </Grid>
                                             <SelectableTextBlock Text="{Binding RadioReadStatusText}" TextWrapping="Wrap" />
                                             <ItemsControl ItemsSource="{Binding RadioReadWarnings}" IsVisible="{Binding HasRadioReadWarnings}">
                                                 <ItemsControl.ItemTemplate>
@@ -434,7 +437,10 @@
                                 <Border Classes="Panel" Padding="8" MaxWidth="480">
                                     <ScrollViewer MaxHeight="420">
                                         <StackPanel Spacing="8">
-                                            <TextBlock Classes="SectionTitle" Text="Write to Radio" />
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Grid.Column="0" Classes="SectionTitle" Text="Write to Radio" />
+                                                <Button Grid.Column="1" Content="Copy" Padding="6,2" FontSize="11" Command="{Binding CopyRadioWriteWarningsCommand}" ToolTip.Tip="Copy the full message to the clipboard" />
+                                            </Grid>
                                             <SelectableTextBlock Text="{Binding RadioWriteStatusText}" TextWrapping="Wrap" />
                                             <ItemsControl ItemsSource="{Binding RadioWriteWarnings}">
                                                 <ItemsControl.ItemTemplate>

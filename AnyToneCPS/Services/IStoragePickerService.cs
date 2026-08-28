@@ -58,6 +58,13 @@ public interface IStoragePickerService
     /// DtmfSpecialCallDialogRequest's own doc comment. Returns true (OK) or
     /// false (Cancel/closed).</summary>
     Task<bool> ShowDtmfSpecialCallDialogAsync(DtmfSpecialCallDialogRequest request);
+
+    /// <summary>Copies the full text of a status/warnings message (e.g. a
+    /// Read/Write From Radio result) to the system clipboard - added so the
+    /// whole message can be copied in one action instead of the per-row
+    /// text selection each warning line's own SelectableTextBlock otherwise
+    /// limits the user to.</summary>
+    Task CopyToClipboardAsync(string text);
 }
 
 public interface IProjectStorage
@@ -85,4 +92,5 @@ public sealed class NullStoragePickerService : IStoragePickerService
     public Task<bool> ShowFiveToneSpecialCallDialogAsync(FiveToneSpecialCallDialogRequest request) => Task.FromResult(false);
     public Task<bool> ConfirmResetFiveToneSpecialCallAsync() => Task.FromResult(false);
     public Task<bool> ShowDtmfSpecialCallDialogAsync(DtmfSpecialCallDialogRequest request) => Task.FromResult(false);
+    public Task CopyToClipboardAsync(string text) => Task.CompletedTask;
 }
