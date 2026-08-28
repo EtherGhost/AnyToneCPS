@@ -55,9 +55,10 @@ official or supported product.
   error and factory-reset. Back up your codeplug with the vendor CPS (or at
   least do a Read From Radio and save the project file) before writing
   anything you'd be upset to lose.
-- **No support is offered.** Issues and pull requests are welcome, but
-  there's no guaranteed response time and no obligation to fix, triage, or
-  merge anything.
+- **This is a solo project, not a collaborative one.** Bug reports are
+  welcome, but there's no guaranteed response time and no promise any given
+  one gets fixed - I'll get to things if and when I decide to. The source is
+  here to be read and forked, not to gather contributors.
 - **Not affiliated with, endorsed by, or supported by AnyTone** in any way.
   All protocol and codeplug details here come from independent reverse
   engineering against real hardware, not from AnyTone documentation.
@@ -77,46 +78,33 @@ official or supported product.
 - **iOS** - project scaffolding exists; no iOS toolchain has been used to
   build or test it yet.
 
+## Install
+
+Download the latest build from the
+[Releases](https://github.com/EtherGhost/AnyToneCPS/releases) page.
+
+**Android**: install the APK (`adb install -r anytonecps.apk`, or just open
+it on the phone). Updating over an existing install can fail with a
+signature error if the new build was signed differently from what's already
+on the phone - uninstall the old one first if that happens (this clears
+whatever project file is saved in the app's own storage, so back it up
+first if you care about it).
+
+**Linux desktop** - pick one:
+
+- RPM (Fedora): `sudo dnf install ./anytone-cps-<version>-1.fc44.x86_64.rpm`,
+  then run `anytone-cps`.
+- Flatpak: `flatpak install --user anytone-cps-<version>.flatpak`, then run
+  `flatpak run se.tobbe.AnyToneCPS`. Asks for raw USB device access on
+  install, since that's how it reaches the radio.
+- AppImage: `chmod +x AnyToneCPS-<version>-x86_64.AppImage`, then run it
+  directly - no install step.
+
+**Windows/macOS**: not packaged yet.
+
 ## Technology
 
-- .NET 10
-- Avalonia UI
-- CommunityToolkit.Mvvm
-
-Five projects share one solution: `AnyToneCPS` (shared core: models,
-view models, radio protocol/codecs), `AnyToneCPS.Desktop`,
-`AnyToneCPS.Android`, `AnyToneCPS.Browser`, `AnyToneCPS.iOS`, and
-`AnyToneCPS.Tests`.
-
-## Getting started
-
-Requirements:
-
-- .NET 10 SDK
-
-Build the solution:
-
-```bash
-dotnet build AnyToneCPS.sln
-```
-
-Run the desktop app:
-
-```bash
-dotnet run --project AnyToneCPS.Desktop
-```
-
-This is debug/JIT mode - `dotnet run` does not use NativeAOT. See below for
-a NativeAOT publish.
-
-Run the test suite:
-
-```bash
-dotnet run --project AnyToneCPS.Tests
-```
-
-(Not `dotnet test` - this project uses its own lightweight test runner in
-`AnyToneCPS.Tests/Program.cs`, not the standard test-host protocol.)
+Built with .NET 10, Avalonia UI, and CommunityToolkit.Mvvm.
 
 ## Channel labels
 
@@ -129,190 +117,6 @@ entirely from the channel's own data: `RPTR` for a repeater channel, a
 frequency band label (`VHF`/`UHF`), `JAKT` if the name contains it, `ENC`/
 `ARC4` depending on which encryption is in use, `SCRA` if scrambling is on,
 or `RX` for a receive-only channel.
-
-## Android NativeAOT
-
-The Android build uses a separate official .NET SDK install and Android NDK
-27, since the Fedora-packaged .NET SDK currently has MSBuild/ILLink issues
-with the NativeAOT task host.
-
-Requirements:
-
-- An official .NET SDK install (point `DOTNET_NATIVEAOT_ROOT` at it)
-- Android SDK command line tools
-- Android NDK `27.2.12479018` (point `ANDROID_NDK_ROOT` at it, if not in the
-  default location the script expects)
-- A phone paired over `adb`
-
-Publish the Android APK:
-
-```bash
-scripts/publish-android-nativeaot.sh
-```
-
-The installable APK is written to:
-
-```text
-AnyToneCPS.Android/bin/Release/net10.0-android/android-arm64/publish/com.companyname.anytonecps-Signed.apk
-```
-
-Install it on the phone:
-
-```bash
-adb devices -l
-adb install -r AnyToneCPS.Android/bin/Release/net10.0-android/android-arm64/publish/com.companyname.anytonecps-Signed.apk
-```
-
-The app's own Settings view shows its build mode. A NativeAOT build shows:
-
-```text
-Version ... - NativeAOT
-```
-
-### Release signing
-
-Not distributed via Google Play, so `Release` config signs the APK itself
-(not an AAB) with a dedicated key. Signing config isn't tracked in git (it's
-personal machine paths, and a public repo shouldn't ship those) - copy
-`AnyToneCPS.Android/signing.local.props.example` to
-`AnyToneCPS.Android/signing.local.props` (gitignored) and fill in your own
-keystore/alias/password-file paths. Without it, `Release` builds just fall
-back to default debug signing - fine for local testing, not for handing an
-APK to anyone else, since they won't be able to install an update over it
-later.
-
-Two separate password files with identical content, not one shared by both
-properties, is deliberate: `apksigner`'s `file:` password source only
-supports a single read, so pointing both `AndroidSigningKeyPass` and
-`AndroidSigningStorePass` at the same file fails the second read with
-`end of file reached`.
-
-Installing a release build over a debug-signed install of the app will fail
-with `INSTALL_FAILED_UPDATE_INCOMPATIBLE` since the signing key changed -
-`adb uninstall com.companyname.anytonecps` first (this loses whatever
-project file is saved on the phone if it hasn't been backed up off-device).
-
-## Fedora NativeAOT
-
-Requirements for a Fedora desktop NativeAOT build:
-
-```bash
-sudo dnf install rpm-build clang lld zlib-devel
-```
-
-Publish the Fedora desktop app as `linux-x64` NativeAOT:
-
-```bash
-scripts/publish-desktop-nativeaot.sh
-```
-
-Output goes to:
-
-```text
-artifacts/desktop-nativeaot
-```
-
-Run it directly from the publish directory:
-
-```bash
-./artifacts/desktop-nativeaot/AnyToneCPS.Desktop
-```
-
-## Fedora RPM
-
-Build an RPM from the desktop NativeAOT publish:
-
-```bash
-scripts/build-fedora-rpm.sh
-```
-
-The RPM is written to:
-
-```text
-artifacts/packages/anytone-cps-<version>-1.fc44.x86_64.rpm
-```
-
-Install it locally:
-
-```bash
-sudo dnf install ./artifacts/packages/anytone-cps-<version>-1.fc44.x86_64.rpm
-```
-
-Run it after installing:
-
-```bash
-anytone-cps
-```
-
-The RPM installs:
-
-- `/opt/anytone-cps/AnyToneCPS.Desktop`
-- `/opt/anytone-cps/libHarfBuzzSharp.so`
-- `/opt/anytone-cps/libSkiaSharp.so`
-- `/usr/bin/anytone-cps`
-- a desktop entry and app icon under `/usr/share/`
-
-## Flatpak
-
-Requirements:
-
-```bash
-sudo dnf install flatpak-builder
-flatpak install flathub org.freedesktop.Sdk//25.08
-```
-
-Build the flatpak bundle from the desktop NativeAOT publish:
-
-```bash
-scripts/publish-desktop-nativeaot.sh
-scripts/build-flatpak.sh
-```
-
-Output goes to:
-
-```text
-artifacts/packages/anytone-cps-<version>.flatpak
-```
-
-Install and run it locally:
-
-```bash
-flatpak install --user artifacts/packages/anytone-cps-<version>.flatpak
-flatpak run se.tobbe.AnyToneCPS
-```
-
-The sandbox is opened up with `--device=all` since the app needs raw access
-to the radio's USB serial device - everything else (file picker, clipboard)
-goes through the normal portals. The manifest and appstream metadata are in
-`flatpak/`; not yet submitted to Flathub.
-
-## AppImage
-
-Build the AppImage from the desktop NativeAOT publish:
-
-```bash
-scripts/publish-desktop-nativeaot.sh
-scripts/build-appimage.sh
-```
-
-`appimagetool` is downloaded automatically into `artifacts/tools/` on first
-run - no system package needed.
-
-Output goes to:
-
-```text
-artifacts/packages/AnyToneCPS-<version>-x86_64.AppImage
-```
-
-Run it directly:
-
-```bash
-chmod +x artifacts/packages/AnyToneCPS-<version>-x86_64.AppImage
-artifacts/packages/AnyToneCPS-<version>-x86_64.AppImage
-```
-
-No sandboxing, no install step - just an executable that bundles the
-NativeAOT binary and its native libs together.
 
 ## Project data
 
@@ -331,16 +135,6 @@ AnyToneCPS/settings.json
 
 Paths and naming are still provisional and are likely to change as model
 and export support solidify.
-
-## Development principles
-
-- Keep the data model simple until a given CPS field is actually confirmed
-  against real hardware.
-- Verify field encodings against live USB captures of the real vendor CPS
-  before trusting a write path - assumptions from documentation alone are
-  not enough on this radio.
-- Keep general radio data separate from model- and export-specific
-  details.
 
 ## License
 
