@@ -1,0 +1,18 @@
+<Project>
+    <!-- Copy this file to signing.local.props (gitignored) and fill in
+         real paths to sign Release builds with your own key. Without it,
+         Release builds fall back to the default debug signing - fine for
+         local testing, not for distributing an APK to anyone else, since
+         they won't be able to install an update over it later. -->
+    <PropertyGroup Condition="$(TargetFramework.Contains('-android')) and '$(Configuration)' == 'Release'">
+        <AndroidKeyStore>true</AndroidKeyStore>
+        <AndroidSigningKeyStore>/path/to/your-release-keystore.jks</AndroidSigningKeyStore>
+        <AndroidSigningKeyAlias>release</AndroidSigningKeyAlias>
+        <!-- Two separate password files (even with identical content), not
+             one shared by both properties - apksigner's file: password
+             source only supports a single read, so pointing both at the
+             same file fails the second read with "end of file reached". -->
+        <AndroidSigningKeyPass>file:/path/to/key-password-file</AndroidSigningKeyPass>
+        <AndroidSigningStorePass>file:/path/to/store-password-file</AndroidSigningStorePass>
+    </PropertyGroup>
+</Project>

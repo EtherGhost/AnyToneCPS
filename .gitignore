@@ -47,6 +47,7 @@ _ReSharper.Caches/
 *.dex
 *.keystore
 *.jks
+signing.local.props
 
 # iOS / macOS
 *.ipa

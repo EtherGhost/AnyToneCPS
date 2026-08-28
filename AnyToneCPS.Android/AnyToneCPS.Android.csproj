@@ -13,23 +13,12 @@
         <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">android-arm64</RuntimeIdentifier>
     </PropertyGroup>
 
-    <!-- Not distributed via Google Play - this signs the APK itself (not an
-         AAB) with a release key dedicated to this app, so a sideloaded
-         install can be upgraded in place instead of needing an uninstall
-         each release. Two distinct password files (same content) rather
-         than one shared by both properties, since apksigner's APK signing
-         path (unlike the AAB path the other two apps use) reads a file:
-         password source as a single-consume stream - pointing both
-         AndroidSigningKeyPass and AndroidSigningStorePass at the same file
-         fails the second read with "end of file reached", confirmed live
-         with a direct apksigner invocation 2026-08-28. -->
-    <PropertyGroup Condition="$(TargetFramework.Contains('-android')) and '$(Configuration)' == 'Release'">
-        <AndroidKeyStore>true</AndroidKeyStore>
-        <AndroidSigningKeyStore>/home/tobbe/.android/anytonecps-release-keystore.jks</AndroidSigningKeyStore>
-        <AndroidSigningKeyAlias>release</AndroidSigningKeyAlias>
-        <AndroidSigningKeyPass>file:/home/tobbe/.android/AnyToneCpsSigningKeyPassword</AndroidSigningKeyPass>
-        <AndroidSigningStorePass>file:/home/tobbe/.android/AnyToneCpsSigningPassword</AndroidSigningStorePass>
-    </PropertyGroup>
+    <!-- Real signing config lives in the gitignored signing.local.props,
+         not here - see AnyToneCPS.Android/signing.local.props.example.
+         Public repo, so no personal machine paths belong in tracked files;
+         also means a fresh clone's Release build just falls back to debug
+         signing instead of failing outright on a missing local path. -->
+    <Import Project="signing.local.props" Condition="Exists('signing.local.props')" />
 
     <ItemGroup>
         <AndroidResource Include="Icon.png">

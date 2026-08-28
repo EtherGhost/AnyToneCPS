@@ -172,15 +172,20 @@ Version ... - NativeAOT
 ### Release signing
 
 Not distributed via Google Play, so `Release` config signs the APK itself
-(not an AAB) with a dedicated key:
-`/home/tobbe/.android/anytonecps-release-keystore.jks`, alias `release`,
-password files at `/home/tobbe/.android/AnyToneCpsSigningPassword` (store)
-and `/home/tobbe/.android/AnyToneCpsSigningKeyPassword` (key) - deliberately
-two separate files with identical content, not one shared by both
-properties, since `apksigner`'s `file:` password source only supports a
-single read; pointing both properties at the same file fails the second
-read with `end of file reached`. None of this is checked into git - the
-keystore and its password files live outside the repo entirely.
+(not an AAB) with a dedicated key. Signing config isn't tracked in git (it's
+personal machine paths, and a public repo shouldn't ship those) - copy
+`AnyToneCPS.Android/signing.local.props.example` to
+`AnyToneCPS.Android/signing.local.props` (gitignored) and fill in your own
+keystore/alias/password-file paths. Without it, `Release` builds just fall
+back to default debug signing - fine for local testing, not for handing an
+APK to anyone else, since they won't be able to install an update over it
+later.
+
+Two separate password files with identical content, not one shared by both
+properties, is deliberate: `apksigner`'s `file:` password source only
+supports a single read, so pointing both `AndroidSigningKeyPass` and
+`AndroidSigningStorePass` at the same file fails the second read with
+`end of file reached`.
 
 Installing a release build over a debug-signed install of the app will fail
 with `INSTALL_FAILED_UPDATE_INCOMPATIBLE` since the signing key changed -
