@@ -55,10 +55,11 @@ official or supported product.
   error and factory-reset. Back up your codeplug with the vendor CPS (or at
   least do a Read From Radio and save the project file) before writing
   anything you'd be upset to lose.
-- **This is a solo project, not a collaborative one.** Bug reports are
-  welcome, but there's no guaranteed response time and no promise any given
-  one gets fixed - I'll get to things if and when I decide to. The source is
-  here to be read and forked, not to gather contributors.
+- **No support is offered, and this is a solo project, not a collaborative
+  one.** Bug reports are welcome, but there's no guaranteed response time
+  and no promise any given one gets fixed - I'll get to things if and when I
+  decide to. The source is here to be read and forked, not to gather
+  contributors.
 - **Not affiliated with, endorsed by, or supported by AnyTone** in any way.
   All protocol and codeplug details here come from independent reverse
   engineering against real hardware, not from AnyTone documentation.
