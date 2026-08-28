@@ -1284,6 +1284,15 @@ public partial class MainViewModel : ViewModelBase
                 data, Channels, Zones, EncryptionKeys, Arc4EncryptionKeys, AesEncryptionKeys,
                 RadioIds, Talkgroups, ScanLists, RoamingChannels, RoamingZones, ReceiveGroupLists, AutoRepeaterOffsets,
                 MasterId, TalkAliasSettings, AnalogAddresses, GpsRoamingEntries, TalkgroupWhitelist, PrefabricatedSmsMessages, AmAirChannels, AmZones, FmChannels, AlarmSettings, DigitalContactWhitelist, AprsSettings, AprsReceiveFilters, OptionalSettings, DigitalContacts);
+            // RadioProjectMapper.ToEntry sets OffsetMHz via an object
+            // initializer AFTER RxFrequencyMHz, which overwrites whatever
+            // ChannelEntry's own OnRxFrequencyMHzChanged hook just corrected
+            // - a project file saved before the 2026-08-28 fix (or one
+            // carrying an old stale mirrored-to-RX offset) loads that stale
+            // value back in verbatim. Same normalize pass Save/Write already
+            // run, here so the in-memory state is correct immediately after
+            // this remembered-project auto-load too.
+            NormalizeSimplexChannelOffsets();
             EnsureEncryptionKeySlotsPresent();
             EnsureGpsRoamingSlotsPresent();
             EnsureHotKeySlotsPresent();
@@ -1405,6 +1414,15 @@ public partial class MainViewModel : ViewModelBase
                 data, Channels, Zones, EncryptionKeys, Arc4EncryptionKeys, AesEncryptionKeys,
                 RadioIds, Talkgroups, ScanLists, RoamingChannels, RoamingZones, ReceiveGroupLists, AutoRepeaterOffsets,
                 MasterId, TalkAliasSettings, AnalogAddresses, GpsRoamingEntries, TalkgroupWhitelist, PrefabricatedSmsMessages, AmAirChannels, AmZones, FmChannels, AlarmSettings, DigitalContactWhitelist, AprsSettings, AprsReceiveFilters, OptionalSettings, DigitalContacts);
+            // RadioProjectMapper.ToEntry sets OffsetMHz via an object
+            // initializer AFTER RxFrequencyMHz, which overwrites whatever
+            // ChannelEntry's own OnRxFrequencyMHzChanged hook just corrected
+            // - a project file saved before the 2026-08-28 fix (or one
+            // carrying an old stale mirrored-to-RX offset) loads that stale
+            // value back in verbatim. Same normalize pass Save/Write already
+            // run, here so the in-memory state is correct immediately after
+            // load too, not just at the next Save/Write.
+            NormalizeSimplexChannelOffsets();
             EnsureEncryptionKeySlotsPresent();
             EnsureGpsRoamingSlotsPresent();
             EnsureHotKeySlotsPresent();
@@ -1548,14 +1566,16 @@ public partial class MainViewModel : ViewModelBase
     /// hooks now keep this in sync going forward during live editing; this
     /// is the defense-in-depth pass at the save boundary that also heals
     /// any channel that went stale before that fix existed, or by some
-    /// future path that doesn't go through those hooks.</summary>
+    /// future path that doesn't go through those hooks. Normalizes to
+    /// CodeplugLimits.SimplexOffsetPlaceholderMHz (0.1, not RX and not a
+    /// flat 0 either) - see that constant's own doc comment for why.</summary>
     internal void NormalizeSimplexChannelOffsets()
     {
         foreach (var channel in Channels)
         {
-            if (channel.OffsetDirection == 0 && channel.OffsetMHz != channel.RxFrequencyMHz)
+            if (channel.OffsetDirection == 0 && channel.OffsetMHz != CodeplugLimits.SimplexOffsetPlaceholderMHz)
             {
-                channel.OffsetMHz = channel.RxFrequencyMHz;
+                channel.OffsetMHz = CodeplugLimits.SimplexOffsetPlaceholderMHz;
             }
         }
     }
@@ -1668,7 +1688,7 @@ public partial class MainViewModel : ViewModelBase
             Number = nextNumber,
             Name = $"CHANNEL {nextNumber:000}",
             RxFrequencyMHz = 145.5,
-            OffsetMHz = 0,
+            OffsetMHz = CodeplugLimits.SimplexOffsetPlaceholderMHz,
             OffsetDirection = 0,
             ChannelType = 0, // A-Analog
             TransmitPower = 2, // High
@@ -3198,7 +3218,7 @@ public partial class MainViewModel : ViewModelBase
             Number = 100,
             Name = "V00",
             RxFrequencyMHz = 145.50000,
-            OffsetMHz = 0,
+            OffsetMHz = CodeplugLimits.SimplexOffsetPlaceholderMHz,
             OffsetDirection = 0,
             ChannelType = 0,
             TransmitPower = 3,
@@ -3209,7 +3229,7 @@ public partial class MainViewModel : ViewModelBase
             Number = 116,
             Name = "U00",
             RxFrequencyMHz = 433.50000,
-            OffsetMHz = 0,
+            OffsetMHz = CodeplugLimits.SimplexOffsetPlaceholderMHz,
             OffsetDirection = 0,
             ChannelType = 0,
             TransmitPower = 3,
@@ -3220,7 +3240,7 @@ public partial class MainViewModel : ViewModelBase
             Number = 400,
             Name = "DMRV1",
             RxFrequencyMHz = 145.37500,
-            OffsetMHz = 0,
+            OffsetMHz = CodeplugLimits.SimplexOffsetPlaceholderMHz,
             OffsetDirection = 0,
             ChannelType = 1,
             TransmitPower = 3,
@@ -3489,9 +3509,22 @@ public partial class MainViewModel : ViewModelBase
     /// happened to trigger a refresh.</summary>
     private void OnEncryptionKeyEntryPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        _projectStructureDirty = true;
-        NotifyDirtyStateChanged();
-        RefreshValidation();
+        // MarkRadioSynced() (after a successful Read/Write) raises a
+        // HasAnyPendingRadioWrite notification purely to refresh the
+        // radio-write-pending UI indicator - treating it as a real edit here
+        // marked the project file dirty after a write that changed nothing
+        // the user actually edited (found live 2026-08-29, same bug class
+        // as MainViewModel.CoreEntities.cs's MarkDirtyAndRevalidateOnRealPropertyChange).
+        // A genuine field edit always ALSO raises its own property's own
+        // change notification alongside this one, so skipping just this one
+        // doesn't miss real edits.
+        if (e.PropertyName != nameof(EncryptionKeyEntry.HasAnyPendingRadioWrite))
+        {
+            _projectStructureDirty = true;
+            NotifyDirtyStateChanged();
+            RefreshValidation();
+        }
+
         WriteChangesToRadioCommand.NotifyCanExecuteChanged();
 
         if (sender is EncryptionKeyEntry key)

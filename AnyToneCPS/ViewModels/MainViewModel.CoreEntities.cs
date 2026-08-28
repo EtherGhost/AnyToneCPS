@@ -254,6 +254,29 @@ public partial class MainViewModel
             RefreshValidation();
         }
 
+        // For the singleton settings entities below (PropertyChanged, not
+        // CollectionChanged): MarkRadioSynced() - called on every entity
+        // after a successful write, even ones the user never touched - fires
+        // a HasAnyPendingRadioWrite notification purely to refresh the
+        // radio-write-pending UI indicator. Found live 2026-08-29: wiring
+        // MarkDirtyAndRevalidate directly to these entities' PropertyChanged
+        // misread that internal notification as a real edit, marking the
+        // project file dirty (Save enabled) after a write that changed
+        // nothing the user actually edited. A genuine field edit on these
+        // entities always ALSO raises its own property's own change
+        // notification alongside HasAnyPendingRadioWrite (see e.g.
+        // MasterIdEntry.OnUsedChanged), so ignoring that one specific
+        // notification here doesn't miss real edits.
+        void MarkDirtyAndRevalidateOnRealPropertyChange(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(MasterIdEntry.HasAnyPendingRadioWrite))
+            {
+                return;
+            }
+
+            MarkDirtyAndRevalidate(sender, e);
+        }
+
         RadioIds.CollectionChanged += MarkDirtyAndRevalidate;
         Talkgroups.CollectionChanged += MarkDirtyAndRevalidate;
         ScanLists.CollectionChanged += MarkDirtyAndRevalidate;
@@ -269,18 +292,18 @@ public partial class MainViewModel
         AmAirChannels.CollectionChanged += MarkDirtyAndRevalidate;
         AmZones.CollectionChanged += MarkDirtyAndRevalidate;
         FmChannels.CollectionChanged += MarkDirtyAndRevalidate;
-        MasterId.PropertyChanged += MarkDirtyAndRevalidate;
-        TalkAliasSettings.PropertyChanged += MarkDirtyAndRevalidate;
-        AlarmSettings.PropertyChanged += MarkDirtyAndRevalidate;
+        MasterId.PropertyChanged += MarkDirtyAndRevalidateOnRealPropertyChange;
+        TalkAliasSettings.PropertyChanged += MarkDirtyAndRevalidateOnRealPropertyChange;
+        AlarmSettings.PropertyChanged += MarkDirtyAndRevalidateOnRealPropertyChange;
         AlarmSettings.PropertyChanged += OnAlarmSettingsPropertyChanged;
-        AprsSettings.PropertyChanged += MarkDirtyAndRevalidate;
+        AprsSettings.PropertyChanged += MarkDirtyAndRevalidateOnRealPropertyChange;
         AprsReceiveFilters.CollectionChanged += MarkDirtyAndRevalidate;
-        OptionalSettings.PropertyChanged += MarkDirtyAndRevalidate;
+        OptionalSettings.PropertyChanged += MarkDirtyAndRevalidateOnRealPropertyChange;
         OptionalSettings.PropertyChanged += OnOptionalSettingsPropertyChanged;
-        Qdc1200Settings.PropertyChanged += MarkDirtyAndRevalidate;
-        FiveToneSettings.PropertyChanged += MarkDirtyAndRevalidate;
-        TwoToneEncodeSettings.PropertyChanged += MarkDirtyAndRevalidate;
-        DtmfSettings.PropertyChanged += MarkDirtyAndRevalidate;
+        Qdc1200Settings.PropertyChanged += MarkDirtyAndRevalidateOnRealPropertyChange;
+        FiveToneSettings.PropertyChanged += MarkDirtyAndRevalidateOnRealPropertyChange;
+        TwoToneEncodeSettings.PropertyChanged += MarkDirtyAndRevalidateOnRealPropertyChange;
+        DtmfSettings.PropertyChanged += MarkDirtyAndRevalidateOnRealPropertyChange;
 
         // AlertTones is a fixed 25-entry sub-list on OptionalSettings (see
         // OptionalSettingsEntry's own doc comment) - never added/removed

@@ -34,8 +34,8 @@ public static class Program
         Run("Overlong channel name blocks save and write", OverlongChannelNameBlocksSaveAndWrite);
         Run("Rejects invalid frequency text without changing the value", RejectsInvalidFrequencyTextWithoutChangingTheValue);
         Run("Rejects out of range frequency text without changing the value", RejectsOutOfRangeFrequencyTextWithoutChangingTheValue);
-        Run("Simplex channel keeps OffsetMHz in sync with RX on every edit", SimplexChannelKeepsOffsetMHzInSyncWithRxOnEveryEdit);
-        Run("Switching to simplex snaps OffsetMHz to RX", SwitchingToSimplexSnapsOffsetMHzToRx);
+        Run("Simplex channel keeps OffsetMHz at the placeholder on every edit", SimplexChannelKeepsOffsetMHzAtThePlaceholderOnEveryEdit);
+        Run("Switching to simplex sets OffsetMHz to the placeholder", SwitchingToSimplexSetsOffsetMHzToThePlaceholder);
         Run("Save normalizes stale simplex offsets before writing", SaveNormalizesStaleSimplexOffsetsBeforeWriting);
         Run("Invalid encryption key formats block save", InvalidEncryptionKeyFormatsBlockSave);
         Run("Validates dotted frequencies independent of current culture", ValidatesDottedFrequenciesIndependentOfCurrentCulture);
@@ -54,6 +54,7 @@ public static class Program
         Run("Am zone codec decodes scan channel bitmask not index list", AmZoneCodecDecodesScanChannelBitmaskNotIndexList);
         Run("Single member zone only sets A channel", SingleMemberZoneOnlySetsAChannel);
         Run("Tracks unsaved field changes", TracksUnsavedFieldChanges);
+        Run("Mark radio synced on singleton settings does not dirty the project file", MarkRadioSyncedOnSingletonSettingsDoesNotDirtyTheProjectFile);
         Run("Refresh filtered digital contacts combines friends only with text filter", RefreshFilteredDigitalContactsCombinesFriendsOnlyWithTextFilter);
         Run("Tracks unsaved zone membership changes", TracksUnsavedZoneMembershipChanges);
         Run("Scan list assignment edits scan list membership not a channel field", ScanListAssignmentEditsScanListMembershipNotAChannelField);
@@ -460,6 +461,7 @@ public static class Program
         Run("Capturing a fully populated radio leaves no unmerged adjacent regions anywhere", CapturingAFullyPopulatedRadioLeavesNoUnmergedAdjacentRegionsAnywhere);
         Run("Dev force model to image marks every entity dirty without changing values", DevForceModelToImageMarksEveryEntityDirtyWithoutChangingValues);
         Run("Dev force model to image then write succeeds against a virtual radio", DevForceModelToImageThenWriteSucceedsAgainstAVirtualRadio);
+        Run("Write changes to radio normalizes a stale simplex offset even if nothing else changed", WriteChangesToRadioNormalizesAStaleSimplexOffsetEvenIfNothingElseChanged);
 
         if (Failures.Count == 0)
         {
@@ -713,22 +715,29 @@ public static class Program
     // its pre-edit value) whenever only RX was edited afterward, because
     // ComputeTransmitFrequencyMHz ignores OffsetMHz for OffsetDirection==0
     // and so the UI never surfaced the drift. 11 channels in the real file
-    // carried a wrong OffsetMHz this way.
-    private static void SimplexChannelKeepsOffsetMHzInSyncWithRxOnEveryEdit()
+    // carried a wrong OffsetMHz this way. Originally fixed by mirroring
+    // OffsetMHz to RX; changed to a flat 0 on 2026-08-28 after a live USB
+    // capture of the real vendor CPS writing a stock simplex channel showed
+    // the mirrored value is what made the vendor CPS's own frequency parser
+    // crash reading a channel this app had written; changed again the same
+    // day to CodeplugLimits.SimplexOffsetPlaceholderMHz (0.1, not a flat 0)
+    // after the vendor CPS kept crashing on exactly 0 too - see that
+    // constant's own doc comment for the full story.
+    private static void SimplexChannelKeepsOffsetMHzAtThePlaceholderOnEveryEdit()
     {
         var channel = new ChannelEntry { OffsetDirection = 0 };
 
         channel.RxFrequencyMHzText = "433.45000";
-        AssertEqual(433.45, channel.OffsetMHz);
+        AssertEqual(CodeplugLimits.SimplexOffsetPlaceholderMHz, channel.OffsetMHz);
 
         // The actual reported bug shape: RX edited AGAIN after the channel
-        // already existed - OffsetMHz must track the new value, not keep
-        // the one from the first edit.
+        // already existed - OffsetMHz must stay pinned at the placeholder,
+        // not drift.
         channel.RxFrequencyMHzText = "433.62500";
-        AssertEqual(433.625, channel.OffsetMHz);
+        AssertEqual(CodeplugLimits.SimplexOffsetPlaceholderMHz, channel.OffsetMHz);
     }
 
-    private static void SwitchingToSimplexSnapsOffsetMHzToRx()
+    private static void SwitchingToSimplexSetsOffsetMHzToThePlaceholder()
     {
         var channel = new ChannelEntry
         {
@@ -739,7 +748,7 @@ public static class Program
 
         channel.OffsetDirection = 0;
 
-        AssertEqual(145.5, channel.OffsetMHz);
+        AssertEqual(CodeplugLimits.SimplexOffsetPlaceholderMHz, channel.OffsetMHz);
     }
 
     private static void SaveNormalizesStaleSimplexOffsetsBeforeWriting()
@@ -754,7 +763,7 @@ public static class Program
 
         viewModel.NormalizeSimplexChannelOffsets();
 
-        AssertEqual(channel.RxFrequencyMHz, channel.OffsetMHz);
+        AssertEqual(CodeplugLimits.SimplexOffsetPlaceholderMHz, channel.OffsetMHz);
     }
 
     private static void InvalidEncryptionKeyFormatsBlockSave()
@@ -1170,6 +1179,38 @@ public static class Program
         AssertTrue(!viewModel.IsDirty, "mark clean should reset project dirty state");
         AssertTrue(!viewModel.SelectedChannel.IsNameDirty, "mark clean should reset field dirty state");
         AssertEqual("Normal", viewModel.SelectedChannel.NameFontWeight);
+    }
+
+    /// <summary>Regression test for a real live bug found 2026-08-29: after
+    /// loading a project (Save disabled - clean) and writing to the radio
+    /// with no edits at all, Save became enabled. Root cause: MasterId (and
+    /// TalkAliasSettings/AlarmSettings/AprsSettings/OptionalSettings/
+    /// Qdc1200Settings/FiveToneSettings/TwoToneEncodeSettings/DtmfSettings/
+    /// EncryptionKeyEntry) wired their WHOLE PropertyChanged event,
+    /// unfiltered, to the project-file dirty tracker - and MarkRadioSynced()
+    /// (called on every entity after a successful write, including ones the
+    /// user never touched) itself raises a HasAnyPendingRadioWrite
+    /// notification purely to refresh the radio-write-pending UI indicator.
+    /// That internal notification was being misread as a real edit.</summary>
+    private static void MarkRadioSyncedOnSingletonSettingsDoesNotDirtyTheProjectFile()
+    {
+        var viewModel = new MainViewModel();
+        AssertTrue(!viewModel.IsDirty, "new seeded view model should start clean");
+
+        // Simulates what a successful Write-to-Radio does for every entity
+        // on success, including ones with nothing the user actually edited -
+        // MasterId reports HasAnyPendingRadioWrite==true from a fresh
+        // load alone (never synced this session), so a real write patches
+        // and syncs it even with zero user edits.
+        viewModel.MasterId.MarkRadioSynced();
+
+        AssertTrue(!viewModel.IsDirty, "MarkRadioSynced on Master ID must not mark the project file dirty - nothing the user edited changed");
+
+        // The fix must not silence real edits - Used raises its own change
+        // notification alongside HasAnyPendingRadioWrite, which must still
+        // mark the project dirty.
+        viewModel.MasterId.Used = !viewModel.MasterId.Used;
+        AssertTrue(viewModel.IsDirty, "a real Master ID edit should still mark the project dirty");
     }
 
     private static void RefreshFilteredDigitalContactsCombinesFriendsOnlyWithTextFilter()
@@ -7603,6 +7644,45 @@ public static class Program
 
         AssertTrue(viewModel.RadioWriteStatusText.StartsWith("Write verified", StringComparison.Ordinal), $"a full-entity write against the virtual radio should succeed and verify cleanly, got: '{viewModel.RadioWriteStatusText}'");
         AssertEqual(0, viewModel.RadioWriteWarnings.Count);
+    }
+
+    /// <summary>Regression test for a real live bug found 2026-08-28, right
+    /// after the OffsetMHz-mirroring fix landed: SaveProject/SaveProjectAs
+    /// already called NormalizeSimplexChannelOffsets, but
+    /// WriteChangesToRadioAsync did not - so a channel loaded from an old
+    /// project file (whose stale mirrored offset survives
+    /// RadioProjectMapper.ToEntry's object-initializer field order, see that
+    /// method's own comment) got written to the real radio completely
+    /// unchanged if the user wrote without saving first, exactly reproducing
+    /// the vendor-CPS-crashing bytes. Proves a channel whose ONLY problem is
+    /// a stale simplex offset (already radio-synced otherwise) still gets
+    /// picked up and corrected by a write.</summary>
+    private static void WriteChangesToRadioNormalizesAStaleSimplexOffsetEvenIfNothingElseChanged()
+    {
+        var viewModel = new MainViewModel();
+        viewModel.ApplyRadioReadResult(new RadioCodeplugReadResult { Success = true }, includeDigitalContacts: false, includeEncryptionKeys: false);
+        viewModel.SetRadioServices(() => new FakeRadioConnection(), () => []);
+        viewModel.SelectedPort = "FAKE";
+        viewModel.SetStoragePicker(new TestStoragePicker(UsedEncryptionKeyRemovalChoice.Cancel, confirmWriteToRadio: true));
+        viewModel.AddChannelCommand.Execute(null);
+
+        var channel = viewModel.SelectedChannel!;
+        channel.RxFrequencyMHz = 433.5;
+        channel.OffsetDirection = 0;
+        channel.MarkRadioSynced(); // baseline: correctly OffsetMHz == the placeholder
+
+        // Simulate a stale mirrored offset surviving a project load (see
+        // RadioProjectMapper.ToEntry's own comment) - nothing else about
+        // this channel changed.
+        channel.OffsetMHz = 433.5;
+        AssertTrue(channel.HasAnyPendingRadioWrite, "the stale offset alone should make this channel pending for radio write");
+
+        viewModel.WriteChangesToRadioCommand.NotifyCanExecuteChanged();
+        AssertTrue(viewModel.WriteChangesToRadioCommand.CanExecute(null), "write must be available");
+        viewModel.WriteChangesToRadioCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+
+        AssertEqual(CodeplugLimits.SimplexOffsetPlaceholderMHz, channel.OffsetMHz);
+        AssertTrue(viewModel.RadioWriteStatusText.StartsWith("Write verified", StringComparison.Ordinal), $"write should succeed, got: '{viewModel.RadioWriteStatusText}'");
     }
 
     private static void AddAnalogAddressIsCappedAt128Slots()

@@ -295,6 +295,21 @@ public partial class MainViewModel
             return;
         }
 
+        // Same reasoning as SaveProject's own call to this - a channel
+        // loaded from a project file saved before this normalization
+        // existed (or from any other path that doesn't go through
+        // ChannelEntry's own OnRxFrequencyMHzChanged/OnOffsetDirectionChanged
+        // hooks, e.g. RadioProjectMapper.ToEntry's object initializer, which
+        // sets OffsetMHz AFTER RxFrequencyMHz and so overwrites whatever
+        // those hooks just corrected) could still carry a stale non-zero
+        // simplex offset in memory. Found live 2026-08-28: a channel written
+        // with this app still sent the old bad mirrored-to-RX offset,
+        // because this method had no normalize pass of its own and the
+        // loaded channel's in-memory OffsetMHz was never corrected. Must run
+        // before dirtyChannels is computed below so a channel that only
+        // needed this correction is actually included in the write.
+        NormalizeSimplexChannelOffsets();
+
         var dirtyChannels = Channels.Where(HasAnySafeFieldDirty).ToList();
         // A channel's Number may have been reused (Add/DuplicateChannel) since
         // it was deleted - that slot gets a real field patch below instead,

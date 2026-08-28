@@ -38,6 +38,25 @@ public static class CodeplugLimits
         (mhz >= VhfFrequencyMinMhz && mhz <= VhfFrequencyMaxMhz) ||
         (mhz >= UhfFrequencyMinMhz && mhz <= UhfFrequencyMaxMhz);
 
+    /// <summary>Placeholder OffsetMHz value for a simplex channel
+    /// (OffsetDirection == 0, which ignores OffsetMHz entirely when
+    /// computing TX - see ChannelEntry.ComputeTransmitFrequencyMHz). Not 0:
+    /// a live USB capture of the real vendor CPS writing a stock simplex
+    /// channel (2026-08-28) showed it uses 0.1, not 0. Separately, the
+    /// vendor CPS's own "GetFreFromCommData" read routine crashed (twice
+    /// reproduced) reading back a channel this app had written with
+    /// OffsetMHz mirrored to RX, and STILL crashed reading it back after a
+    /// fix changed that to exactly 0 - live capture confirmed the radio
+    /// held the intended 0 correctly and the read transaction itself was
+    /// clean, so their parser has a real edge case with this specific
+    /// field, not a communication problem. Matching their own observed
+    /// value (0.1) instead of the theoretically "cleaner" 0 is the
+    /// pragmatic fix - not yet independently confirmed this resolves the
+    /// crash (that requires one more live write+read cycle), but 0.1 is
+    /// guaranteed safe at minimum since it's what their own software
+    /// already produces without issue.</summary>
+    public const double SimplexOffsetPlaceholderMHz = 0.1;
+
 
     /// <summary>
     /// From the doc's §1 Channel Name row: "max 16 characters (from

@@ -1203,14 +1203,15 @@ public partial class ChannelEntry : ObservableValidator
         // invisible in the UI whenever only RX was edited after a channel's
         // creation - confirmed 2026-08-23 against a real saved project file
         // (11 channels carrying a pre-edit OffsetMHz that no longer matched
-        // RX). Keep it mirrored to RX so a future reader that takes
-        // OffsetMHz literally instead of checking OffsetDirection first (a
-        // write path, a CSV export, a different app reading this same
-        // file) doesn't compute a wrong TX frequency from silently stale
-        // data.
+        // RX). Originally fixed by mirroring OffsetMHz to RX; then changed to
+        // a flat 0 after a live capture showed the vendor CPS never mirrors
+        // it either; then changed again to
+        // CodeplugLimits.SimplexOffsetPlaceholderMHz (0.1, not 0) after the
+        // vendor CPS's own read routine kept crashing on this app's 0 - see
+        // that constant's own doc comment for the full story.
         if (OffsetDirection == 0)
         {
-            OffsetMHz = value;
+            OffsetMHz = CodeplugLimits.SimplexOffsetPlaceholderMHz;
         }
     }
 
@@ -1234,10 +1235,12 @@ public partial class ChannelEntry : ObservableValidator
 
         // Same staleness class as OnRxFrequencyMHzChanged above - switching
         // an existing duplex/split channel to simplex should not leave its
-        // old (now-ignored-by-the-UI) OffsetMHz behind.
+        // old (now-ignored-by-the-UI) OffsetMHz behind. See that method's
+        // own comment for why this is SimplexOffsetPlaceholderMHz, not RX
+        // or a flat 0.
         if (value == 0)
         {
-            OffsetMHz = RxFrequencyMHz;
+            OffsetMHz = CodeplugLimits.SimplexOffsetPlaceholderMHz;
         }
     }
 
