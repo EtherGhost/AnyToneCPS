@@ -169,6 +169,24 @@ The app's own Settings view shows its build mode. A NativeAOT build shows:
 Version ... - NativeAOT
 ```
 
+### Release signing
+
+Not distributed via Google Play, so `Release` config signs the APK itself
+(not an AAB) with a dedicated key:
+`/home/tobbe/.android/anytonecps-release-keystore.jks`, alias `release`,
+password files at `/home/tobbe/.android/AnyToneCpsSigningPassword` (store)
+and `/home/tobbe/.android/AnyToneCpsSigningKeyPassword` (key) - deliberately
+two separate files with identical content, not one shared by both
+properties, since `apksigner`'s `file:` password source only supports a
+single read; pointing both properties at the same file fails the second
+read with `end of file reached`. None of this is checked into git - the
+keystore and its password files live outside the repo entirely.
+
+Installing a release build over a debug-signed install of the app will fail
+with `INSTALL_FAILED_UPDATE_INCOMPATIBLE` since the signing key changed -
+`adb uninstall com.companyname.anytonecps` first (this loses whatever
+project file is saved on the phone if it hasn't been backed up off-device).
+
 ## Fedora NativeAOT
 
 Requirements for a Fedora desktop NativeAOT build:
@@ -228,6 +246,68 @@ The RPM installs:
 - `/opt/anytone-cps/libSkiaSharp.so`
 - `/usr/bin/anytone-cps`
 - a desktop entry and app icon under `/usr/share/`
+
+## Flatpak
+
+Requirements:
+
+```bash
+sudo dnf install flatpak-builder
+flatpak install flathub org.freedesktop.Sdk//25.08
+```
+
+Build the flatpak bundle from the desktop NativeAOT publish:
+
+```bash
+scripts/publish-desktop-nativeaot.sh
+scripts/build-flatpak.sh
+```
+
+Output goes to:
+
+```text
+artifacts/packages/anytone-cps-<version>.flatpak
+```
+
+Install and run it locally:
+
+```bash
+flatpak install --user artifacts/packages/anytone-cps-<version>.flatpak
+flatpak run se.tobbe.AnyToneCPS
+```
+
+The sandbox is opened up with `--device=all` since the app needs raw access
+to the radio's USB serial device - everything else (file picker, clipboard)
+goes through the normal portals. The manifest and appstream metadata are in
+`flatpak/`; not yet submitted to Flathub.
+
+## AppImage
+
+Build the AppImage from the desktop NativeAOT publish:
+
+```bash
+scripts/publish-desktop-nativeaot.sh
+scripts/build-appimage.sh
+```
+
+`appimagetool` is downloaded automatically into `artifacts/tools/` on first
+run - no system package needed.
+
+Output goes to:
+
+```text
+artifacts/packages/AnyToneCPS-<version>-x86_64.AppImage
+```
+
+Run it directly:
+
+```bash
+chmod +x artifacts/packages/AnyToneCPS-<version>-x86_64.AppImage
+artifacts/packages/AnyToneCPS-<version>-x86_64.AppImage
+```
+
+No sandboxing, no install step - just an executable that bundles the
+NativeAOT binary and its native libs together.
 
 ## Project data
 

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>se.tobbe.AnyToneCPS</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>AnyTone CPS</name>
+  <summary>Edit and export AnyTone D890UV codeplugs</summary>
+  <description>
+    <p>
+      AnyToneCPS is an open-source, cross-platform CPS (codeplug programming
+      software) for the AnyTone D890UV DMR radio. It talks to the radio
+      directly over its USB serial protocol - reverse-engineered from
+      scratch against real hardware - so it does not depend on or wrap the
+      vendor's Windows-only CPS.
+    </p>
+  </description>
+  <launchable type="desktop-id">se.tobbe.AnyToneCPS.desktop</launchable>
+  <url type="homepage">https://github.com/EtherGhost/AnyToneCPS</url>
+  <content_rating type="oars-1.1" />
+</component>

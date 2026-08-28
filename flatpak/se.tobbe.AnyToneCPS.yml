@@ -1,0 +1,40 @@
+app-id: se.tobbe.AnyToneCPS
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: anytone-cps
+
+# Radio access is a real USB serial device (D890UV), not something the
+# portal file-chooser flow covers - the sandbox needs raw device access to
+# reach it. Everything else routes through the portals normally.
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=all
+  - --socket=pulseaudio
+
+modules:
+  - name: anytone-cps
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 AnyToneCPS.Desktop /app/bin/AnyToneCPS.Desktop
+      - install -Dm755 libHarfBuzzSharp.so /app/bin/libHarfBuzzSharp.so
+      - install -Dm755 libSkiaSharp.so /app/bin/libSkiaSharp.so
+      - install -Dm755 libSystem.IO.Ports.Native.so /app/bin/libSystem.IO.Ports.Native.so
+      - install -Dm644 icon.png /app/share/icons/hicolor/256x256/apps/se.tobbe.AnyToneCPS.png
+      - install -Dm644 se.tobbe.AnyToneCPS.metainfo.xml /app/share/metainfo/se.tobbe.AnyToneCPS.metainfo.xml
+      - sed 's|^Exec=.*|Exec=anytone-cps|' se.tobbe.AnyToneCPS.desktop > se.tobbe.AnyToneCPS.desktop.processed
+      - install -Dm644 se.tobbe.AnyToneCPS.desktop.processed /app/share/applications/se.tobbe.AnyToneCPS.desktop
+      - printf '#!/usr/bin/env bash\nexec /app/bin/AnyToneCPS.Desktop "$@"\n' > /app/bin/anytone-cps
+      - chmod 0755 /app/bin/anytone-cps
+    sources:
+      - type: dir
+        path: ../artifacts/desktop-nativeaot
+      - type: file
+        path: ../AnyToneCPS.Desktop/Linux/se.tobbe.AnyToneCPS.desktop
+      - type: file
+        path: se.tobbe.AnyToneCPS.metainfo.xml
+      - type: file
+        path: ../AnyToneCPS/Assets/Icon.png
+        dest-filename: icon.png
