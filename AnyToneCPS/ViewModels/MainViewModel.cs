@@ -791,6 +791,16 @@ public partial class MainViewModel : ViewModelBase
     public string DataStoreDescription => string.IsNullOrWhiteSpace(CurrentProjectLocation)
         ? "No codeplug file selected"
         : $"Codeplug: {CurrentProjectLocation}";
+
+    /// <summary>See CopyRadioWriteWarningsAsync's own doc comment - same
+    /// "whole message in one action" fix, for the codeplug file location
+    /// label (a real path is often too long to read/select from the
+    /// truncated status-bar TextBlock it lives in).</summary>
+    [RelayCommand]
+    private async Task CopyDataStoreDescriptionAsync()
+    {
+        await _storagePicker.CopyToClipboardAsync(DataStoreDescription);
+    }
     public string ValidationSummary => ValidationMessages.Count == 0
         ? "OK"
         : $"{ValidationMessages.Count} issue(s)";
@@ -1615,7 +1625,10 @@ public partial class MainViewModel : ViewModelBase
             CurrentProjectLocation = projectStorage.DisplayLocation;
             await _storagePicker.RememberProjectAsync(projectStorage);
             MarkProjectClean();
-            StatusMessage = $"Codeplug saved: {projectStorage.DisplayLocation}";
+            // Short on purpose - the full path is always visible in the
+            // "Codeplug:" label next to this (DataStoreDescription), which
+            // has its own click-to-copy popup for the full path.
+            StatusMessage = "Codeplug saved";
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -1661,7 +1674,10 @@ public partial class MainViewModel : ViewModelBase
             CurrentProjectLocation = projectStorage.DisplayLocation;
             await _storagePicker.RememberProjectAsync(projectStorage);
             MarkProjectClean();
-            StatusMessage = $"Codeplug saved: {projectStorage.DisplayLocation}";
+            // Short on purpose - the full path is always visible in the
+            // "Codeplug:" label next to this (DataStoreDescription), which
+            // has its own click-to-copy popup for the full path.
+            StatusMessage = "Codeplug saved";
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -2605,7 +2621,8 @@ public partial class MainViewModel : ViewModelBase
         }
 
         var files = CpsCsvExporter.WriteExports(ExportDirectory, Channels, Zones);
-        StatusMessage = $"Exported {files.Count} files to {ExportDirectory}";
+        // Short on purpose - ExportDirectory is already shown separately.
+        StatusMessage = $"Exported {files.Count} file(s)";
     }
 
     [RelayCommand]
@@ -2620,7 +2637,8 @@ public partial class MainViewModel : ViewModelBase
 
         ExportDirectory = folder;
         await SaveAppSettingsAsync();
-        StatusMessage = $"Export folder: {folder}";
+        // Short on purpose - ExportDirectory is already shown separately.
+        StatusMessage = "Export folder set";
     }
 
     partial void OnSelectedChannelChanged(ChannelEntry? value)

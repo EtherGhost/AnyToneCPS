@@ -358,13 +358,37 @@
                     <!-- Which codeplug/project file is loaded - moved here
                          2026-08-14 from ChannelDetailView (Common tab header),
                          where it duplicated this same info off in a page
-                         that isn't always the one open. -->
-                    <TextBlock Grid.Column="3"
-                               Text="{Binding DataStoreDescription}"
-                               Foreground="{DynamicResource AppSubtleTextBrush}"
-                               TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center"
-                               Margin="16,0,0,0" />
+                         that isn't always the one open. Button+Flyout
+                         instead of a bare truncated TextBlock, same reason
+                         as Read/Write From Radio below - a real path is
+                         often too long to read or select from the
+                         ellipsis-truncated label, so click it for the full
+                         text plus a Copy button. -->
+                    <Button Grid.Column="3"
+                            MinHeight="0"
+                            MinWidth="0"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            VerticalAlignment="Center"
+                            Margin="16,0,0,0">
+                        <TextBlock Text="{Binding DataStoreDescription}"
+                                   Foreground="{DynamicResource AppSubtleTextBrush}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <Button.Flyout>
+                            <Flyout>
+                                <Border Classes="Panel" Padding="8" MaxWidth="480">
+                                    <StackPanel Spacing="8">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Grid.Column="0" Classes="SectionTitle" Text="Codeplug File" />
+                                            <Button Grid.Column="1" Content="Copy" Padding="6,2" FontSize="11" Command="{Binding CopyDataStoreDescriptionCommand}" ToolTip.Tip="Copy the full path to the clipboard" />
+                                        </Grid>
+                                        <SelectableTextBlock Text="{Binding DataStoreDescription}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
                     <TextBlock Grid.Column="4"
                                Text="Reading codeplug..."
                                Foreground="{DynamicResource AppStatusBrush}"
