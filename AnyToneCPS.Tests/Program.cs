@@ -11670,7 +11670,6 @@ public static class Program
         public Task ForgetRememberedProjectAsync() => Task.CompletedTask;
         public Task<IReadOnlyList<string>> PickCsvFilesAsync(string title) => Task.FromResult<IReadOnlyList<string>>([]);
         public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
-        public Task<bool> ConfirmOverwriteAsync(IProjectStorage projectStorage) => Task.FromResult(false);
         public Task<bool> ConfirmDiscardUnsavedChangesAsync() => Task.FromResult(false);
         public Task<UsedEncryptionKeyRemovalChoice> ConfirmRemoveUsedEncryptionKeyAsync(string message) =>
             Task.FromResult(removalChoice);

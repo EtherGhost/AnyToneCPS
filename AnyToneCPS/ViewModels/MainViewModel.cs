@@ -1596,14 +1596,11 @@ public partial class MainViewModel : ViewModelBase
         var projectStorage = _currentProjectStorage;
         if (projectStorage is null)
         {
+            // PickSaveProjectAsync's own ShowOverwritePrompt already asks
+            // the user before returning a path that already exists - a
+            // second confirmation here was redundant (removed 2026-08-29).
             projectStorage = await _storagePicker.PickSaveProjectAsync("SE_Field_Comms_D890UV_v1.dat");
             if (projectStorage is null)
-            {
-                StatusMessage = "Save cancelled";
-                return;
-            }
-
-            if (!await _storagePicker.ConfirmOverwriteAsync(projectStorage))
             {
                 StatusMessage = "Save cancelled";
                 return;
@@ -1646,14 +1643,11 @@ public partial class MainViewModel : ViewModelBase
         var suggestedName = string.IsNullOrWhiteSpace(CurrentProjectLocation)
             ? "SE_Field_Comms_D890UV_v1.dat"
             : Path.GetFileName(CurrentProjectLocation);
+        // PickSaveProjectAsync's own ShowOverwritePrompt already asks the
+        // user before returning a path that already exists - a second
+        // confirmation here was redundant (removed 2026-08-29).
         var projectStorage = await _storagePicker.PickSaveProjectAsync(suggestedName);
         if (projectStorage is null)
-        {
-            StatusMessage = "Save cancelled";
-            return;
-        }
-
-        if (!await _storagePicker.ConfirmOverwriteAsync(projectStorage))
         {
             StatusMessage = "Save cancelled";
             return;

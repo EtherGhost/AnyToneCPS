@@ -19,7 +19,6 @@ public interface IStoragePickerService
     Task ForgetRememberedProjectAsync();
     Task<IReadOnlyList<string>> PickCsvFilesAsync(string title);
     Task<string?> PickFolderAsync(string title);
-    Task<bool> ConfirmOverwriteAsync(IProjectStorage projectStorage);
     Task<bool> ConfirmDiscardUnsavedChangesAsync();
     Task<UsedEncryptionKeyRemovalChoice> ConfirmRemoveUsedEncryptionKeyAsync(string message);
 
@@ -83,7 +82,6 @@ public sealed class NullStoragePickerService : IStoragePickerService
     public Task ForgetRememberedProjectAsync() => Task.CompletedTask;
     public Task<IReadOnlyList<string>> PickCsvFilesAsync(string title) => Task.FromResult<IReadOnlyList<string>>([]);
     public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
-    public Task<bool> ConfirmOverwriteAsync(IProjectStorage projectStorage) => Task.FromResult(false);
     public Task<bool> ConfirmDiscardUnsavedChangesAsync() => Task.FromResult(false);
     public Task<UsedEncryptionKeyRemovalChoice> ConfirmRemoveUsedEncryptionKeyAsync(string message) =>
         Task.FromResult(UsedEncryptionKeyRemovalChoice.Cancel);
