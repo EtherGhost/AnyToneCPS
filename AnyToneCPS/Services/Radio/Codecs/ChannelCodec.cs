@@ -693,7 +693,78 @@ public static class ChannelCodec
             result[0x3b] = PatchBits(result[0x3b], 0, 1, (byte)(aesMultipleKey ? 1 : 0));
         }
 
+        NormalizeErasedUnclaimedBytes(result);
+
         return result;
+    }
+
+    /// <summary>Found live 2026-08-29: 42 real channels in a live user
+    /// codeplug had 0xFF (erased flash) sitting in several byte ranges this
+    /// codec has never decoded/modeled - including the APRS report fields
+    /// below, which ARE decoded on read (see Decode above) but were never
+    /// wired into ChannelFieldPatch, so a normal write always left them
+    /// untouched. The vendor CPS's own read routine ("GetFreFromCommData")
+    /// crashed trying to parse one of these channels - traced to
+    /// AnalogAprsReportFrequencyIndex (0x3c) most directly by name, but a
+    /// live differential test proved it wasn't that field alone; cloning a
+    /// known-good neighbor channel's whole unclaimed-byte structure is what
+    /// actually let the vendor CPS read past it. Root cause: a channel
+    /// freshly written onto a blank/reset radio slot for the first time
+    /// (HasAnyPendingRadioWrite true purely because _radioSyncSnapshot is
+    /// null, not because of any real field edit - see ChannelEntry's own
+    /// doc comment) goes through this Encode, but every field patch above
+    /// is null since the user changed nothing - so whatever the radio's
+    /// blank-slot default happens to be (0xFF, i.e. erased flash) passed
+    /// straight through unfixed. Runs unconditionally at the end of every
+    /// Encode call so this can't recur, e.g. after a future stock reset.
+    /// Only ever clears a byte that's CURRENTLY 0xFF (or, for the "mixed"
+    /// bytes below, only the specific bit positions this codec has never
+    /// claimed) - never overwrites a byte holding any other value, so a
+    /// channel with genuine data in these positions is left alone.</summary>
+    private static void NormalizeErasedUnclaimedBytes(byte[] result)
+    {
+        void ClearIfErased(int offset)
+        {
+            if (result[offset] == 0xFF)
+            {
+                result[offset] = 0x00;
+            }
+        }
+
+        for (var i = 0x15; i <= 0x17; i++) ClearIfErased(i); // fully unclaimed gap
+
+        // squelchPttByte/signalBusyByte: bits 7,3,2 (mask 0x8C) are unclaimed -
+        // SquelchMode/PttId and OptionalSignal/BusyLock respectively occupy
+        // the rest. Always safe to clear regardless of current value - these
+        // specific bit positions have no legitimate meaning either way.
+        result[0x19] = (byte)(result[0x19] & ~0x8C);
+        result[0x1a] = (byte)(result[0x1a] & ~0x8C);
+
+        // digitalByte/extra34: only bit 6 (0x40) is unclaimed in each.
+        result[0x21] = (byte)(result[0x21] & ~0x40);
+        result[0x34] = (byte)(result[0x34] & ~0x40);
+
+        for (var i = 0x23; i <= 0x33; i++) ClearIfErased(i); // fully unclaimed gap
+
+        // AprsReportType/AnalogAprsPttMode/DigitalAprsPttMode/
+        // DigitalAprsReportChannel/CorrectFrequency/DigitalEncryption/
+        // AnalogAprsReportFrequencyIndex - plain byte values, only clear the
+        // exact erased-flash sentinel, never a real (if unrecognized) value.
+        // extra3b (0x3b) is a flag byte between these - only its unclaimed
+        // bit 6 gets cleared, same treatment as digitalByte/extra34 above.
+        for (var i = 0x35; i <= 0x3c; i++)
+        {
+            if (i == 0x3b)
+            {
+                result[i] = (byte)(result[i] & ~0x40);
+            }
+            else
+            {
+                ClearIfErased(i);
+            }
+        }
+
+        for (var i = 0x64; i <= 0x7f; i++) ClearIfErased(i); // fully unclaimed gap
     }
 
     public static string ChannelTypeToString(byte raw) => raw switch

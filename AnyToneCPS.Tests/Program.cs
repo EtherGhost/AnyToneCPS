@@ -74,6 +74,7 @@ public static class Program
         Run("Builds write block request matching the revert capture", BuildsWriteBlockRequestMatchingTheRevertCapture);
         Run("Rejects write block data of the wrong length", RejectsWriteBlockDataOfTheWrongLength);
         Run("Empty channel patch is a byte-identical round trip", EmptyChannelPatchIsAByteIdenticalRoundTrip);
+        Run("Encode normalizes erased flash in never-modeled byte ranges", EncodeNormalizesErasedFlashInNeverModeledByteRanges);
         Run("Channel name patch touches only the name bytes", ChannelNamePatchTouchesOnlyTheNameBytes);
         Run("Channel frequency patch round trips through decode", ChannelFrequencyPatchRoundTripsThroughDecode);
         Run("Offset direction patch preserves sibling bits", OffsetDirectionPatchPreservesSiblingBits);
@@ -1832,6 +1833,69 @@ public static class Program
         var result = ChannelCodec.Encode(original, new ChannelCodec.ChannelFieldPatch());
 
         AssertEqual(Convert.ToHexString(original), Convert.ToHexString(result));
+    }
+
+    /// <summary>Regression test for a real bug found live 2026-08-29: 42
+    /// channels in a live user codeplug had 0xFF (erased flash) sitting in
+    /// byte ranges this codec has never modeled in ChannelFieldPatch
+    /// (including 5 APRS report fields that ARE decoded on read but never
+    /// wired up for write), because a channel written for the first time
+    /// onto a blank/reset radio slot goes through Encode with every
+    /// individual field patch null - so whatever the radio's own blank-slot
+    /// default happens to be just passed straight through. This crashed the
+    /// real vendor CPS's own read routine. Starts from the real captured
+    /// fixture (clean, no 0xFF in these ranges) and deliberately injects the
+    /// exact erased-flash pattern found live, plus a real (non-erased,
+    /// non-zero) value in one "plain value" position to prove genuine data
+    /// is never overwritten - only the true 0xFF sentinel is.</summary>
+    private static void EncodeNormalizesErasedFlashInNeverModeledByteRanges()
+    {
+        var original = RealControlChannelRecord();
+
+        // Simulate the erased-flash pattern found live: fully-unclaimed
+        // gaps and the "plain value" byte positions all 0xFF...
+        for (var i = 0x15; i <= 0x17; i++) original[i] = 0xFF;
+        for (var i = 0x23; i <= 0x33; i++) original[i] = 0xFF;
+        for (var i = 0x35; i <= 0x3c; i++) original[i] = 0xFF;
+        for (var i = 0x64; i <= 0x7f; i++) original[i] = 0xFF;
+
+        // ...except one plain-value byte gets a real, legitimate value
+        // instead - this one must survive untouched.
+        original[0x39] = 0x2a; // CorrectFrequency = 42, a real setting
+
+        // The "mixed" bytes (known claimed bits + the one unclaimed bit)
+        // get a real claimed-bit value ORed with the unclaimed bit set, as
+        // erased flash actually looked live (e.g. squelchPttByte 0x8c =
+        // SquelchMode/PttId bits already 0, plus the unclaimed 0x8C bits set).
+        original[0x19] = 0x8c; // squelchPttByte: unclaimed bits set, SquelchMode/PttId already 0
+        original[0x1a] = 0x8c; // signalBusyByte: same
+        original[0x21] = 0x40; // digitalByte: only the unclaimed bit 6 set
+        original[0x34] = 0x40; // extra34: only the unclaimed bit 6 set
+        original[0x3b] = 0x48; // extra3b: unclaimed bit 6 set, AND AnalogAprsMute (bit 3) genuinely on
+
+        var result = ChannelCodec.Encode(original, new ChannelCodec.ChannelFieldPatch());
+
+        for (var i = 0x15; i <= 0x17; i++) AssertEqual((byte)0x00, result[i]);
+        for (var i = 0x23; i <= 0x33; i++) AssertEqual((byte)0x00, result[i]);
+        for (var i = 0x35; i <= 0x38; i++) AssertEqual((byte)0x00, result[i]); // AprsReportType/AnalogAprsPttMode/DigitalAprsPttMode/DigitalAprsReportChannel
+        AssertEqual((byte)0x2a, result[0x39]); // CorrectFrequency - a real value, must survive
+        AssertEqual((byte)0x00, result[0x3a]); // DigitalEncryption - was erased
+        AssertEqual((byte)0x00, result[0x3c]); // AnalogAprsReportFrequencyIndex
+        for (var i = 0x64; i <= 0x7f; i++) AssertEqual((byte)0x00, result[i]);
+
+        // Unclaimed bits cleared, but any genuinely-claimed bit survives.
+        AssertEqual((byte)0x00, result[0x19]);
+        AssertEqual((byte)0x00, result[0x1a]);
+        AssertEqual((byte)0x00, result[0x21]);
+        AssertEqual((byte)0x00, result[0x34]);
+        AssertEqual((byte)0x08, result[0x3b]); // unclaimed bit 6 cleared, AnalogAprsMute (bit 3) preserved
+
+        // Decoding still gives sane values - nothing this codec understands
+        // got corrupted by the normalize pass.
+        var decoded = ChannelCodec.Decode(result, 0);
+        AssertEqual((byte)0, decoded.SquelchMode);
+        AssertEqual((byte)0, decoded.PttId);
+        AssertTrue(decoded.AnalogAprsMute, "AnalogAprsMute should survive the normalize pass");
     }
 
     private static void ChannelNamePatchTouchesOnlyTheNameBytes()
