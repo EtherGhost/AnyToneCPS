@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <Version>0.1.3</Version>
         <ApplicationId>se.cloudsite.anytonecps</ApplicationId>
-        <ApplicationVersion>7</ApplicationVersion>
+        <ApplicationVersion>8</ApplicationVersion>
         <ApplicationDisplayVersion>0.1.3</ApplicationDisplayVersion>
         <AndroidPackageFormat>aab</AndroidPackageFormat>
         <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
