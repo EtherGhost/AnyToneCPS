@@ -207,6 +207,11 @@
                                             </TreeDataTemplate>
                                         </TreeView.ItemTemplate>
                                     </TreeView>
+                                    <Border BorderBrush="{DynamicResource AppPanelBorderBrush}" BorderThickness="0,1,0,0" Margin="0,4,0,0" />
+                                    <Button Content="New" Click="NavigationNewProject_OnClick" />
+                                    <Button Content="Load" Click="NavigationLoadProject_OnClick" />
+                                    <Button Content="Save" IsEnabled="{Binding IsDirty}" Click="NavigationSaveProject_OnClick" />
+                                    <Button Content="Save As" Click="NavigationSaveProjectAs_OnClick" />
                                 </StackPanel>
                             </Border>
                         </Flyout>

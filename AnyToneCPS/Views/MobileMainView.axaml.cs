@@ -148,6 +148,50 @@ public partial class MobileMainView : UserControl
         NavigationButton.Flyout?.Hide();
     }
 
+    // These mirror NavigationTreeLeaf_OnClick's Click-only pattern rather
+    // than binding Command directly - a Button with both Command and Click
+    // set inside this same Flyout silently did nothing on click (real bug
+    // found live 2026-09-06), so nothing else here uses that combination.
+    private void NavigationNewProject_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel && viewModel.NewProjectCommand.CanExecute(null))
+        {
+            viewModel.NewProjectCommand.Execute(null);
+        }
+
+        NavigationButton.Flyout?.Hide();
+    }
+
+    private void NavigationLoadProject_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel && viewModel.LoadProjectCommand.CanExecute(null))
+        {
+            viewModel.LoadProjectCommand.Execute(null);
+        }
+
+        NavigationButton.Flyout?.Hide();
+    }
+
+    private void NavigationSaveProject_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel && viewModel.SaveProjectCommand.CanExecute(null))
+        {
+            viewModel.SaveProjectCommand.Execute(null);
+        }
+
+        NavigationButton.Flyout?.Hide();
+    }
+
+    private void NavigationSaveProjectAs_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel && viewModel.SaveProjectAsCommand.CanExecute(null))
+        {
+            viewModel.SaveProjectAsCommand.Execute(null);
+        }
+
+        NavigationButton.Flyout?.Hide();
+    }
+
     // 2026-08-01: same "chevron alone is too small a target" fix as
     // Desktop's MainView.axaml.cs - the category header TextBlock (only
     // ever visible for HasChildren nodes, see the DataTemplate below) now
