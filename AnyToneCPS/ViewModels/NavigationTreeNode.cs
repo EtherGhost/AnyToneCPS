@@ -24,8 +24,12 @@ public sealed record NavigationTreeNode(
     public bool HasChildren => Children.Count > 0;
     public bool IsLeaf => TabIndex is not null;
 
-    // Hides a leaf entirely (e.g. Dev Options - not meant for a public
-    // build) - default true so every existing node stays visible.
+    // Only hides the leaf's own content (see the TreeDataTemplate in
+    // MainView.axaml/MobileMainView.axaml), not the TreeViewItem row wrapping
+    // it - the row still reserves its space, leaving a blank gap (real bug
+    // found live 2026-09-06 hiding Dev Options this way). To hide a node for
+    // real, leave it out of the tree entirely instead - see
+    // MainViewModel.BuildNavigationTree's Dev Options handling.
     public bool IsVisible { get; init; } = true;
 
     // Greys out a leaf and blocks navigation to it (see

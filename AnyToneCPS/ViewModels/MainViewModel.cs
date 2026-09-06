@@ -786,6 +786,12 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private bool _showVoxStartupWarning;
     [ObservableProperty] private bool _suppressVoxStartupWarning;
 
+    /// <summary>Gates the "Dev Options" nav entry (see NavigationTreeNode's
+    /// IsVisible doc comment) - defaults to hidden, persisted via
+    /// AppSettingsData.ShowDevOptions. Changing it rebuilds NavigationTree
+    /// since NavigationTreeNode.IsVisible is init-only.</summary>
+    [ObservableProperty] private bool _showDevOptions;
+
     public int ChannelCount => Channels.Count;
     public int ZoneCount => Zones.Count;
     public string DataStoreDescription => string.IsNullOrWhiteSpace(CurrentProjectLocation)
@@ -985,7 +991,22 @@ public partial class MainViewModel : ViewModelBase
     /// a second radio model, "D890UV" becomes the first of several
     /// radio-root nodes rather than a hardcoded label.
     /// </summary>
-    public IReadOnlyList<NavigationTreeNode> NavigationTree { get; } =
+    private IReadOnlyList<NavigationTreeNode> _navigationTree = null!;
+
+    public IReadOnlyList<NavigationTreeNode> NavigationTree
+    {
+        get => _navigationTree;
+        private set
+        {
+            _navigationTree = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(MobileNavigationSections));
+        }
+    }
+
+    // ShowDevOptions is init-only on NavigationTreeNode, so toggling it
+    // rebuilds the whole tree rather than mutating one node in place.
+    private static IReadOnlyList<NavigationTreeNode> BuildNavigationTree(bool showDevOptions) =>
     [
         new NavigationTreeNode("D890UV", Children:
         [
@@ -1092,7 +1113,12 @@ public partial class MainViewModel : ViewModelBase
         new NavigationTreeNode("Imports", TabIndex: 26) { IsEnabled = false, DisabledReason = "CSV import is disabled during the Channel canonical-model migration - not yet available in this version." },
         new NavigationTreeNode("Exports", TabIndex: 27) { IsEnabled = false, DisabledReason = "CSV export is disabled during the Channel canonical-model migration - not yet available in this version." },
         new NavigationTreeNode("Settings", TabIndex: 28),
-        new NavigationTreeNode("Dev Options", TabIndex: 39),
+        // IsVisible only hides the leaf's own content (see TreeDataTemplate
+        // in MainView.axaml/MobileMainView.axaml), not the TreeViewItem row
+        // wrapping it - the row itself still reserves space, leaving a blank
+        // gap. Real bug found live 2026-09-06: leaving the node out of the
+        // tree entirely when hidden is the only way that doesn't happen.
+        .. showDevOptions ? (NavigationTreeNode[]) [new NavigationTreeNode("Dev Options", TabIndex: 39)] : [],
         new NavigationTreeNode("About", TabIndex: 43)
     ];
 
@@ -1131,6 +1157,7 @@ public partial class MainViewModel : ViewModelBase
 
     public MainViewModel()
     {
+        _navigationTree = BuildNavigationTree(showDevOptions: false);
         Channels.CollectionChanged += OnChannelsChanged;
         Zones.CollectionChanged += OnZonesChanged;
         ScanLists.CollectionChanged += OnScanListsChanged;
@@ -1275,6 +1302,7 @@ public partial class MainViewModel : ViewModelBase
 
     private async Task LoadRememberedProjectAsync()
     {
+        IsLoadingProject = true;
         try
         {
             var projectStorage = await OpenRememberedProjectOnBackgroundAsync();
@@ -1334,6 +1362,10 @@ public partial class MainViewModel : ViewModelBase
         catch (Exception exception)
         {
             StatusMessage = $"Auto-load failed: {exception.Message}";
+        }
+        finally
+        {
+            IsLoadingProject = false;
         }
     }
 
@@ -1599,7 +1631,7 @@ public partial class MainViewModel : ViewModelBase
             // PickSaveProjectAsync's own ShowOverwritePrompt already asks
             // the user before returning a path that already exists - a
             // second confirmation here was redundant (removed 2026-08-29).
-            projectStorage = await _storagePicker.PickSaveProjectAsync("SE_Field_Comms_D890UV_v1.dat");
+            projectStorage = await _storagePicker.PickSaveProjectAsync("Codeplug_D890UV.dat");
             if (projectStorage is null)
             {
                 StatusMessage = "Save cancelled";
@@ -1641,7 +1673,7 @@ public partial class MainViewModel : ViewModelBase
     private async Task SaveProjectAs()
     {
         var suggestedName = string.IsNullOrWhiteSpace(CurrentProjectLocation)
-            ? "SE_Field_Comms_D890UV_v1.dat"
+            ? "Codeplug_D890UV.dat"
             : Path.GetFileName(CurrentProjectLocation);
         // PickSaveProjectAsync's own ShowOverwritePrompt already asks the
         // user before returning a path that already exists - a second
@@ -2844,6 +2876,8 @@ public partial class MainViewModel : ViewModelBase
             ShowVoxStartupWarning = true;
             DispatcherTimer.RunOnce(() => ShowVoxStartupWarning = false, TimeSpan.FromSeconds(8));
         }
+
+        ShowDevOptions = settings.ShowDevOptions;
     }
 
     [RelayCommand]
@@ -2851,13 +2885,20 @@ public partial class MainViewModel : ViewModelBase
 
     partial void OnSuppressVoxStartupWarningChanged(bool value) => _ = SaveAppSettingsAsync();
 
+    partial void OnShowDevOptionsChanged(bool value)
+    {
+        NavigationTree = BuildNavigationTree(value);
+        _ = SaveAppSettingsAsync();
+    }
+
     private Task SaveAppSettingsAsync()
     {
         return AppSettingsStore.SaveAsync(new AppSettingsData
         {
             SuppressVoxStartupWarning = SuppressVoxStartupWarning,
             ThemeMode = SelectedThemeMode,
-            ExportDirectory = ExportDirectory
+            ExportDirectory = ExportDirectory,
+            ShowDevOptions = ShowDevOptions
         });
     }
 
@@ -2883,11 +2924,20 @@ public partial class MainViewModel : ViewModelBase
 
     private static string GetAppVersion()
     {
-        var assembly = Assembly.GetEntryAssembly() ?? typeof(MainViewModel).Assembly;
-        var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        // AssemblyInformationalVersionAttribute (from each head csproj's
+        // <Version>) does not reliably survive NativeAOT trimming on Android -
+        // confirmed live, still showed "1.0.0" after switching to scanning
+        // all loaded assemblies for it. Reading a custom AssemblyMetadata
+        // attribute instead uses the exact same mechanism as GetBuildMode()
+        // below, which IS confirmed to survive a real NativeAOT publish.
+        var version = AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(assembly => assembly.GetCustomAttributes<AssemblyMetadataAttribute>())
+            .FirstOrDefault(attribute => attribute.Key == "AnyToneCPS.Version")
+            ?.Value;
 
         if (string.IsNullOrWhiteSpace(version))
         {
+            var assembly = Assembly.GetEntryAssembly() ?? typeof(MainViewModel).Assembly;
             version = assembly.GetName().Version?.ToString(3) ?? "unknown";
         }
 

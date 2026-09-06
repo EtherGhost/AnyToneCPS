@@ -41,11 +41,17 @@ public sealed class AvaloniaStoragePickerService(TopLevel topLevel) : IStoragePi
 
     public async Task<IProjectStorage?> PickSaveProjectAsync(string suggestedFileName)
     {
+        // On Linux (GTK), setting DefaultExtension when SuggestedFileName
+        // already ends in that extension makes the picker append it again,
+        // producing "name.dat.dat". Only ask for a default extension when
+        // the suggested name doesn't already carry one.
+        var hasExtension = Path.HasExtension(suggestedFileName);
+
         var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Save codeplug",
             SuggestedFileName = suggestedFileName,
-            DefaultExtension = "dat",
+            DefaultExtension = hasExtension ? null : "dat",
             FileTypeChoices = [ProjectFileType, FilePickerFileTypes.All],
             ShowOverwritePrompt = true
         });
@@ -744,22 +750,57 @@ public sealed class AvaloniaStoragePickerService(TopLevel topLevel) : IStoragePi
 
     private sealed class LocalProjectSettingsStore
     {
+        // This used to share AppSettingsStore.SettingsPath with the app
+        // settings (theme/export dir/VOX warning). Both stores called
+        // File.Create on the same file with different JSON shapes, so
+        // whichever one saved last silently erased the other's data. Now
+        // each has its own file; LoadAsync migrates a still-recoverable
+        // remembered project out of the old shared file once.
         private readonly string _settingsPath = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "AnyToneCPS",
-            "settings.json");
+            "recent-project.json");
 
         public async Task<ProjectStorageSettings?> LoadAsync()
         {
-            if (!File.Exists(_settingsPath))
+            if (File.Exists(_settingsPath))
+            {
+                await using var stream = File.OpenRead(_settingsPath);
+                return await JsonSerializer.DeserializeAsync(
+                    stream,
+                    RadioProjectJsonContext.Default.ProjectStorageSettings);
+            }
+
+            return await MigrateFromSharedSettingsFileAsync();
+        }
+
+        private async Task<ProjectStorageSettings?> MigrateFromSharedSettingsFileAsync()
+        {
+            if (!File.Exists(AppSettingsStore.SettingsPath))
             {
                 return null;
             }
 
-            await using var stream = File.OpenRead(_settingsPath);
-            return await JsonSerializer.DeserializeAsync(
-                stream,
-                RadioProjectJsonContext.Default.ProjectStorageSettings);
+            ProjectStorageSettings? migrated;
+            try
+            {
+                await using var stream = File.OpenRead(AppSettingsStore.SettingsPath);
+                migrated = await JsonSerializer.DeserializeAsync(
+                    stream,
+                    RadioProjectJsonContext.Default.ProjectStorageSettings);
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(migrated?.Kind))
+            {
+                return null;
+            }
+
+            await SaveAsync(migrated);
+            return migrated;
         }
 
         public async Task SaveAsync(ProjectStorageSettings settings)

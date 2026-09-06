@@ -17,7 +17,7 @@
 
     <Grid>
         <Border Classes="Panel">
-            <Grid RowDefinitions="Auto,Auto,Auto"
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto"
                   RowSpacing="18">
                 <TextBlock Classes="SectionTitle" Text="Settings" />
 
@@ -52,6 +52,10 @@
                         <TextBlock Text="{Binding NativeAotDescription}" />
                     </HeaderedContentControl>
                 </Grid>
+
+                <HeaderedContentControl Grid.Row="3" Header="Show Developer Options">
+                    <ToggleSwitch IsChecked="{Binding ShowDevOptions}" />
+                </HeaderedContentControl>
             </Grid>
         </Border>
     </Grid>

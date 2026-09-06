@@ -4824,6 +4824,9 @@
                                 <HeaderedContentControl Header="NativeAOT">
                                     <TextBlock Text="{Binding NativeAotDescription}" />
                                 </HeaderedContentControl>
+                                <HeaderedContentControl Header="Show Developer Options">
+                                    <ToggleSwitch IsChecked="{Binding ShowDevOptions}" />
+                                </HeaderedContentControl>
                             </StackPanel>
                         </Border>
                     </StackPanel>

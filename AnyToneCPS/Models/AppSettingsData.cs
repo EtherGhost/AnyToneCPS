@@ -8,4 +8,8 @@ public sealed class AppSettingsData
     // "Don't show again" for the startup VOX safety warning (see
     // MainViewModel's ShowVoxStartupWarning) - added 2026-07-30.
     public bool SuppressVoxStartupWarning { get; set; }
+
+    // Gates the "Dev Options" nav entry - defaults to hidden, since it's not
+    // meant for a public build (see NavigationTreeNode.IsVisible).
+    public bool ShowDevOptions { get; set; }
 }
