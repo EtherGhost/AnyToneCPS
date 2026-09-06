@@ -356,17 +356,13 @@
                                                                Foreground="{DynamicResource AppMutedTextBrush}"
                                                                FontSize="12" />
                                                 </StackPanel>
+                                                <!-- Extras (RPTR/ENC/etc) come before Type/Band so
+                                                     they're the least likely to wrap away - Band in
+                                                     particular is redundant with FrequencyLabel already
+                                                     shown on the left. -->
                                                 <WrapPanel Grid.Column="1"
                                                            HorizontalAlignment="Right"
                                                            VerticalAlignment="Top">
-                                                    <Border Classes="TypeBadge InfoBadge"
-                                                            Margin="0,0,4,4"
-                                                            IsVisible="{Binding HasFrequencyBandBadge}">
-                                                        <TextBlock Text="{Binding FrequencyBandBadge}" />
-                                                    </Border>
-                                                    <Border Classes="TypeBadge" Margin="0,0,4,4">
-                                                        <TextBlock Text="{Binding TypeBadge}" />
-                                                    </Border>
                                                     <Border Classes="TypeBadge InfoBadge"
                                                             Margin="0,0,4,4"
                                                             IsVisible="{Binding HasInfoBadge1}"
@@ -378,6 +374,14 @@
                                                             IsVisible="{Binding HasInfoBadge2}"
                                                             ToolTip.Tip="{Binding InfoBadge2ToolTip}">
                                                         <TextBlock Text="{Binding InfoBadge2}" />
+                                                    </Border>
+                                                    <Border Classes="TypeBadge" Margin="0,0,4,4">
+                                                        <TextBlock Text="{Binding TypeBadge}" />
+                                                    </Border>
+                                                    <Border Classes="TypeBadge InfoBadge"
+                                                            Margin="0,0,4,4"
+                                                            IsVisible="{Binding HasFrequencyBandBadge}">
+                                                        <TextBlock Text="{Binding FrequencyBandBadge}" />
                                                     </Border>
                                                 </WrapPanel>
                                             </Grid>
