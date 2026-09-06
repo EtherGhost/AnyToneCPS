@@ -53,6 +53,11 @@ public partial class ChannelEntry : ObservableValidator
 
     [ObservableProperty] private int _number;
     [ObservableProperty] private string _name = "";
+    // Manually typed badge shown instead of the auto-derived InfoBadge below
+    // when non-empty - app/project-file only, never encoded to the radio
+    // (the D890UV has no such field). Added 2026-09-06 to replace automatic
+    // "jakt" name-sniffing, which the user preferred to drop.
+    [ObservableProperty] private string _infoBadgeOverride = "";
     [ObservableProperty] private double _rxFrequencyMHz;
     [ObservableProperty] private double _offsetMHz;
     [ObservableProperty] private byte _offsetDirection; // 0=None,1=+,2=-
@@ -750,9 +755,14 @@ public partial class ChannelEntry : ObservableValidator
     public string DisplayLabel => $"{Number:000}  {Name}";
     public string FrequencyLabel => $"{RxFrequencyMHzText} / {TransmitFrequencyMHzText}";
     public string TypeBadge => IsDigital ? "DMR" : "FM";
-    public string InfoBadge => GetInfoBadge();
-    public bool HasInfoBadge => !string.IsNullOrWhiteSpace(InfoBadge);
-    public string InfoBadgeToolTip => GetInfoBadgeToolTip();
+    public string FrequencyBandBadge => GetFrequencyBand();
+    public bool HasFrequencyBandBadge => !string.IsNullOrWhiteSpace(FrequencyBandBadge);
+    public string InfoBadge1 => GetInfoBadge(0);
+    public bool HasInfoBadge1 => !string.IsNullOrWhiteSpace(InfoBadge1);
+    public string InfoBadge1ToolTip => GetInfoBadgeToolTip(0);
+    public string InfoBadge2 => GetInfoBadge(1);
+    public bool HasInfoBadge2 => !string.IsNullOrWhiteSpace(InfoBadge2);
+    public string InfoBadge2ToolTip => GetInfoBadgeToolTip(1);
     public bool IsDirty => _cleanSnapshot is null || CreateSnapshot() != _cleanSnapshot;
     public bool IsNumberDirty => _cleanSnapshot is null || Number != _cleanSnapshot.Number;
     public bool IsNameDirty => _cleanSnapshot is null || Name != _cleanSnapshot.Name;
@@ -1178,6 +1188,12 @@ public partial class ChannelEntry : ObservableValidator
     partial void OnNumberChanged(int value)
     {
         OnPropertyChanged(nameof(DisplayLabel));
+        NotifyDirtyProperties();
+    }
+
+    partial void OnInfoBadgeOverrideChanged(string value)
+    {
+        NotifyInfoBadgeChanged();
         NotifyDirtyProperties();
     }
 
@@ -1781,9 +1797,14 @@ public partial class ChannelEntry : ObservableValidator
 
     private void NotifyInfoBadgeChanged()
     {
-        OnPropertyChanged(nameof(InfoBadge));
-        OnPropertyChanged(nameof(HasInfoBadge));
-        OnPropertyChanged(nameof(InfoBadgeToolTip));
+        OnPropertyChanged(nameof(FrequencyBandBadge));
+        OnPropertyChanged(nameof(HasFrequencyBandBadge));
+        OnPropertyChanged(nameof(InfoBadge1));
+        OnPropertyChanged(nameof(HasInfoBadge1));
+        OnPropertyChanged(nameof(InfoBadge1ToolTip));
+        OnPropertyChanged(nameof(InfoBadge2));
+        OnPropertyChanged(nameof(HasInfoBadge2));
+        OnPropertyChanged(nameof(InfoBadge2ToolTip));
     }
 
     // Analog only has 3 valid raw values (0-2); digital has 4 (0-3) - see
@@ -1864,7 +1885,8 @@ public partial class ChannelEntry : ObservableValidator
             ExtendEncryption,
             IdleTx,
             Ranging,
-            TxInterrupt);
+            TxInterrupt,
+            InfoBadgeOverride);
     }
 
     private sealed record ChannelSnapshot(
@@ -1928,106 +1950,62 @@ public partial class ChannelEntry : ObservableValidator
         bool ExtendEncryption,
         bool IdleTx,
         bool Ranging,
-        bool TxInterrupt);
+        bool TxInterrupt,
+        string InfoBadgeOverride);
 
-    private string GetInfoBadge()
+    // Frequency band (VHF/UHF) and TypeBadge (FM/DMR) each get their own
+    // always-visible slot; InfoBadge1/InfoBadge2 below take the first two of
+    // whatever ELSE currently applies, in priority order - a manual override
+    // always wins that a channel actually got more than 2 simultaneous extra
+    // conditions before this was ever hit. Real bug found live 2026-09-06:
+    // this used to be a single GetInfoBadge() returning only labels[0], so
+    // ENC/ARC4/SCRA/RX could never show at all on a channel with a valid
+    // frequency (the band label always won that one slot first).
+    private string GetInfoBadge(int index)
     {
-        var labels = GetDerivedInfoLabels();
-        return labels.Count == 0 ? "" : labels[0];
+        var badges = GetDerivedInfoBadges();
+        return index < badges.Count ? badges[index].Label : "";
     }
 
-    private string GetInfoBadgeToolTip()
+    private string GetInfoBadgeToolTip(int index)
     {
-        var labels = GetDerivedInfoDescriptions();
-        return labels.Count == 0
-            ? ""
-            : string.Join(Environment.NewLine, labels);
+        var badges = GetDerivedInfoBadges();
+        return index < badges.Count ? badges[index].Description : "";
     }
 
-    private List<string> GetDerivedInfoLabels()
+    private List<(string Label, string Description)> GetDerivedInfoBadges()
     {
-        var labels = new List<string>();
+        var badges = new List<(string, string)>();
+        if (!string.IsNullOrWhiteSpace(InfoBadgeOverride))
+        {
+            badges.Add((InfoBadgeOverride, "Manuellt satt"));
+        }
+
         if (IsRepeaterChannel())
         {
-            labels.Add("RPTR");
-        }
-
-        var band = GetFrequencyBand();
-        if (!string.IsNullOrWhiteSpace(band))
-        {
-            labels.Add(band);
-        }
-
-        if (Name.Contains("jakt", StringComparison.OrdinalIgnoreCase))
-        {
-            labels.Add("JAKT");
+            badges.Add(("RPTR", "Repeaterkanal"));
         }
 
         if (UsesDigitalEncryption || UsesAesEncryption)
         {
-            labels.Add("ENC");
+            badges.Add(("ENC", "Kryptering aktiv"));
         }
         else if (UsesArc4Encryption)
         {
-            labels.Add("ARC4");
+            badges.Add(("ARC4", "ARC4 aktivt"));
         }
 
         if (ScrambleMode != 0)
         {
-            labels.Add("SCRA");
+            badges.Add(("SCRA", "Analog scrambler aktiv"));
         }
 
         if (PttProhibit)
         {
-            labels.Add("RX");
+            badges.Add(("RX", "Endast mottagning"));
         }
 
-        return labels;
-    }
-
-    private List<string> GetDerivedInfoDescriptions()
-    {
-        var labels = new List<string>();
-        if (IsRepeaterChannel())
-        {
-            labels.Add("Repeaterkanal");
-        }
-
-        var band = GetFrequencyBand();
-        if (band == "VHF")
-        {
-            labels.Add("VHF-band");
-        }
-        else if (band == "UHF")
-        {
-            labels.Add("UHF-band");
-        }
-
-        if (Name.Contains("jakt", StringComparison.OrdinalIgnoreCase))
-        {
-            labels.Add("Jaktkanal");
-        }
-
-        if (UsesDigitalEncryption || UsesAesEncryption)
-        {
-            labels.Add("Kryptering aktiv");
-        }
-        else if (UsesArc4Encryption)
-        {
-            labels.Add("ARC4 aktivt");
-        }
-
-        if (ScrambleMode != 0)
-        {
-            labels.Add("Analog scrambler aktiv");
-        }
-
-        if (PttProhibit)
-        {
-            labels.Add("Endast mottagning");
-        }
-
-        return labels;
+        return badges;
     }
 
     private bool IsRepeaterChannel() => OffsetDirection != 0 && OffsetMHz != 0;

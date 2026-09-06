@@ -44,7 +44,7 @@
                     <TextBlock Classes="SectionTitle" Text="Channel Data" />
 
                     <GroupBox Grid.Row="1" Header="Both Analog and Digital">
-                    <Grid ColumnDefinitions="*,*,*,*,*"
+                    <Grid ColumnDefinitions="*,*,*,*,*,*"
                           RowDefinitions="Auto,Auto"
                           ColumnSpacing="12"
                           RowSpacing="12">
@@ -107,6 +107,11 @@
                             <ComboBox ItemsSource="{Binding ScanListOptions}"
                                       SelectedItem="{Binding SelectedChannelScanListName}"
                                       ToolTip.Tip="Membership is stored on the scan list, not the channel - see ScanListEntry." />
+                        </HeaderedContentControl>
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="5" Header="Badge Override" ToolTip.Tip="Shown in the channel list instead of the automatic RPTR/ENC/ARC4/SCRA/RX badge, when set. App-only - not written to the radio.">
+                            <TextBox Text="{Binding SelectedChannel.InfoBadgeOverride}"
+                                     MaxLength="4"
+                                     views:AsciiTextInput.Enabled="True" />
                         </HeaderedContentControl>
                     </Grid>
                     </GroupBox>

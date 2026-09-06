@@ -336,27 +336,50 @@
                                          SelectionChanged="ChannelList_OnSelectionChanged">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="models:ChannelEntry">
+                                            <!-- Two independent columns, not a shared row grid - the
+                                                 right column (badges) can wrap to 2 lines without
+                                                 affecting the left column's own height at all, since
+                                                 Name/FrequencyLabel live in their own self-contained
+                                                 StackPanel rather than sharing RowDefinitions with the
+                                                 badges. Earlier attempts sharing rows either pushed
+                                                 FrequencyLabel down under both badge lines, or forced
+                                                 Name/FrequencyLabel's own spacing to stretch/compress to
+                                                 match badge row heights - real feedback live 2026-09-06. -->
                                             <Grid Margin="8,7"
-                                                  ColumnDefinitions="*,Auto,Auto"
-                                                  RowDefinitions="Auto,Auto"
+                                                  ColumnDefinitions="1*,1*"
                                                   ColumnSpacing="8">
-                                                <TextBlock Text="{Binding DisplayLabel}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <Border Grid.Column="1"
-                                                        Classes="TypeBadge InfoBadge"
-                                                        IsVisible="{Binding HasInfoBadge}"
-                                                        ToolTip.Tip="{Binding InfoBadgeToolTip}">
-                                                    <TextBlock Text="{Binding InfoBadge}" />
-                                                </Border>
-                                                <Border Grid.Column="2" Classes="TypeBadge">
-                                                    <TextBlock Text="{Binding TypeBadge}" />
-                                                </Border>
-                                                <TextBlock Grid.Row="1"
-                                                           Grid.ColumnSpan="3"
-                                                           Text="{Binding FrequencyLabel}"
-                                                           Foreground="{DynamicResource AppMutedTextBrush}"
-                                                           FontSize="12" />
+                                                <StackPanel Spacing="4" VerticalAlignment="Top">
+                                                    <TextBlock Text="{Binding DisplayLabel}"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding FrequencyLabel}"
+                                                               Foreground="{DynamicResource AppMutedTextBrush}"
+                                                               FontSize="12" />
+                                                </StackPanel>
+                                                <WrapPanel Grid.Column="1"
+                                                           HorizontalAlignment="Right"
+                                                           VerticalAlignment="Top">
+                                                    <Border Classes="TypeBadge InfoBadge"
+                                                            Margin="0,0,4,4"
+                                                            IsVisible="{Binding HasFrequencyBandBadge}">
+                                                        <TextBlock Text="{Binding FrequencyBandBadge}" />
+                                                    </Border>
+                                                    <Border Classes="TypeBadge" Margin="0,0,4,4">
+                                                        <TextBlock Text="{Binding TypeBadge}" />
+                                                    </Border>
+                                                    <Border Classes="TypeBadge InfoBadge"
+                                                            Margin="0,0,4,4"
+                                                            IsVisible="{Binding HasInfoBadge1}"
+                                                            ToolTip.Tip="{Binding InfoBadge1ToolTip}">
+                                                        <TextBlock Text="{Binding InfoBadge1}" />
+                                                    </Border>
+                                                    <Border Classes="TypeBadge InfoBadge"
+                                                            Margin="0,0,4,4"
+                                                            IsVisible="{Binding HasInfoBadge2}"
+                                                            ToolTip.Tip="{Binding InfoBadge2ToolTip}">
+                                                        <TextBlock Text="{Binding InfoBadge2}" />
+                                                    </Border>
+                                                </WrapPanel>
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -433,6 +456,11 @@
                                             <HeaderedContentControl Header="Scan List">
                                                 <ComboBox ItemsSource="{Binding ScanListOptions}"
                                                           SelectedItem="{Binding SelectedChannelScanListName}" />
+                                            </HeaderedContentControl>
+                                            <HeaderedContentControl Header="Badge Override" ToolTip.Tip="Shown in the channel list instead of the automatic RPTR/ENC/ARC4/SCRA/RX badge, when set. App-only - not written to the radio.">
+                                                <TextBox Text="{Binding SelectedChannel.InfoBadgeOverride}"
+                                                         MaxLength="4"
+                                                         views:AsciiTextInput.Enabled="True" />
                                             </HeaderedContentControl>
                                             <CheckBox Content="Talk Around"
                                                       IsChecked="{Binding SelectedChannel.TalkAround}"

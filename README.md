@@ -108,11 +108,14 @@ Each channel row shows either `FM` or `DMR`, derived directly from the
 channel's `Channel Type`: `A-Analog` shows as `FM`, every other channel
 type shows as `DMR`.
 
-An optional info badge can appear to the left of `FM`/`DMR`, derived
-entirely from the channel's own data: `RPTR` for a repeater channel, a
-frequency band label (`VHF`/`UHF`), `JAKT` if the name contains it, `ENC`/
-`ARC4` depending on which encryption is in use, `SCRA` if scrambling is on,
-or `RX` for a receive-only channel.
+A frequency band badge (`VHF`/`UHF`) appears next to it whenever the
+channel's RX frequency falls in a known band. Below that, up to two more
+badges can appear, derived from the channel's own data: `RPTR` for a
+repeater channel, `ENC`/`ARC4` depending on which encryption is in use,
+`SCRA` if scrambling is on, or `RX` for a receive-only channel. Each
+channel also has a manual "Badge Override" field (Channel Data, up to 4
+characters) that replaces whichever of those would otherwise show, for
+anything the automatic derivation doesn't cover.
 
 ## Project data
 
@@ -120,14 +123,19 @@ The app saves project data as JSON under the user's application data
 directory:
 
 ```text
-AnyToneCPS/SE_Field_Comms_D890UV_v1.dat
+AnyToneCPS/Codeplug_D890UV.dat
 ```
 
-Settings are saved under the user's app data directory as:
+Settings are saved under the user's app data directory as two separate
+files:
 
 ```text
 AnyToneCPS/settings.json
+AnyToneCPS/recent-project.json
 ```
+
+`settings.json` holds app-level preferences (theme, export folder, etc.);
+`recent-project.json` holds only the last-opened project's location.
 
 Paths and naming are still provisional and are likely to change as model
 and export support solidify.
