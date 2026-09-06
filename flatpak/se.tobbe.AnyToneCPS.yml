@@ -7,9 +7,17 @@ command: anytone-cps
 # Radio access is a real USB serial device (D890UV), not something the
 # portal file-chooser flow covers - the sandbox needs raw device access to
 # reach it. Everything else routes through the portals normally.
+#
+# --socket=x11, not --socket=fallback-x11: Avalonia's Linux backend only has
+# an X11 windowing implementation (Avalonia.X11, always used via XWayland
+# even under Wayland), no native Wayland backend. fallback-x11 only grants
+# X11 when the Wayland socket ISN'T available, so on any real Wayland
+# session (Wayland socket granted below) it silently withheld X11 too and
+# the app failed immediately with "XOpenDisplay failed" - real bug found
+# live 2026-09-06, RPM/AppImage worked fine since they run unsandboxed.
 finish-args:
   - --share=ipc
-  - --socket=fallback-x11
+  - --socket=x11
   - --socket=wayland
   - --device=all
   - --socket=pulseaudio
