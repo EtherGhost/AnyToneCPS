@@ -33,14 +33,14 @@ install -m 0755 "$publish_dir/libHarfBuzzSharp.so" "$appdir/usr/bin/libHarfBuzzS
 install -m 0755 "$publish_dir/libSkiaSharp.so" "$appdir/usr/bin/libSkiaSharp.so"
 install -m 0755 "$publish_dir/libSystem.IO.Ports.Native.so" "$appdir/usr/bin/libSystem.IO.Ports.Native.so"
 
-install -m 0644 "$repo_root/AnyToneCPS.Desktop/Linux/se.tobbe.AnyToneCPS.desktop" \
-    "$appdir/usr/share/applications/se.tobbe.AnyToneCPS.desktop"
-install -m 0644 "$repo_root/AnyToneCPS.Desktop/Linux/se.tobbe.AnyToneCPS.desktop" \
-    "$appdir/se.tobbe.AnyToneCPS.desktop"
+install -m 0644 "$repo_root/AnyToneCPS.Desktop/Linux/se.cloudsite.AnyToneCPS.desktop" \
+    "$appdir/usr/share/applications/se.cloudsite.AnyToneCPS.desktop"
+install -m 0644 "$repo_root/AnyToneCPS.Desktop/Linux/se.cloudsite.AnyToneCPS.desktop" \
+    "$appdir/se.cloudsite.AnyToneCPS.desktop"
 
 install -m 0644 "$repo_root/AnyToneCPS/Assets/Icon.png" \
-    "$appdir/usr/share/icons/hicolor/256x256/apps/se.tobbe.AnyToneCPS.png"
-install -m 0644 "$repo_root/AnyToneCPS/Assets/Icon.png" "$appdir/se.tobbe.AnyToneCPS.png"
+    "$appdir/usr/share/icons/hicolor/256x256/apps/se.cloudsite.AnyToneCPS.png"
+install -m 0644 "$repo_root/AnyToneCPS/Assets/Icon.png" "$appdir/se.cloudsite.AnyToneCPS.png"
 
 cat > "$appdir/AppRun" <<'APPRUN'
 #!/usr/bin/env bash

@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 publish_dir="${PUBLISH_DIR:-$repo_root/artifacts/desktop-nativeaot}"
-manifest="$repo_root/flatpak/se.tobbe.AnyToneCPS.yml"
+manifest="$repo_root/flatpak/se.cloudsite.AnyToneCPS.yml"
 build_dir="$repo_root/artifacts/flatpak-build"
 repo_dir="$repo_root/artifacts/flatpak-repo"
 bundle_out="$repo_root/artifacts/packages"
@@ -30,6 +30,6 @@ mkdir -p "$bundle_out"
 flatpak-builder --force-clean --user --repo="$repo_dir" "$build_dir" "$manifest"
 
 bundle_path="$bundle_out/anytone-cps-$csproj_version.flatpak"
-flatpak build-bundle "$repo_dir" "$bundle_path" se.tobbe.AnyToneCPS
+flatpak build-bundle "$repo_dir" "$bundle_path" se.cloudsite.AnyToneCPS
 
 echo "Flatpak bundle: $bundle_path"

@@ -91,7 +91,7 @@ Download the latest build from the
 - RPM (Fedora): `sudo dnf install ./anytone-cps-<version>-1.fc44.x86_64.rpm`,
   then run `anytone-cps`.
 - Flatpak: `flatpak install --user anytone-cps-<version>.flatpak`, then run
-  `flatpak run se.tobbe.AnyToneCPS`. Asks for raw USB device access on
+  `flatpak run se.cloudsite.AnyToneCPS`. Asks for raw USB device access on
   install, since that's how it reaches the radio.
 - AppImage: `chmod +x AnyToneCPS-<version>-x86_64.AppImage`, then run it
   directly - no install step.

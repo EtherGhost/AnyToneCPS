@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>se.tobbe.AnyToneCPS</id>
+  <id>se.cloudsite.AnyToneCPS</id>
   <metadata_license>MIT</metadata_license>
   <project_license>MIT</project_license>
   <name>AnyTone CPS</name>
@@ -14,7 +14,7 @@
       vendor's Windows-only CPS.
     </p>
   </description>
-  <launchable type="desktop-id">se.tobbe.AnyToneCPS.desktop</launchable>
+  <launchable type="desktop-id">se.cloudsite.AnyToneCPS.desktop</launchable>
   <url type="homepage">https://github.com/EtherGhost/AnyToneCPS</url>
   <content_rating type="oars-1.1" />
 </component>

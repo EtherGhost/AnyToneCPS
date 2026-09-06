@@ -17,7 +17,7 @@ if [[ ! -x "${exec_path}" ]]; then
     exit 2
 fi
 
-app_id="se.tobbe.AnyToneCPS"
+app_id="se.cloudsite.AnyToneCPS"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd -- "${script_dir}/../.." && pwd)"
 data_home="${XDG_DATA_HOME:-${HOME}/.local/share}"

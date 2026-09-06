@@ -33,7 +33,7 @@ public sealed class AndroidUsbRadioConnection : IRadioConnection
     private const int ProductId = 0x5740;
     private const int MemoryBlockLength = 16;
     private const int UsbTimeoutMs = 2000;
-    private const string UsbPermissionAction = "se.tobbe.anytonecps.USB_PERMISSION";
+    private const string UsbPermissionAction = "se.cloudsite.anytonecps.USB_PERMISSION";
 
     private UsbDeviceConnection? _connection;
     private UsbEndpoint? _bulkIn;

@@ -57,11 +57,11 @@ WRAPPER
 chmod 0755 "%{buildroot}%{_bindir}/anytone-cps"
 
 install -d "%{buildroot}%{_datadir}/applications"
-sed 's|^Exec=.*|Exec=anytone-cps|' "%{_repo_dir}/AnyToneCPS.Desktop/Linux/se.tobbe.AnyToneCPS.desktop" > "%{buildroot}%{_datadir}/applications/se.tobbe.AnyToneCPS.desktop"
-chmod 0644 "%{buildroot}%{_datadir}/applications/se.tobbe.AnyToneCPS.desktop"
+sed 's|^Exec=.*|Exec=anytone-cps|' "%{_repo_dir}/AnyToneCPS.Desktop/Linux/se.cloudsite.AnyToneCPS.desktop" > "%{buildroot}%{_datadir}/applications/se.cloudsite.AnyToneCPS.desktop"
+chmod 0644 "%{buildroot}%{_datadir}/applications/se.cloudsite.AnyToneCPS.desktop"
 
 install -d "%{buildroot}%{_datadir}/icons/hicolor/256x256/apps"
-install -m 0644 "%{_repo_dir}/AnyToneCPS/Assets/Icon.png" "%{buildroot}%{_datadir}/icons/hicolor/256x256/apps/se.tobbe.AnyToneCPS.png"
+install -m 0644 "%{_repo_dir}/AnyToneCPS/Assets/Icon.png" "%{buildroot}%{_datadir}/icons/hicolor/256x256/apps/se.cloudsite.AnyToneCPS.png"
 
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -86,8 +86,8 @@ fi
 /opt/anytone-cps/libSkiaSharp.so
 /opt/anytone-cps/libSystem.IO.Ports.Native.so
 %{_bindir}/anytone-cps
-%{_datadir}/applications/se.tobbe.AnyToneCPS.desktop
-%{_datadir}/icons/hicolor/256x256/apps/se.tobbe.AnyToneCPS.png
+%{_datadir}/applications/se.cloudsite.AnyToneCPS.desktop
+%{_datadir}/icons/hicolor/256x256/apps/se.cloudsite.AnyToneCPS.png
 
 %changelog
 * Thu Jun 04 2026 AnyToneCPS <local@localhost> - $version-$release
