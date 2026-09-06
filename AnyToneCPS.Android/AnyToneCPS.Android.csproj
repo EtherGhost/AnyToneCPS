@@ -4,10 +4,10 @@
         <TargetFramework>net10.0-android</TargetFramework>
         <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
         <Nullable>enable</Nullable>
-        <Version>0.1.3</Version>
+        <Version>0.2.0</Version>
         <ApplicationId>se.cloudsite.anytonecps</ApplicationId>
-        <ApplicationVersion>8</ApplicationVersion>
-        <ApplicationDisplayVersion>0.1.3</ApplicationDisplayVersion>
+        <ApplicationVersion>9</ApplicationVersion>
+        <ApplicationDisplayVersion>0.2.0</ApplicationDisplayVersion>
         <AndroidPackageFormat>aab</AndroidPackageFormat>
         <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
         <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">android-arm64</RuntimeIdentifier>
@@ -36,6 +36,25 @@
              2026-08-17 (same reflection pattern is latent on Android too,
              even though it hadn't crashed there yet). -->
         <TrimmerRootDescriptor Include="..\AnyToneCPS\TrimmerRoots.xml"/>
+    </ItemGroup>
+
+    <!-- Unconditional (not just NativeAOT): AssemblyInformationalVersionAttribute
+         from the Version property above does not reliably survive NativeAOT
+         trimming on Android, so version display uses this custom metadata
+         attribute instead - same mechanism as AnyToneCPS.BuildMode above,
+         which is confirmed to survive a real NativeAOT publish.
+
+         Caution for future edits to this file: see the matching comment in
+         AnyToneCPS.Desktop.csproj - Desktop's release scripts extract the
+         release version with a naive grep that breaks if this element's own
+         angle-bracket tags are spelled out in prose anywhere in that file.
+         Not currently a risk here (nothing greps this csproj the same way),
+         but keep the same caution rather than reintroduce the habit. -->
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>AnyToneCPS.Version</_Parameter1>
+            <_Parameter2>$(Version)</_Parameter2>
+        </AssemblyAttribute>
     </ItemGroup>
 
     <ItemGroup>

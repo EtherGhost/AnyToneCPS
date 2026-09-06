@@ -5,7 +5,7 @@
         See https://docs.avaloniaui.net/docs/guides/platforms/platform-specific-code/dotnet for more details.-->
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
-        <Version>0.1.3</Version>
+        <Version>0.2.0</Version>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(EnableNativeAot)' == 'true'">
@@ -27,6 +27,27 @@
         <!-- See ..\AnyToneCPS\TrimmerRoots.xml's own comment - preserves
              AnyToneCPS.Models from trimming, real crash found 2026-08-17. -->
         <TrimmerRootDescriptor Include="..\AnyToneCPS\TrimmerRoots.xml"/>
+    </ItemGroup>
+
+    <!-- Unconditional (not just NativeAOT): AssemblyInformationalVersionAttribute
+         from the Version property above does not reliably survive NativeAOT
+         trimming on Android, so version display uses this custom metadata
+         attribute instead - same mechanism as AnyToneCPS.BuildMode above,
+         which is confirmed to survive a real NativeAOT publish.
+
+         Caution for future edits to this file: scripts/build-fedora-rpm.sh,
+         build-flatpak.sh and build-appimage.sh all extract the release
+         version with a naive grep for the Version element's opening and
+         closing tags, which matches the FIRST such occurrence anywhere in
+         this file, comments included. Do not spell out that element's own
+         angle-bracket tags in prose anywhere below this point (real
+         incident, 2026-09-06: an earlier version of this very comment did
+         that and broke the version number in all three release scripts). -->
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>AnyToneCPS.Version</_Parameter1>
+            <_Parameter2>$(Version)</_Parameter2>
+        </AssemblyAttribute>
     </ItemGroup>
 
     <ItemGroup>
