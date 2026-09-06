@@ -84,12 +84,7 @@ official or supported product.
 Download the latest build from the
 [Releases](https://github.com/EtherGhost/AnyToneCPS/releases) page.
 
-**Android**: install the APK (`adb install -r anytonecps.apk`, or just open
-it on the phone). Updating over an existing install can fail with a
-signature error if the new build was signed differently from what's already
-on the phone - uninstall the old one first if that happens (this clears
-whatever project file is saved in the app's own storage, so back it up
-first if you care about it).
+**Android**: coming to Google Play Store soon.
 
 **Linux desktop** - pick one:
 
