@@ -108,10 +108,21 @@
                                       SelectedItem="{Binding SelectedChannelScanListName}"
                                       ToolTip.Tip="Membership is stored on the scan list, not the channel - see ScanListEntry." />
                         </HeaderedContentControl>
-                        <HeaderedContentControl Grid.Row="1" Grid.Column="5" Header="Badge Override" ToolTip.Tip="Shown in the channel list instead of the automatic RPTR/ENC/ARC4/SCRA/RX badge, when set. App-only - not written to the radio.">
-                            <TextBox Text="{Binding SelectedChannel.InfoBadgeOverride}"
-                                     MaxLength="4"
-                                     views:AsciiTextInput.Enabled="True" />
+                        <HeaderedContentControl Grid.Row="1" Grid.Column="5" Header="Badge Override">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                <TextBox Text="{Binding SelectedChannel.InfoBadgeOverride}"
+                                         MaxLength="4"
+                                         views:AsciiTextInput.Enabled="True" />
+                                <Button Grid.Column="1" Classes="InfoIconButton" VerticalAlignment="Center">
+                                    <Button.Flyout>
+                                        <Flyout>
+                                            <Border Classes="Panel" Padding="8" MaxWidth="280">
+                                                <TextBlock Text="Adds its own badge to the channel list - doesn't replace RPTR/ENC/ARC4/SCRA/RX, but since only 2 of those show at once, it can push one out. App only - not written to the radio." TextWrapping="Wrap" />
+                                            </Border>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </Grid>
                         </HeaderedContentControl>
                     </Grid>
                     </GroupBox>

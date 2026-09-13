@@ -798,8 +798,8 @@
                         <Border Classes="Panel">
                             <Grid RowDefinitions="Auto,*" RowSpacing="10">
                                 <StackPanel x:Name="DigitalContactListHeader" Spacing="4">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Button Classes="InfoIconButton">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                        <Button Classes="InfoIconButton" VerticalAlignment="Top">
                                             <Button.Flyout>
                                                 <Flyout>
                                                     <Border Classes="Panel" Padding="8" MaxWidth="360">
@@ -808,8 +808,8 @@
                                                 </Flyout>
                                             </Button.Flyout>
                                         </Button>
-                                        <TextBlock Text="Only populated if 'Include Digital Contact List' was checked on the Radio tab before reading - this list can be very large, so it is opt-in and not read by default. Tap a row to edit it." TextWrapping="Wrap" />
-                                    </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="Opt-in: check 'Include Digital Contact List' on the Radio tab before reading, since imports can be huge. Tap a row to edit." TextWrapping="Wrap" />
+                                    </Grid>
                                     <HeaderedContentControl Header="Filter (name, callsign, city, country, or radio ID)">
                                         <TextBox Text="{Binding DigitalContactFilterText}" />
                                     </HeaderedContentControl>
@@ -1408,10 +1408,21 @@
                                                 <ComboBox ItemsSource="{Binding ScanListOptions}"
                                                           SelectedItem="{Binding SelectedChannelScanListName}" />
                                             </HeaderedContentControl>
-                                            <HeaderedContentControl Header="Badge Override" ToolTip.Tip="Shown in the channel list instead of the automatic RPTR/ENC/ARC4/SCRA/RX badge, when set. App-only - not written to the radio.">
-                                                <TextBox Text="{Binding SelectedChannel.InfoBadgeOverride}"
-                                                         MaxLength="4"
-                                                         views:AsciiTextInput.Enabled="True" />
+                                            <HeaderedContentControl Header="Badge Override">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                                    <TextBox Text="{Binding SelectedChannel.InfoBadgeOverride}"
+                                                             MaxLength="4"
+                                                             views:AsciiTextInput.Enabled="True" />
+                                                    <Button Grid.Column="1" Classes="InfoIconButton" VerticalAlignment="Center">
+                                                        <Button.Flyout>
+                                                            <Flyout>
+                                                                <Border Classes="Panel" Padding="8" MaxWidth="280">
+                                                                    <TextBlock Text="Adds its own badge to the channel list - doesn't replace RPTR/ENC/ARC4/SCRA/RX, but since only 2 of those show at once, it can push one out. App only - not written to the radio." TextWrapping="Wrap" />
+                                                                </Border>
+                                                            </Flyout>
+                                                        </Button.Flyout>
+                                                    </Button>
+                                                </Grid>
                                             </HeaderedContentControl>
                                             <CheckBox Content="Talk Around"
                                                       IsChecked="{Binding SelectedChannel.TalkAround}"

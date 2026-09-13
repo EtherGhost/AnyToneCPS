@@ -20,7 +20,7 @@
     <Grid>
         <Border Classes="Panel">
             <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8" Margin="4">
-                <TextBlock Text="Only populated if 'Include Digital Contact List' was checked on the Radio tab before reading - this list can be very large (real DMR-ID database imports can be 100,000+ entries), so it is opt-in and not read by default. Select a row below to edit it." TextWrapping="Wrap" />
+                <TextBlock Text="Opt-in: check 'Include Digital Contact List' on the Radio tab before reading, since imports can be huge. Select a row to edit." TextWrapping="Wrap" />
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
                     <Button Classes="InfoIconButton">
                         <Button.Flyout>
