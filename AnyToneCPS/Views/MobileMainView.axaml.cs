@@ -87,6 +87,57 @@ public partial class MobileMainView : UserControl
             _inputPane.StateChanged += InputPane_OnStateChanged;
             UpdateInputPaneSpacer();
         }
+
+        UpdateListBrowsePaneVisibility();
+    }
+
+    // Keeps ListBrowsePane (the fixed-height, self-scrolling list view for
+    // single-list entity sections) and MainScrollViewer (everything else,
+    // plus every section's editor form) mutually exclusive - both sit in the
+    // same Grid.Row="1" cell, and a visible-but-empty MainScrollViewer still
+    // swallows touch input over its full bounds, not just where it has
+    // content. Called from every affected section's ShowXList()/ShowXEditor()
+    // and from OnLoaded for the section selected at startup - safe to call
+    // redundantly, since it only reads current state rather than reacting to
+    // which call site triggered it.
+    private void UpdateListBrowsePaneVisibility()
+    {
+        if (DataContext is not MainViewModel viewModel)
+        {
+            return;
+        }
+
+        var showList = _editorMode == MobileEditorMode.None
+            && (viewModel.IsChannelsViewSelected
+                || viewModel.IsDigitalKeysViewSelected
+                || viewModel.IsArc4KeysViewSelected
+                || viewModel.IsAesKeysViewSelected
+                || viewModel.IsRadioIdListViewSelected
+                || viewModel.IsTalkgroupsViewSelected
+                || viewModel.IsRoamingChannelsViewSelected
+                || viewModel.IsAutoRepeaterOffsetsViewSelected
+                || viewModel.IsAnalogAddressBookViewSelected
+                || viewModel.IsGpsRoamingViewSelected
+                || viewModel.IsTalkgroupWhitelistViewSelected
+                || viewModel.IsDigitalContactWhitelistViewSelected
+                || viewModel.IsDigitalContactsViewSelected
+                || viewModel.IsPrefabricatedSmsViewSelected
+                || viewModel.IsAmAirBandViewSelected
+                || viewModel.IsFmBroadcastViewSelected
+                || viewModel.IsAnalogQuickCallViewSelected
+                || viewModel.IsStateInformationViewSelected
+                || viewModel.IsHotKeyViewSelected
+                || viewModel.IsQdcAddressBookViewSelected
+                || viewModel.IsTwoToneDecodeViewSelected
+                || viewModel.IsAprsFiltersViewSelected
+                || viewModel.IsZonesViewSelected
+                || viewModel.IsScanListsViewSelected
+                || viewModel.IsRoamingZonesViewSelected
+                || viewModel.IsReceiveGroupListsViewSelected
+                || viewModel.IsAmZoneViewSelected);
+
+        ListBrowsePane.IsVisible = showList;
+        MainScrollViewer.IsVisible = !showList;
     }
 
     protected override void OnUnloaded(RoutedEventArgs e)
@@ -974,6 +1025,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowChannelEditor()
@@ -991,6 +1043,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.Channel;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowZoneList()
@@ -1001,6 +1054,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowZoneEditor()
@@ -1011,6 +1065,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.Zone;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowRoamingChannelList()
@@ -1021,6 +1076,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowRoamingChannelEditor()
@@ -1031,6 +1087,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.RoamingChannel;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowRadioIdList()
@@ -1041,6 +1098,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowRadioIdEditor()
@@ -1051,6 +1109,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.RadioId;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowTalkgroupList()
@@ -1061,6 +1120,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowTalkgroupEditor()
@@ -1071,6 +1131,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.Talkgroup;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowScanListList()
@@ -1081,6 +1142,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowScanListEditor()
@@ -1091,6 +1153,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.ScanList;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowRoamingZoneList()
@@ -1101,6 +1164,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowRoamingZoneEditor()
@@ -1111,6 +1175,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.RoamingZone;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowReceiveGroupListList()
@@ -1121,6 +1186,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowReceiveGroupListEditor()
@@ -1131,6 +1197,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.ReceiveGroupList;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowDigitalContactList()
@@ -1141,6 +1208,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowDigitalContactEditor()
@@ -1151,6 +1219,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.DigitalContact;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAutoRepeaterOffsetList()
@@ -1161,6 +1230,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAutoRepeaterOffsetEditor()
@@ -1171,6 +1241,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.AutoRepeaterOffset;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAnalogAddressList()
@@ -1181,6 +1252,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAnalogAddressEditor()
@@ -1191,6 +1263,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.AnalogAddress;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowGpsRoamingList()
@@ -1201,6 +1274,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowGpsRoamingEditor()
@@ -1211,6 +1285,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.GpsRoaming;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowTalkgroupWhitelistList()
@@ -1221,6 +1296,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowTalkgroupWhitelistEditor()
@@ -1231,6 +1307,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.TalkgroupWhitelist;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowDigitalContactWhitelistList()
@@ -1241,6 +1318,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowDigitalContactWhitelistEditor()
@@ -1251,6 +1329,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.DigitalContactWhitelist;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowPrefabricatedSmsList()
@@ -1261,6 +1340,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowPrefabricatedSmsEditor()
@@ -1271,6 +1351,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.PrefabricatedSms;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAmAirList()
@@ -1281,6 +1362,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAmAirEditor()
@@ -1291,6 +1373,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.AmAir;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAmZoneList()
@@ -1301,6 +1384,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAmZoneEditor()
@@ -1311,6 +1395,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.AmZone;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowFmChannelList()
@@ -1321,6 +1406,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowFmChannelEditor()
@@ -1331,6 +1417,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.FmChannel;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAnalogQuickCallList()
@@ -1341,6 +1428,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAnalogQuickCallEditor()
@@ -1351,6 +1439,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.AnalogQuickCall;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowStateInformationList()
@@ -1361,6 +1450,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowStateInformationEditor()
@@ -1371,6 +1461,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.StateInformation;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowHotKeyList()
@@ -1381,6 +1472,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowHotKeyEditor()
@@ -1391,6 +1483,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.HotKey;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowQdc1200IdList()
@@ -1421,6 +1514,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowQdcAddressEditor()
@@ -1431,6 +1525,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.QdcAddress;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowFiveToneIdList()
@@ -1481,6 +1576,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowTwoToneDecodeEntryEditor()
@@ -1491,6 +1587,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.TwoToneDecodeEntry;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAprsReceiveFilterList()
@@ -1501,6 +1598,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAprsReceiveFilterEditor()
@@ -1511,6 +1609,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.AprsReceiveFilter;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowDigitalKeyList()
@@ -1521,6 +1620,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowDigitalKeyEditor()
@@ -1531,6 +1631,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.DigitalKey;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowArc4KeyList()
@@ -1541,6 +1642,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowArc4KeyEditor()
@@ -1551,6 +1653,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.Arc4Key;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAesKeyList()
@@ -1561,6 +1664,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.None;
         EditorNavigationBar.IsVisible = false;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void ShowAesKeyEditor()
@@ -1571,6 +1675,7 @@ public partial class MobileMainView : UserControl
         _editorMode = MobileEditorMode.AesKey;
         EditorNavigationBar.IsVisible = true;
         MainScrollViewer.Offset = MainScrollViewer.Offset.WithY(0);
+        UpdateListBrowsePaneVisibility();
     }
 
     private void MoveSelectedChannel(int offset)

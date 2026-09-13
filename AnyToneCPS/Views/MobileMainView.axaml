@@ -277,19 +277,50 @@
             </Grid>
         </Border>
 
-        <ScrollViewer x:Name="MainScrollViewer"
-                      Grid.Row="1"
-                      ScrollViewer.BringIntoViewOnFocusChange="True">
-            <Grid x:Name="ScrollableContent"
-                  Margin="12"
-                  RowDefinitions="*,Auto,Auto">
-                <Grid>
-                    <StackPanel IsVisible="{Binding IsChannelsViewSelected}" Spacing="12">
-                        <Border Classes="Panel">
-                            <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
-                                <!-- ChannelSelectionCountText/ChannelSelectionCancelButton are
-                                     hidden until a long-press on a channel row enters selection
-                                     mode (MobileMainView.axaml.cs's EnterChannelSelectionMode) -
+        <Grid Grid.Row="1">
+            <!-- List-browsing pane for every entity section whose browse
+                 screen is just a header row plus one top-level ListBox
+                 (Channels, Zones, Scan Lists, Roaming Channels/Zones,
+                 Receive Group Lists, Digital/ARC4/AES Keys, Radio IDs,
+                 Talkgroups, Auto Repeater Offsets, Analog Address Book,
+                 GPS Roaming, both Whitelists, Digital Contacts, Prefabricated
+                 SMS, AM Air Band/Zone, FM Broadcast, Analog Quick Call, State
+                 Information, Hot Key, QDC Address Book, 2Tone Decode, APRS
+                 Filters) - sits OUTSIDE MainScrollViewer entirely, as a real
+                 bounded-height sibling, not another ScrollViewer. A
+                 ScrollViewer always measures its content at infinite height,
+                 so a section's header+ListBox nested in one never actually
+                 got the remaining screen space - the ListBox just grew to
+                 fit its own MaxHeight/content and the whole blob (header
+                 included) had to page-scroll to be seen, on top of the
+                 ListBox's own internal scrollbar. Real bug found live
+                 2026-09-13 (screenshot: Channels list's own header/+/-Copy/
+                 Del row scrolling away with the list). Each section here
+                 uses Grid RowDefinitions="Auto,*" instead - the header takes
+                 its own height, the ListBox fills whatever is actually left
+                 and scrolls internally, header stays put.
+                 Zones/Scan Lists/Roaming Zones/Receive Group Lists/AM Zone's
+                 own EDITOR forms (not moved here - they stay in
+                 MainScrollViewer, see each one's own Grid further down) also
+                 contain extra assignment-picker ListBoxes, but those are
+                 already correctly MaxHeight-bounded widgets inside a form
+                 that's meant to scroll as a whole, unrelated to this fix.
+                 5Tone/QDC1200 Encode/2Tone Encode/APRS Settings were left
+                 out entirely - they have real settings fields ahead of their
+                 list, not just a header row, so their whole section
+                 legitimately needs page-scroll and doesn't fit this pane.
+                 UpdateListBrowsePaneVisibility() (MobileMainView.axaml.cs)
+                 keeps this pane and MainScrollViewer mutually exclusive -
+                 both would otherwise occupy the same cell and MainScrollViewer
+                 swallows touch input over its full bounds even where its own
+                 content is empty. -->
+            <Grid x:Name="ListBrowsePane" Margin="12">
+                <Grid IsVisible="{Binding IsChannelsViewSelected}">
+                    <Border Classes="Panel">
+                        <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                            <!-- ChannelSelectionCountText/ChannelSelectionCancelButton are
+                                 hidden until a long-press on a channel row enters selection
+                                 mode (MobileMainView.axaml.cs's EnterChannelSelectionMode) -
                                      the touch equivalent of Desktop's Ctrl/Shift-click. This row
                                      already has just enough width for 3 buttons on a phone screen
                                      (nothing here wraps or clips, so a 4th one runs off the right
@@ -329,7 +360,6 @@
                                      ListBox, so the long-press timer would never start. -->
                                 <ListBox x:Name="ChannelList"
                                          Grid.Row="1"
-                                         MaxHeight="900"
                                          ItemsSource="{Binding Channels}"
                                          SelectedItem="{Binding SelectedChannel}"
                                          Tapped="ChannelList_OnTapped"
@@ -388,8 +418,925 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                    <Grid IsVisible="{Binding IsDigitalKeysViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="DigitalKeyListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding VisibleEncryptionKeys.Count, StringFormat='Digital Keys ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Classes="ClusterButton" Command="{Binding AddDigitalEncryptionKeyCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Classes="ClusterButton" Command="{Binding RemoveEncryptionKeyCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="DigitalKeyList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding VisibleEncryptionKeys}"
+                                         SelectedItem="{Binding SelectedEncryptionKey}"
+                                         Tapped="DigitalKeyList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:EncryptionKeyEntry">
+                                            <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                                <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding EncryptionIdText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsArc4KeysViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="Arc4KeyListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding VisibleArc4EncryptionKeys.Count, StringFormat='ARC4 Keys ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Classes="ClusterButton" Command="{Binding AddArc4EncryptionKeyCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Classes="ClusterButton" Command="{Binding RemoveArc4EncryptionKeyCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="Arc4KeyList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding VisibleArc4EncryptionKeys}"
+                                         SelectedItem="{Binding SelectedArc4EncryptionKey}"
+                                         Tapped="Arc4KeyList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:EncryptionKeyEntry">
+                                            <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                                <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding EncryptionKeyText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsAesKeysViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="AesKeyListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding VisibleAesEncryptionKeys.Count, StringFormat='AES Keys ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Classes="ClusterButton" Command="{Binding AddAesEncryptionKeyCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Classes="ClusterButton" Command="{Binding RemoveAesEncryptionKeyCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="AesKeyList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding VisibleAesEncryptionKeys}"
+                                         SelectedItem="{Binding SelectedAesEncryptionKey}"
+                                         Tapped="AesKeyList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:EncryptionKeyEntry">
+                                            <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
+                                                <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding EncryptionIdText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsRadioIdListViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="RadioIdListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding RadioIdCount, StringFormat='Radio IDs ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddRadioIdCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveRadioIdCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="RadioIdList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding RadioIds}"
+                                         SelectedItem="{Binding SelectedRadioId}"
+                                         Tapped="RadioIdList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:RadioIdEntry">
+                                            <Grid Margin="8,7"
+                                                  ColumnDefinitions="*,Auto"
+                                                  ColumnSpacing="8">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsTalkgroupsViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="TalkgroupListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding TalkgroupCount, StringFormat='Talkgroups ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddTalkgroupCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveTalkgroupCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="TalkgroupList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding Talkgroups}"
+                                         SelectedItem="{Binding SelectedTalkgroup}"
+                                         Tapped="TalkgroupList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:TalkgroupEntry">
+                                            <Grid Margin="8,7"
+                                                  ColumnDefinitions="*,Auto"
+                                                  RowDefinitions="Auto,Auto"
+                                                  ColumnSpacing="8">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                                <TextBlock Grid.Row="1"
+                                                           Grid.ColumnSpan="2"
+                                                           Text="{Binding CallType}"
+                                                           Foreground="{DynamicResource AppMutedTextBrush}"
+                                                           FontSize="12" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsRoamingChannelsViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="RoamingChannelListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding RoamingChannelCount, StringFormat='Roaming Channels ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddRoamingChannelCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveRoamingChannelCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="RoamingChannelList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding RoamingChannels}"
+                                         SelectedItem="{Binding SelectedRoamingChannel}"
+                                         Tapped="RoamingChannelList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:RoamingChannelEntry">
+                                            <Grid Margin="8,7"
+                                                  ColumnDefinitions="*,Auto"
+                                                  RowDefinitions="Auto,Auto"
+                                                  ColumnSpacing="8">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                                <TextBlock Grid.Row="1"
+                                                           Grid.ColumnSpan="2"
+                                                           Text="{Binding RxFrequencyMhz, StringFormat='RX {0:F5} MHz'}"
+                                                           Foreground="{DynamicResource AppMutedTextBrush}"
+                                                           FontSize="12" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsAutoRepeaterOffsetsViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="AutoRepeaterOffsetListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding AutoRepeaterOffsetCount, StringFormat='Auto Repeater Offsets ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddAutoRepeaterOffsetCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveAutoRepeaterOffsetCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="AutoRepeaterOffsetList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding AutoRepeaterOffsets}"
+                                         SelectedItem="{Binding SelectedAutoRepeaterOffset}"
+                                         Tapped="AutoRepeaterOffsetList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:AutoRepeaterOffsetEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding OffsetFrequencyMhzText}" FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsAnalogAddressBookViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="AnalogAddressListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding AnalogAddressCount, StringFormat='Analog Address Book ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddAnalogAddressCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveAnalogAddressCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="AnalogAddressList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding AnalogAddresses}"
+                                         SelectedItem="{Binding SelectedAnalogAddress}"
+                                         Tapped="AnalogAddressList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:AnalogAddressEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsGpsRoamingViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="GpsRoamingListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding GpsRoamingCount, StringFormat='GPS Roaming ({0} of 32 fixed slots)'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding ResetGpsRoamingCommand}" Content="Reset" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="GpsRoamingList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding GpsRoamingEntries}"
+                                         SelectedItem="{Binding SelectedGpsRoaming}"
+                                         Tapped="GpsRoamingList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:GpsRoamingEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding ZoneDisplayName}" FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsTalkgroupWhitelistViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="TalkgroupWhitelistListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding TalkgroupWhitelistCount, StringFormat='Talkgroup Whitelist ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Classes="InfoIconButton" Margin="8,0,0,0">
+                                            <Button.Flyout>
+                                                <Flyout>
+                                                    <Border Classes="Panel" Padding="8" MaxWidth="360">
+                                                        <TextBlock Text="The whole list is rewritten together on every Write to Radio, up to 1000 entries. Number reflects packed position on the radio, not a chosen slot - it isn't editable." TextWrapping="Wrap" />
+                                                    </Border>
+                                                </Flyout>
+                                            </Button.Flyout>
+                                        </Button>
+                                        <Button Margin="8,0,0,0" Command="{Binding AddTalkgroupWhitelistEntryCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveTalkgroupWhitelistEntryCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="TalkgroupWhitelistList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding TalkgroupWhitelist}"
+                                         SelectedItem="{Binding SelectedTalkgroupWhitelistEntry}"
+                                         Tapped="TalkgroupWhitelistList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:TalkgroupWhitelistEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding DmrId}" FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsDigitalContactWhitelistViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="DigitalContactWhitelistListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding DigitalContactWhitelistCount, StringFormat='Digital Contact Whitelist ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Classes="InfoIconButton" Margin="8,0,0,0">
+                                            <Button.Flyout>
+                                                <Flyout>
+                                                    <Border Classes="Panel" Padding="8" MaxWidth="360">
+                                                        <TextBlock Text="The whole list is rewritten together on every Write to Radio, up to 1000 entries. Number reflects packed position on the radio, not a chosen slot - it isn't editable." TextWrapping="Wrap" />
+                                                    </Border>
+                                                </Flyout>
+                                            </Button.Flyout>
+                                        </Button>
+                                        <Button Margin="8,0,0,0" Command="{Binding AddDigitalContactWhitelistEntryCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveDigitalContactWhitelistEntryCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="DigitalContactWhitelistList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding DigitalContactWhitelist}"
+                                         SelectedItem="{Binding SelectedDigitalContactWhitelistEntry}"
+                                         Tapped="DigitalContactWhitelistList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:DigitalContactWhitelistEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding DmrId}" FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsDigitalContactsViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <StackPanel x:Name="DigitalContactListHeader" Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Classes="InfoIconButton">
+                                            <Button.Flyout>
+                                                <Flyout>
+                                                    <Border Classes="Panel" Padding="8" MaxWidth="360">
+                                                        <TextBlock Text="The whole list is rewritten together on every Write to Radio. Multi-block writes are supported (live-confirmed crossing into a second block) up to 500 blocks - covers the vendor's own claimed 500,000-entry capacity." TextWrapping="Wrap" />
+                                                    </Border>
+                                                </Flyout>
+                                            </Button.Flyout>
+                                        </Button>
+                                        <TextBlock Text="Only populated if 'Include Digital Contact List' was checked on the Radio tab before reading - this list can be very large, so it is opt-in and not read by default. Tap a row to edit it." TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <HeaderedContentControl Header="Filter (name, callsign, city, country, or radio ID)">
+                                        <TextBox Text="{Binding DigitalContactFilterText}" />
+                                    </HeaderedContentControl>
+                                    <CheckBox Content="Friends only" IsChecked="{Binding DigitalContactFriendsOnly}" />
+                                    <TextBlock Text="{Binding DigitalContacts.Count, StringFormat='{}{0} total'}" />
+                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                        <Button Command="{Binding AddDigitalContactCommand}" Content="+ Add" />
+                                        <Button Grid.Column="1" Command="{Binding RemoveDigitalContactCommand}" Content="Del" />
+                                    </Grid>
+                                </StackPanel>
+                                <ListBox x:Name="DigitalContactList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding FilteredDigitalContacts}"
+                                         SelectedItem="{Binding SelectedDigitalContact}"
+                                         Tapped="DigitalContactList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:DigitalContactEntry">
+                                            <StackPanel Margin="8,7" Spacing="6">
+                                                <HeaderedContentControl Header="Radio ID">
+                                                    <TextBlock Text="{Binding RadioId}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Name">
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Callsign">
+                                                    <TextBlock Text="{Binding Callsign}" />
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="City / State / Country">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding City}" />
+                                                        <TextBlock Text="{Binding State}" />
+                                                        <TextBlock Text="{Binding Country}" />
+                                                    </StackPanel>
+                                                </HeaderedContentControl>
+                                                <HeaderedContentControl Header="Call Type / Alert / Remarks">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding CallTypeText}" />
+                                                        <TextBlock Text="{Binding CallAlert}" />
+                                                        <TextBlock Text="{Binding Remarks}" />
+                                                    </StackPanel>
+                                                </HeaderedContentControl>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsPrefabricatedSmsViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="PrefabricatedSmsListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding PrefabricatedSmsCount, StringFormat='Prefabricated SMS ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddPrefabricatedSmsCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemovePrefabricatedSmsCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="PrefabricatedSmsList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding PrefabricatedSmsMessages}"
+                                         SelectedItem="{Binding SelectedPrefabricatedSms}"
+                                         Tapped="PrefabricatedSmsList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:PrefabricatedSmsEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding Text}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsAmAirBandViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="AmAirListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding AmAirCount, StringFormat='AM Air Band ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddAmAirCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveAmAirCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="AmAirList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding AmAirChannels}"
+                                         SelectedItem="{Binding SelectedAmAir}"
+                                         Tapped="AmAirList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:AmAirEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsFmBroadcastViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="FmChannelListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding FmChannelCount, StringFormat='FM Broadcast ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddFmChannelCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveFmChannelCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="FmChannelList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding FmChannels}"
+                                         SelectedItem="{Binding SelectedFmChannel}"
+                                         Tapped="FmChannelList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:FmChannelEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsAnalogQuickCallViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="AnalogQuickCallListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding AnalogQuickCallCount, StringFormat='Analog Quick Call ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddAnalogQuickCallCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveAnalogQuickCallCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="AnalogQuickCallList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding AnalogQuickCalls}"
+                                         SelectedItem="{Binding SelectedAnalogQuickCall}"
+                                         Tapped="AnalogQuickCallList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:AnalogQuickCallEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding OperationTypeText}" FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsStateInformationViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="StateInformationListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding StateInformationCount, StringFormat='State Information ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddStateInformationCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveStateInformationCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="StateInformationList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding StateInformationEntries}"
+                                         SelectedItem="{Binding SelectedStateInformation}"
+                                         Tapped="StateInformationList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:StateInformationEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding Content}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsHotKeyViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <TextBlock x:Name="HotKeyListHeader" Classes="SectionTitle" Text="Hot Keys (18)" />
+                                <ListBox x:Name="HotKeyList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding HotKeys}"
+                                         SelectedItem="{Binding SelectedHotKey}"
+                                         Tapped="HotKeyList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:HotKeyEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding Key}" FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="1" Text="{Binding ModeText}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsQdcAddressBookViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="QdcAddressListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding QdcAddressCount, StringFormat='QDC Address Book ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddQdcAddressCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveQdcAddressCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="QdcAddressList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding QdcAddresses}"
+                                         SelectedItem="{Binding SelectedQdcAddress}"
+                                         Tapped="QdcAddressList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:QdcAddressEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsTwoToneDecodeViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="TwoToneDecodeEntryListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding TwoToneDecodeCount, StringFormat='2Tone Decode ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddTwoToneDecodeEntryCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveTwoToneDecodeEntryCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="TwoToneDecodeEntryList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding TwoToneDecodeEntries}"
+                                         SelectedItem="{Binding SelectedTwoToneDecodeEntry}"
+                                         Tapped="TwoToneDecodeEntryList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:TwoToneDecodeEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsAprsFiltersViewSelected}" RowDefinitions="Auto,*">
+                        <Border Background="{DynamicResource AppInfoBadgeBackgroundBrush}"
+                                BorderBrush="{DynamicResource AppInfoBadgeBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10,6"
+                                Margin="0,0,0,8">
+                            <TextBlock Text="Not yet writable to the radio - edits here are saved to the project file only." TextWrapping="Wrap" />
+                        </Border>
+                        <Border Grid.Row="1" Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="AprsReceiveFilterListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding AprsReceiveFilterCount, StringFormat='APRS Filters ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddAprsReceiveFilterCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveAprsReceiveFilterCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="AprsReceiveFilterList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding AprsReceiveFilters}"
+                                         SelectedItem="{Binding SelectedAprsReceiveFilter}"
+                                         Tapped="AprsReceiveFilterList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:AprsReceiveFilterEntry">
+                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding Callsign}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                    <Grid IsVisible="{Binding IsZonesViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="ZoneListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding ZoneCount, StringFormat='Zoner ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddZoneCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveZoneCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="ZoneList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding Zones}"
+                                         SelectedItem="{Binding SelectedZone}"
+                                         Tapped="ZoneList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:ZoneEntry">
+                                            <Grid Margin="8,7"
+                                                  ColumnDefinitions="*,Auto"
+                                                  ColumnSpacing="8">
+                                                <TextBlock Text="{Binding DisplayLabel}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <Border Grid.Column="1" Classes="TypeBadge">
+                                                    <TextBlock Text="{Binding Members.Count}" />
+                                                </Border>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsScanListsViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="ScanListListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding ScanListCount, StringFormat='Scan Lists ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddScanListCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveScanListCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="ScanListList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding ScanLists}"
+                                         SelectedItem="{Binding SelectedScanList}"
+                                         Tapped="ScanListList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:ScanListEntry">
+                                            <Grid Margin="8,7" RowDefinitions="Auto,Auto">
+                                                <TextBlock Text="{Binding DisplayLabel}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Row="1"
+                                                           Text="{Binding Members.Count, StringFormat='{}{0} channels'}"
+                                                           Foreground="{DynamicResource AppMutedTextBrush}"
+                                                           FontSize="12" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsRoamingZonesViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="RoamingZoneListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding RoamingZoneCount, StringFormat='Roaming Zones ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddRoamingZoneCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveRoamingZoneCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="RoamingZoneList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding RoamingZones}"
+                                         SelectedItem="{Binding SelectedRoamingZone}"
+                                         Tapped="RoamingZoneList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:RoamingZoneEntry">
+                                            <Grid Margin="8,7" RowDefinitions="Auto,Auto">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Row="1"
+                                                           Text="{Binding Members.Count, StringFormat='{}{0} channels'}"
+                                                           Foreground="{DynamicResource AppMutedTextBrush}"
+                                                           FontSize="12" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsReceiveGroupListsViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="ReceiveGroupListListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding ReceiveGroupListCount, StringFormat='Receive Group Lists ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddReceiveGroupListCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveReceiveGroupListCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="ReceiveGroupListList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding ReceiveGroupLists}"
+                                         SelectedItem="{Binding SelectedReceiveGroupList}"
+                                         Tapped="ReceiveGroupListList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:ReceiveGroupListEntry">
+                                            <Grid Margin="8,7" RowDefinitions="Auto,Auto">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Row="1"
+                                                           Text="{Binding TalkgroupIndexes.Count, StringFormat='{}{0} talkgroups'}"
+                                                           Foreground="{DynamicResource AppMutedTextBrush}"
+                                                           FontSize="12" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid IsVisible="{Binding IsAmZoneViewSelected}">
+                        <Border Classes="Panel">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                                <Grid x:Name="AmZoneListHeader" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="SectionTitle"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding AmZoneCount, StringFormat='AM Zones ({0})'}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Margin="8,0,0,0" Command="{Binding AddAmZoneCommand}" Content="+" />
+                                        <Button Margin="8,0,0,0" Command="{Binding RemoveAmZoneCommand}" Content="Del" />
+                                    </StackPanel>
+                                </Grid>
+                                <ListBox x:Name="AmZoneList"
+                                         Grid.Row="1"
+                                         ItemsSource="{Binding AmZones}"
+                                         SelectedItem="{Binding SelectedAmZone}"
+                                         Tapped="AmZoneList_OnTapped">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:AmZoneEntry">
+                                            <Grid Margin="8,7" RowDefinitions="Auto,Auto">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Row="1"
+                                                           Text="{Binding Members.Count, StringFormat='{}{0} channels'}"
+                                                           Foreground="{DynamicResource AppMutedTextBrush}"
+                                                           FontSize="12" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+
+                </Grid>
+
+                <ScrollViewer x:Name="MainScrollViewer"
+                              ScrollViewer.BringIntoViewOnFocusChange="True">
+                    <Grid x:Name="ScrollableContent"
+                          Margin="12"
+                          RowDefinitions="*,Auto,Auto">
+                        <Grid>
+                            <!-- Channels editor - the list-browsing half of this
+                                 section lives in ListBrowsePane above, outside this
+                                 ScrollViewer entirely (see its own comment). This
+                                 half is only ever shown once a channel is tapped, so
+                                 it's fine for it to page-scroll like every other
+                                 form on this page. -->
+                            <Grid IsVisible="{Binding IsChannelsViewSelected}">
+                                <Border Classes="Panel">
+                                    <Grid RowDefinitions="Auto,Auto">
                                 <Grid x:Name="ChannelEditorHeader"
-                                      Grid.Row="2"
                                       ColumnDefinitions="*"
                                       ColumnSpacing="8"
                                       IsVisible="False">
@@ -399,7 +1346,7 @@
                                                TextTrimming="CharacterEllipsis" />
                                 </Grid>
                                 <TabControl x:Name="ChannelEditorTabs"
-                                            Grid.Row="3"
+                                            Grid.Row="1"
                                             IsVisible="False">
                                     <TabItem Header="Common">
                                         <StackPanel Spacing="10" Margin="4">
@@ -745,42 +1692,11 @@
                                         </StackPanel>
                                     </TabItem>
                                 </TabControl>
+                                    </Grid>
+                                </Border>
                             </Grid>
-                        </Border>
-                    </StackPanel>
-
-                    <StackPanel IsVisible="{Binding IsZonesViewSelected}" Spacing="12">
+                    <Grid IsVisible="{Binding IsZonesViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="ZoneListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding ZoneCount, StringFormat='Zoner ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddZoneCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveZoneCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="ZoneList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding Zones}"
-                                         SelectedItem="{Binding SelectedZone}"
-                                         Tapped="ZoneList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:ZoneEntry">
-                                            <Grid Margin="8,7"
-                                                  ColumnDefinitions="*,Auto"
-                                                  ColumnSpacing="8">
-                                                <TextBlock Text="{Binding DisplayLabel}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <Border Grid.Column="1" Classes="TypeBadge">
-                                                    <TextBlock Text="{Binding Members.Count}" />
-                                                </Border>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="ZoneEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -876,36 +1792,11 @@
                                     <Button Grid.Column="1" Command="{Binding MoveZoneMemberDownCommand}" Content="Down" />
                                 </Grid>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsDigitalKeysViewSelected}">
+                    <Grid IsVisible="{Binding IsDigitalKeysViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="DigitalKeyListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding VisibleEncryptionKeys.Count, StringFormat='Digital Keys ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Classes="ClusterButton" Command="{Binding AddDigitalEncryptionKeyCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Classes="ClusterButton" Command="{Binding RemoveEncryptionKeyCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="DigitalKeyList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding VisibleEncryptionKeys}"
-                                         SelectedItem="{Binding SelectedEncryptionKey}"
-                                         Tapped="DigitalKeyList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:EncryptionKeyEntry">
-                                            <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
-                                                <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding EncryptionIdText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="DigitalKeyEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -928,36 +1819,11 @@
                                             Content="Randomize"
                                             ToolTip.Tip="Replace this key's ID with a new random 4-digit value." />
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsArc4KeysViewSelected}">
+                    <Grid IsVisible="{Binding IsArc4KeysViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="Arc4KeyListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding VisibleArc4EncryptionKeys.Count, StringFormat='ARC4 Keys ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Classes="ClusterButton" Command="{Binding AddArc4EncryptionKeyCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Classes="ClusterButton" Command="{Binding RemoveArc4EncryptionKeyCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="Arc4KeyList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding VisibleArc4EncryptionKeys}"
-                                         SelectedItem="{Binding SelectedArc4EncryptionKey}"
-                                         Tapped="Arc4KeyList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:EncryptionKeyEntry">
-                                            <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
-                                                <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding EncryptionKeyText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="Arc4KeyEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -980,36 +1846,11 @@
                                             Content="Randomize"
                                             ToolTip.Tip="Replace this key's value with a new random key." />
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsAesKeysViewSelected}">
+                    <Grid IsVisible="{Binding IsAesKeysViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="AesKeyListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding VisibleAesEncryptionKeys.Count, StringFormat='AES Keys ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Classes="ClusterButton" Command="{Binding AddAesEncryptionKeyCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Classes="ClusterButton" Command="{Binding RemoveAesEncryptionKeyCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="AesKeyList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding VisibleAesEncryptionKeys}"
-                                         SelectedItem="{Binding SelectedAesEncryptionKey}"
-                                         Tapped="AesKeyList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:EncryptionKeyEntry">
-                                            <Grid ColumnDefinitions="50,*" ColumnSpacing="8" Margin="4">
-                                                <TextBlock Text="{Binding Number}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{Binding EncryptionIdText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="AesKeyEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -1032,40 +1873,11 @@
                                             Content="Randomize"
                                             ToolTip.Tip="Replace this key's value with a new random key." />
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsRadioIdListViewSelected}">
+                    <Grid IsVisible="{Binding IsRadioIdListViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="RadioIdListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding RadioIdCount, StringFormat='Radio IDs ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddRadioIdCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveRadioIdCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="RadioIdList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding RadioIds}"
-                                         SelectedItem="{Binding SelectedRadioId}"
-                                         Tapped="RadioIdList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:RadioIdEntry">
-                                            <Grid Margin="8,7"
-                                                  ColumnDefinitions="*,Auto"
-                                                  ColumnSpacing="8">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="RadioIdEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -1089,46 +1901,11 @@
                                                  views:AsciiTextInput.Enabled="True" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsTalkgroupsViewSelected}">
+                    <Grid IsVisible="{Binding IsTalkgroupsViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="TalkgroupListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding TalkgroupCount, StringFormat='Talkgroups ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddTalkgroupCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveTalkgroupCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="TalkgroupList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding Talkgroups}"
-                                         SelectedItem="{Binding SelectedTalkgroup}"
-                                         Tapped="TalkgroupList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:TalkgroupEntry">
-                                            <Grid Margin="8,7"
-                                                  ColumnDefinitions="*,Auto"
-                                                  RowDefinitions="Auto,Auto"
-                                                  ColumnSpacing="8">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                                <TextBlock Grid.Row="1"
-                                                           Grid.ColumnSpan="2"
-                                                           Text="{Binding CallType}"
-                                                           Foreground="{DynamicResource AppMutedTextBrush}"
-                                                           FontSize="12" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="TalkgroupEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -1160,41 +1937,11 @@
                                                   SelectedItem="{Binding SelectedTalkgroup.CallAlert}" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsScanListsViewSelected}">
+                    <Grid IsVisible="{Binding IsScanListsViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="ScanListListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding ScanListCount, StringFormat='Scan Lists ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddScanListCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveScanListCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="ScanListList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding ScanLists}"
-                                         SelectedItem="{Binding SelectedScanList}"
-                                         Tapped="ScanListList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:ScanListEntry">
-                                            <Grid Margin="8,7" RowDefinitions="Auto,Auto">
-                                                <TextBlock Text="{Binding DisplayLabel}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Row="1"
-                                                           Text="{Binding Members.Count, StringFormat='{}{0} channels'}"
-                                                           Foreground="{DynamicResource AppMutedTextBrush}"
-                                                           FontSize="12" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="ScanListEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -1280,46 +2027,11 @@
                                         </ListBox.ItemTemplate>
                                     </ListBox>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsRoamingChannelsViewSelected}">
+                    <Grid IsVisible="{Binding IsRoamingChannelsViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="RoamingChannelListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding RoamingChannelCount, StringFormat='Roaming Channels ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddRoamingChannelCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveRoamingChannelCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="RoamingChannelList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding RoamingChannels}"
-                                         SelectedItem="{Binding SelectedRoamingChannel}"
-                                         Tapped="RoamingChannelList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:RoamingChannelEntry">
-                                            <Grid Margin="8,7"
-                                                  ColumnDefinitions="*,Auto"
-                                                  RowDefinitions="Auto,Auto"
-                                                  ColumnSpacing="8">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                                <TextBlock Grid.Row="1"
-                                                           Grid.ColumnSpan="2"
-                                                           Text="{Binding RxFrequencyMhz, StringFormat='RX {0:F5} MHz'}"
-                                                           Foreground="{DynamicResource AppMutedTextBrush}"
-                                                           FontSize="12" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="RoamingChannelEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -1371,41 +2083,11 @@
                                                   SelectedItem="{Binding SelectedRoamingChannel.SlotSelection}" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsRoamingZonesViewSelected}">
+                    <Grid IsVisible="{Binding IsRoamingZonesViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="RoamingZoneListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding RoamingZoneCount, StringFormat='Roaming Zones ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddRoamingZoneCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveRoamingZoneCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="RoamingZoneList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding RoamingZones}"
-                                         SelectedItem="{Binding SelectedRoamingZone}"
-                                         Tapped="RoamingZoneList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:RoamingZoneEntry">
-                                            <Grid Margin="8,7" RowDefinitions="Auto,Auto">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Row="1"
-                                                           Text="{Binding Members.Count, StringFormat='{}{0} channels'}"
-                                                           Foreground="{DynamicResource AppMutedTextBrush}"
-                                                           FontSize="12" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="RoamingZoneEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -1461,41 +2143,11 @@
                                         <Button Grid.Column="1" Command="{Binding MoveRoamingZoneMemberDownCommand}" Content="Down" />
                                     </Grid>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsReceiveGroupListsViewSelected}">
+                    <Grid IsVisible="{Binding IsReceiveGroupListsViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="ReceiveGroupListListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding ReceiveGroupListCount, StringFormat='Receive Group Lists ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddReceiveGroupListCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveReceiveGroupListCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="ReceiveGroupListList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding ReceiveGroupLists}"
-                                         SelectedItem="{Binding SelectedReceiveGroupList}"
-                                         Tapped="ReceiveGroupListList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:ReceiveGroupListEntry">
-                                            <Grid Margin="8,7" RowDefinitions="Auto,Auto">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Row="1"
-                                                           Text="{Binding TalkgroupIndexes.Count, StringFormat='{}{0} talkgroups'}"
-                                                           Foreground="{DynamicResource AppMutedTextBrush}"
-                                                           FontSize="12" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="ReceiveGroupListEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -1547,36 +2199,11 @@
                                         </ListBox.ItemTemplate>
                                     </ListBox>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsAutoRepeaterOffsetsViewSelected}">
+                    <Grid IsVisible="{Binding IsAutoRepeaterOffsetsViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="AutoRepeaterOffsetListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding AutoRepeaterOffsetCount, StringFormat='Auto Repeater Offsets ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddAutoRepeaterOffsetCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveAutoRepeaterOffsetCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="AutoRepeaterOffsetList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding AutoRepeaterOffsets}"
-                                         SelectedItem="{Binding SelectedAutoRepeaterOffset}"
-                                         Tapped="AutoRepeaterOffsetList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:AutoRepeaterOffsetEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding OffsetFrequencyMhzText}" FontWeight="SemiBold" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="AutoRepeaterOffsetEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -1595,38 +2222,11 @@
                                                  Classes="PinDigits" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsAnalogAddressBookViewSelected}">
+                    <Grid IsVisible="{Binding IsAnalogAddressBookViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="AnalogAddressListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding AnalogAddressCount, StringFormat='Analog Address Book ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddAnalogAddressCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveAnalogAddressCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="AnalogAddressList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding AnalogAddresses}"
-                                         SelectedItem="{Binding SelectedAnalogAddress}"
-                                         Tapped="AnalogAddressList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:AnalogAddressEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="AnalogAddressEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -1652,35 +2252,11 @@
                                                  FontWeight="{Binding SelectedAnalogAddress.NameFontWeight}" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsGpsRoamingViewSelected}">
+                    <Grid IsVisible="{Binding IsGpsRoamingViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="GpsRoamingListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding GpsRoamingCount, StringFormat='GPS Roaming ({0} of 32 fixed slots)'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding ResetGpsRoamingCommand}" Content="Reset" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="GpsRoamingList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding GpsRoamingEntries}"
-                                         SelectedItem="{Binding SelectedGpsRoaming}"
-                                         Tapped="GpsRoamingList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:GpsRoamingEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding ZoneDisplayName}" FontWeight="SemiBold" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="GpsRoamingEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -1733,45 +2309,11 @@
                                                  views:DigitOnlyInput.Enabled="True" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsTalkgroupWhitelistViewSelected}">
+                    <Grid IsVisible="{Binding IsTalkgroupWhitelistViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="TalkgroupWhitelistListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding TalkgroupWhitelistCount, StringFormat='Talkgroup Whitelist ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Classes="InfoIconButton" Margin="8,0,0,0">
-                                            <Button.Flyout>
-                                                <Flyout>
-                                                    <Border Classes="Panel" Padding="8" MaxWidth="360">
-                                                        <TextBlock Text="The whole list is rewritten together on every Write to Radio, up to 1000 entries. Number reflects packed position on the radio, not a chosen slot - it isn't editable." TextWrapping="Wrap" />
-                                                    </Border>
-                                                </Flyout>
-                                            </Button.Flyout>
-                                        </Button>
-                                        <Button Margin="8,0,0,0" Command="{Binding AddTalkgroupWhitelistEntryCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveTalkgroupWhitelistEntryCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="TalkgroupWhitelistList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding TalkgroupWhitelist}"
-                                         SelectedItem="{Binding SelectedTalkgroupWhitelistEntry}"
-                                         Tapped="TalkgroupWhitelistList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:TalkgroupWhitelistEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding DmrId}" FontWeight="SemiBold" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="TalkgroupWhitelistEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -1784,45 +2326,11 @@
                                                  views:DigitOnlyInput.Enabled="True" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsDigitalContactWhitelistViewSelected}">
+                    <Grid IsVisible="{Binding IsDigitalContactWhitelistViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="DigitalContactWhitelistListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding DigitalContactWhitelistCount, StringFormat='Digital Contact Whitelist ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Classes="InfoIconButton" Margin="8,0,0,0">
-                                            <Button.Flyout>
-                                                <Flyout>
-                                                    <Border Classes="Panel" Padding="8" MaxWidth="360">
-                                                        <TextBlock Text="The whole list is rewritten together on every Write to Radio, up to 1000 entries. Number reflects packed position on the radio, not a chosen slot - it isn't editable." TextWrapping="Wrap" />
-                                                    </Border>
-                                                </Flyout>
-                                            </Button.Flyout>
-                                        </Button>
-                                        <Button Margin="8,0,0,0" Command="{Binding AddDigitalContactWhitelistEntryCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveDigitalContactWhitelistEntryCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="DigitalContactWhitelistList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding DigitalContactWhitelist}"
-                                         SelectedItem="{Binding SelectedDigitalContactWhitelistEntry}"
-                                         Tapped="DigitalContactWhitelistList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:DigitalContactWhitelistEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding DmrId}" FontWeight="SemiBold" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="DigitalContactWhitelistEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -1835,71 +2343,11 @@
                                                  views:DigitOnlyInput.Enabled="True" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsDigitalContactsViewSelected}">
+                    <Grid IsVisible="{Binding IsDigitalContactsViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <StackPanel x:Name="DigitalContactListHeader" Spacing="4">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Button Classes="InfoIconButton">
-                                            <Button.Flyout>
-                                                <Flyout>
-                                                    <Border Classes="Panel" Padding="8" MaxWidth="360">
-                                                        <TextBlock Text="The whole list is rewritten together on every Write to Radio. Multi-block writes are supported (live-confirmed crossing into a second block) up to 500 blocks - covers the vendor's own claimed 500,000-entry capacity." TextWrapping="Wrap" />
-                                                    </Border>
-                                                </Flyout>
-                                            </Button.Flyout>
-                                        </Button>
-                                        <TextBlock Text="Only populated if 'Include Digital Contact List' was checked on the Radio tab before reading - this list can be very large, so it is opt-in and not read by default. Tap a row to edit it." TextWrapping="Wrap" />
-                                    </StackPanel>
-                                    <HeaderedContentControl Header="Filter (name, callsign, city, country, or radio ID)">
-                                        <TextBox Text="{Binding DigitalContactFilterText}" />
-                                    </HeaderedContentControl>
-                                    <CheckBox Content="Friends only" IsChecked="{Binding DigitalContactFriendsOnly}" />
-                                    <TextBlock Text="{Binding DigitalContacts.Count, StringFormat='{}{0} total'}" />
-                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                        <Button Command="{Binding AddDigitalContactCommand}" Content="+ Add" />
-                                        <Button Grid.Column="1" Command="{Binding RemoveDigitalContactCommand}" Content="Del" />
-                                    </Grid>
-                                </StackPanel>
-                                <ListBox x:Name="DigitalContactList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding FilteredDigitalContacts}"
-                                         SelectedItem="{Binding SelectedDigitalContact}"
-                                         Tapped="DigitalContactList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:DigitalContactEntry">
-                                            <StackPanel Margin="8,7" Spacing="6">
-                                                <HeaderedContentControl Header="Radio ID">
-                                                    <TextBlock Text="{Binding RadioId}" />
-                                                </HeaderedContentControl>
-                                                <HeaderedContentControl Header="Name">
-                                                    <TextBlock Text="{Binding Name}" />
-                                                </HeaderedContentControl>
-                                                <HeaderedContentControl Header="Callsign">
-                                                    <TextBlock Text="{Binding Callsign}" />
-                                                </HeaderedContentControl>
-                                                <HeaderedContentControl Header="City / State / Country">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding City}" />
-                                                        <TextBlock Text="{Binding State}" />
-                                                        <TextBlock Text="{Binding Country}" />
-                                                    </StackPanel>
-                                                </HeaderedContentControl>
-                                                <HeaderedContentControl Header="Call Type / Alert / Remarks">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding CallTypeText}" />
-                                                        <TextBlock Text="{Binding CallAlert}" />
-                                                        <TextBlock Text="{Binding Remarks}" />
-                                                    </StackPanel>
-                                                </HeaderedContentControl>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="DigitalContactEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -1953,38 +2401,11 @@
                                                  views:AsciiTextInput.Enabled="True" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsPrefabricatedSmsViewSelected}">
+                    <Grid IsVisible="{Binding IsPrefabricatedSmsViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="PrefabricatedSmsListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding PrefabricatedSmsCount, StringFormat='Prefabricated SMS ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddPrefabricatedSmsCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemovePrefabricatedSmsCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="PrefabricatedSmsList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding PrefabricatedSmsMessages}"
-                                         SelectedItem="{Binding SelectedPrefabricatedSms}"
-                                         Tapped="PrefabricatedSmsList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:PrefabricatedSmsEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding Text}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="PrefabricatedSmsEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -2001,38 +2422,11 @@
                                                  views:AsciiTextInput.Enabled="True" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsAmAirBandViewSelected}">
+                    <Grid IsVisible="{Binding IsAmAirBandViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="AmAirListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding AmAirCount, StringFormat='AM Air Band ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddAmAirCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveAmAirCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="AmAirList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding AmAirChannels}"
-                                         SelectedItem="{Binding SelectedAmAir}"
-                                         Tapped="AmAirList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:AmAirEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="AmAirEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -2057,41 +2451,11 @@
                                                  FontWeight="{Binding SelectedAmAir.NameFontWeight}" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsAmZoneViewSelected}">
+                    <Grid IsVisible="{Binding IsAmZoneViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="AmZoneListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding AmZoneCount, StringFormat='AM Zones ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddAmZoneCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveAmZoneCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="AmZoneList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding AmZones}"
-                                         SelectedItem="{Binding SelectedAmZone}"
-                                         Tapped="AmZoneList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:AmZoneEntry">
-                                            <Grid Margin="8,7" RowDefinitions="Auto,Auto">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Row="1"
-                                                           Text="{Binding Members.Count, StringFormat='{}{0} channels'}"
-                                                           Foreground="{DynamicResource AppMutedTextBrush}"
-                                                           FontSize="12" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="AmZoneEditorPanel"
                                             IsVisible="False"
                                             Spacing="8">
@@ -2182,38 +2546,11 @@
                                         </ListBox.ItemTemplate>
                                     </ListBox>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsFmBroadcastViewSelected}">
+                    <Grid IsVisible="{Binding IsFmBroadcastViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="FmChannelListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding FmChannelCount, StringFormat='FM Broadcast ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddFmChannelCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveFmChannelCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="FmChannelList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding FmChannels}"
-                                         SelectedItem="{Binding SelectedFmChannel}"
-                                         Tapped="FmChannelList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:FmChannelEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="FmChannelEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -2241,36 +2578,11 @@
                                     </HeaderedContentControl>
                                     <CheckBox Content="Scan" IsChecked="{Binding SelectedFmChannel.ScanAdd}" />
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsAnalogQuickCallViewSelected}">
+                    <Grid IsVisible="{Binding IsAnalogQuickCallViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="AnalogQuickCallListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding AnalogQuickCallCount, StringFormat='Analog Quick Call ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddAnalogQuickCallCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveAnalogQuickCallCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="AnalogQuickCallList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding AnalogQuickCalls}"
-                                         SelectedItem="{Binding SelectedAnalogQuickCall}"
-                                         Tapped="AnalogQuickCallList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:AnalogQuickCallEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding OperationTypeText}" FontWeight="SemiBold" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="AnalogQuickCallEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -2297,38 +2609,11 @@
                                                   HorizontalAlignment="Stretch" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
-                    <StackPanel IsVisible="{Binding IsStateInformationViewSelected}">
+                    <Grid IsVisible="{Binding IsStateInformationViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="StateInformationListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding StateInformationCount, StringFormat='State Information ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddStateInformationCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveStateInformationCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="StateInformationList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding StateInformationEntries}"
-                                         SelectedItem="{Binding SelectedStateInformation}"
-                                         Tapped="StateInformationList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:StateInformationEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding Content}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="StateInformationEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -2344,31 +2629,14 @@
                                                  views:AsciiTextInput.Enabled="True" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
                     <!-- No Add/Del - Hot Keys is a fixed 18-row list, one per
                          physical/programmable key, not addable/removable
                          (see HotKeyEntry's class doc comment). -->
-                    <StackPanel IsVisible="{Binding IsHotKeyViewSelected}">
+                    <Grid IsVisible="{Binding IsHotKeyViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <TextBlock x:Name="HotKeyListHeader" Classes="SectionTitle" Text="Hot Keys (18)" />
-                                <ListBox x:Name="HotKeyList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding HotKeys}"
-                                         SelectedItem="{Binding SelectedHotKey}"
-                                         Tapped="HotKeyList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:HotKeyEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding Key}" FontWeight="SemiBold" />
-                                                <TextBlock Grid.Column="1" Text="{Binding ModeText}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="HotKeyEditorPanel"
                                             IsVisible="False"
                                             Spacing="8">
@@ -2409,9 +2677,8 @@
                                                   HorizontalAlignment="Stretch" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
                     <StackPanel IsVisible="{Binding IsQdc1200DecodeViewSelected}">
                         <Border Classes="Panel">
@@ -2530,34 +2797,8 @@
                         </Border>
                     </StackPanel>
 
-                    <StackPanel IsVisible="{Binding IsQdcAddressBookViewSelected}">
+                    <Grid IsVisible="{Binding IsQdcAddressBookViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="QdcAddressListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding QdcAddressCount, StringFormat='QDC Address Book ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddQdcAddressCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveQdcAddressCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="QdcAddressList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding QdcAddresses}"
-                                         SelectedItem="{Binding SelectedQdcAddress}"
-                                         Tapped="QdcAddressList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:QdcAddressEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="QdcAddressEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -2596,9 +2837,8 @@
                                                  views:AsciiTextInput.Enabled="True" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
                     <StackPanel IsVisible="{Binding IsFiveToneViewSelected}">
                         <Border Classes="Panel">
@@ -2991,34 +3231,8 @@
                         </Border>
                     </StackPanel>
 
-                    <StackPanel IsVisible="{Binding IsTwoToneDecodeViewSelected}">
+                    <Grid IsVisible="{Binding IsTwoToneDecodeViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="TwoToneDecodeEntryListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding TwoToneDecodeCount, StringFormat='2Tone Decode ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddTwoToneDecodeEntryCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveTwoToneDecodeEntryCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="TwoToneDecodeEntryList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding TwoToneDecodeEntries}"
-                                         SelectedItem="{Binding SelectedTwoToneDecodeEntry}"
-                                         Tapped="TwoToneDecodeEntryList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:TwoToneDecodeEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="TwoToneDecodeEntryEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -3051,9 +3265,8 @@
                                                  views:AsciiTextInput.Enabled="True" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
                     <StackPanel IsVisible="{Binding IsDtmfViewSelected}">
                         <Border Classes="Panel">
@@ -3543,42 +3756,8 @@
                         </Border>
                     </StackPanel>
 
-                    <StackPanel IsVisible="{Binding IsAprsFiltersViewSelected}">
-                        <Border Background="{DynamicResource AppInfoBadgeBackgroundBrush}"
-                                BorderBrush="{DynamicResource AppInfoBadgeBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="10,6"
-                                Margin="0,0,0,8">
-                            <TextBlock Text="Not yet writable to the radio - edits here are saved to the project file only." TextWrapping="Wrap" />
-                        </Border>
+                    <Grid IsVisible="{Binding IsAprsFiltersViewSelected}">
                         <Border Classes="Panel">
-                            <StackPanel Spacing="10">
-                                <Grid x:Name="AprsReceiveFilterListHeader" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="SectionTitle"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding AprsReceiveFilterCount, StringFormat='APRS Filters ({0})'}" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Margin="8,0,0,0" Command="{Binding AddAprsReceiveFilterCommand}" Content="+" />
-                                        <Button Margin="8,0,0,0" Command="{Binding RemoveAprsReceiveFilterCommand}" Content="Del" />
-                                    </StackPanel>
-                                </Grid>
-                                <ListBox x:Name="AprsReceiveFilterList"
-                                         MaxHeight="900"
-                                         ItemsSource="{Binding AprsReceiveFilters}"
-                                         SelectedItem="{Binding SelectedAprsReceiveFilter}"
-                                         Tapped="AprsReceiveFilterList_OnTapped">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:AprsReceiveFilterEntry">
-                                            <Grid Margin="8,7" ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{Binding Callsign}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Number}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
                                 <StackPanel x:Name="AprsReceiveFilterEditorPanel"
                                             IsVisible="False"
                                             Spacing="10">
@@ -3593,9 +3772,8 @@
                                         <TextBox Text="{Binding SelectedAprsReceiveFilter.Ssid}" />
                                     </HeaderedContentControl>
                                 </StackPanel>
-                            </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </Grid>
 
                     <!-- The 18 sections below replaced the old flat "Optional Settings"
                          page (2026-07-28) - moved under IsRadioViewSelected/
@@ -4941,6 +5119,7 @@
                         Height="0" />
             </Grid>
         </ScrollViewer>
+        </Grid>
         <Border x:Name="EditorNavigationBar"
                 Grid.Row="2"
                 Background="{DynamicResource AppHeaderBackgroundBrush}"
