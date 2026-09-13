@@ -63,6 +63,9 @@ chmod 0644 "%{buildroot}%{_datadir}/applications/se.cloudsite.AnyToneCPS.desktop
 install -d "%{buildroot}%{_datadir}/icons/hicolor/256x256/apps"
 install -m 0644 "%{_repo_dir}/AnyToneCPS/Assets/Icon.png" "%{buildroot}%{_datadir}/icons/hicolor/256x256/apps/se.cloudsite.AnyToneCPS.png"
 
+install -d "%{buildroot}%{_datadir}/metainfo"
+install -m 0644 "%{_repo_dir}/flatpak/se.cloudsite.AnyToneCPS.metainfo.xml" "%{buildroot}%{_datadir}/metainfo/se.cloudsite.AnyToneCPS.metainfo.xml"
+
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database %{_datadir}/applications >/dev/null 2>&1 || true
@@ -88,6 +91,7 @@ fi
 %{_bindir}/anytone-cps
 %{_datadir}/applications/se.cloudsite.AnyToneCPS.desktop
 %{_datadir}/icons/hicolor/256x256/apps/se.cloudsite.AnyToneCPS.png
+%{_datadir}/metainfo/se.cloudsite.AnyToneCPS.metainfo.xml
 
 %changelog
 * Thu Jun 04 2026 AnyToneCPS <local@localhost> - $version-$release
