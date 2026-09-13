@@ -22,5 +22,28 @@
   -->
   <assembly fullname="AnyToneCPS">
     <type fullname="AnyToneCPS.Models.*" />
+
+    <!--
+      Preserves the compiler-generated ObservableValidator fast-path helper.
+
+      Real multi-second freeze found live 2026-09-13, right at app startup
+      (project auto-load, same moment the VOX warning's own checkbox stopped
+      responding for several seconds - it's the same UI thread). Root cause:
+      OptionalSettingsEntry.RevalidateAll() calls ValidateAllProperties(),
+      which - per its own [RequiresUnreferencedCode] doc comment - normally
+      dispatches through a generated CommunityToolkit.Mvvm.ComponentModel
+      .__Internals.__ObservableValidatorExtensions type (emitted by the MVVM
+      source generator because OptionalSettingsEntry has 12 [CustomValidation]
+      properties) via a reflection-based Type.GetType(...) lookup by string
+      name. Nothing else in this project references that generated type
+      directly, so the trimmer removed it under NativeAOT, forcing
+      ValidateAllProperties() onto its slow fallback path - building a fresh
+      compiled LINQ expression at runtime for OptionalSettingsEntry's ~200
+      properties, interpreted rather than JIT'd since NativeAOT has no JIT.
+      That one-time cost lands squarely at startup, since RefreshValidation
+      AndPreview() calls RevalidateAll() as part of both the initial seed and
+      the remembered-project auto-load.
+    -->
+    <type fullname="CommunityToolkit.Mvvm.ComponentModel.__Internals.__ObservableValidatorExtensions" />
   </assembly>
 </linker>
