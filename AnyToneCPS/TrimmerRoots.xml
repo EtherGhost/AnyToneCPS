@@ -46,4 +46,23 @@
     -->
     <type fullname="CommunityToolkit.Mvvm.ComponentModel.__Internals.__ObservableValidatorExtensions" />
   </assembly>
+
+  <!--
+    Preserves reflection metadata for ObservableValidator's own protected
+    ValidateAllProperties() method, looked up by name from
+    MainViewModel.WarmUpValidatedModelTypes() (reflection is the only way to
+    call a protected inherited method from outside its class, short of
+    adding a public wrapper to all 21 Models types that need warming - see
+    that method's own doc comment for what it's warming and why). The method
+    body itself already survives trimming regardless, since
+    OptionalSettingsEntry.RevalidateAll() calls it directly - this root is
+    specifically for Type.GetMethod("ValidateAllProperties", ...) to find it
+    by name at runtime, which is a separate trimming concern (kept code vs.
+    kept reflection metadata) from just keeping the method callable.
+  -->
+  <assembly fullname="CommunityToolkit.Mvvm">
+    <type fullname="CommunityToolkit.Mvvm.ComponentModel.ObservableValidator">
+      <method name="ValidateAllProperties" />
+    </type>
+  </assembly>
 </linker>

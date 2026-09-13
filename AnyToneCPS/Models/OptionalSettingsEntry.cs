@@ -332,7 +332,8 @@ public partial class OptionalSettingsEntry : ObservableValidator
             {
                 if (SetProperty(ref _powerOnPasswordChar, value))
                 {
-                    NotifyPendingRadioWriteProperties();
+                    OnPropertyChanged(nameof(IsPowerOnPasswordCharPendingRadioWrite));
+                    OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
                 }
             }
             else
@@ -2442,6 +2443,21 @@ public partial class OptionalSettingsEntry : ObservableValidator
         SatAosLimit,
         RoamingZone);
 
+    /// <summary>Refreshes every IsXxxPendingRadioWrite property plus
+    /// HasAnyPendingRadioWrite at once - correct only when the whole
+    /// snapshot changed (MarkRadioSynced, its only caller), since that's the
+    /// one case where every property's pending-write status could genuinely
+    /// flip together. Real O(n^2) bug found live 2026-09-13: every one of
+    /// this type's own OnXxxChanged partial methods used to call this same
+    /// method too, so loading a project - which sets roughly 190 properties
+    /// on this single entity - fired all ~183 of these notifications on
+    /// EVERY one of those 190 sets, roughly 35,000 total notifications for
+    /// one file load. That's what made "reading the save file" take several
+    /// real seconds, not project size or anything AOT/reflection-related
+    /// (see MainViewModel.WarmUpValidatedModelTypes' own doc comment for the
+    /// separate, unrelated startup-freeze bug found the same day). Each
+    /// individual OnXxxChanged now calls OnPropertyChanged for just its own
+    /// IsXxxPendingRadioWrite plus HasAnyPendingRadioWrite instead.</summary>
     private void NotifyPendingRadioWriteProperties()
     {
         OnPropertyChanged(nameof(IsPowerOnInterfacePendingRadioWrite));
@@ -2838,82 +2854,118 @@ public partial class OptionalSettingsEntry : ObservableValidator
     partial void OnPowerOnInterfaceChanged(byte value)
     {
         OnPropertyChanged(nameof(PowerOnInterfaceText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsPowerOnInterfacePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
-    partial void OnPowerOnDisplayLine1Changed(string value) => NotifyPendingRadioWriteProperties();
-    partial void OnPowerOnDisplayLine2Changed(string value) => NotifyPendingRadioWriteProperties();
+    partial void OnPowerOnDisplayLine1Changed(string value)
+    {
+        OnPropertyChanged(nameof(IsPowerOnDisplayLine1PendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
+    partial void OnPowerOnDisplayLine2Changed(string value)
+    {
+        OnPropertyChanged(nameof(IsPowerOnDisplayLine2PendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
 
     partial void OnPowerOnPasswordChanged(byte value)
     {
         OnPropertyChanged(nameof(PowerOnPasswordText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsPowerOnPasswordPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
 
     partial void OnDefaultStartupChannelChanged(byte value)
     {
         OnPropertyChanged(nameof(DefaultStartupChannelText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsDefaultStartupChannelPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
-    partial void OnStartupZoneAChanged(byte value) => NotifyPendingRadioWriteProperties();
-    partial void OnStartupChannelAChanged(byte value) => NotifyPendingRadioWriteProperties();
-    partial void OnStartupZoneBChanged(byte value) => NotifyPendingRadioWriteProperties();
-    partial void OnStartupChannelBChanged(byte value) => NotifyPendingRadioWriteProperties();
+    partial void OnStartupZoneAChanged(byte value)
+    {
+        OnPropertyChanged(nameof(IsStartupZoneAPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
+    partial void OnStartupChannelAChanged(byte value)
+    {
+        OnPropertyChanged(nameof(IsStartupChannelAPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
+    partial void OnStartupZoneBChanged(byte value)
+    {
+        OnPropertyChanged(nameof(IsStartupZoneBPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
+    partial void OnStartupChannelBChanged(byte value)
+    {
+        OnPropertyChanged(nameof(IsStartupChannelBPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
     partial void OnStartupGpsTestChanged(byte value) => OnPropertyChanged(nameof(StartupGpsTestText));
 
     partial void OnStartupResetChanged(byte value)
     {
         OnPropertyChanged(nameof(StartupResetText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsStartupResetPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnSmsAlertChanged(byte value)
     {
         OnPropertyChanged(nameof(SmsAlertText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSmsAlertPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnCallAlertChanged(byte value)
     {
         OnPropertyChanged(nameof(CallAlertText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsCallAlertPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnDigiCallResetToneChanged(byte value)
     {
         OnPropertyChanged(nameof(DigiCallResetToneText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsDigiCallResetTonePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnTalkPermitChanged(byte value)
     {
         OnPropertyChanged(nameof(TalkPermitText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsTalkPermitPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnKeyToneChanged(byte value)
     {
         OnPropertyChanged(nameof(KeyToneText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsKeyTonePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnDigiIdleChannelToneChanged(byte value)
     {
         OnPropertyChanged(nameof(DigiIdleChannelToneText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsDigiIdleChannelTonePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnStartupSoundChanged(byte value)
     {
         OnPropertyChanged(nameof(StartupSoundText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsStartupSoundPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnAnalogIdleChannelToneChanged(byte value)
     {
         OnPropertyChanged(nameof(AnalogIdleChannelToneText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAnalogIdleChannelTonePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnVoxLevelChanged(byte value)
     {
@@ -2931,239 +2983,298 @@ public partial class OptionalSettingsEntry : ObservableValidator
             VoxDetection = 0;
         }
 
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsVoxLevelPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnLanguageChanged(byte value)
     {
         OnPropertyChanged(nameof(LanguageText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsLanguagePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnTimeDisplayChanged(byte value)
     {
         OnPropertyChanged(nameof(TimeDisplayText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsTimeDisplayPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnDistanceUnitChanged(byte value) => OnPropertyChanged(nameof(DistanceUnitText));
     partial void OnGpsModeChanged(byte value)
     {
         OnPropertyChanged(nameof(GpsModeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsGpsModePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnEncryptionTypeChanged(byte value)
     {
         OnPropertyChanged(nameof(EncryptionTypeText));
         OnPropertyChanged(nameof(IsAesArc4EncryptionTypeSelected));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsEncryptionTypePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnVfMrAChanged(byte value)
     {
         OnPropertyChanged(nameof(VfMrAText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsVfMrAPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnVfMrBChanged(byte value)
     {
         OnPropertyChanged(nameof(VfMrBText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsVfMrBPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnAutoShutdownChanged(byte value)
     {
         OnPropertyChanged(nameof(AutoShutdownText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoShutdownPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnPowerSaveChanged(byte value)
     {
         OnPropertyChanged(nameof(PowerSaveText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsPowerSavePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnAutoShutdownTypeChanged(byte value)
     {
         OnPropertyChanged(nameof(AutoShutdownTypeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoShutdownTypePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnBrightnessChanged(byte value)
     {
         OnPropertyChanged(nameof(BrightnessText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsBrightnessPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnAutoBacklightDurationChanged(byte value)
     {
         OnPropertyChanged(nameof(AutoBacklightDurationText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoBacklightDurationPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnBacklightTxDelayChanged(byte value)
     {
         OnPropertyChanged(nameof(BacklightTxDelayText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsBacklightTxDelayPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnMenuExitTimeChanged(byte value)
     {
         OnPropertyChanged(nameof(MenuExitTimeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsMenuExitTimePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnLastCallerChanged(byte value)
     {
         OnPropertyChanged(nameof(LastCallerText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsLastCallerPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnCallDisplayModeChanged(byte value)
     {
         OnPropertyChanged(nameof(CallDisplayModeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsCallDisplayModePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnCallsignDisplayColorChanged(byte value)
     {
         OnPropertyChanged(nameof(CallsignDisplayColorText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsCallsignDisplayColorPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnCallEndPromptBoxChanged(byte value)
     {
         OnPropertyChanged(nameof(CallEndPromptBoxText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsCallEndPromptBoxPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnDisplayChannelNumberChanged(byte value)
     {
         OnPropertyChanged(nameof(DisplayChannelNumberText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsDisplayChannelNumberPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnDisplayCurrentContactChanged(byte value)
     {
         OnPropertyChanged(nameof(DisplayCurrentContactText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsDisplayCurrentContactPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnStandbyCharColorChanged(byte value)
     {
         OnPropertyChanged(nameof(StandbyCharColorText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsStandbyCharColorPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnStandbyBkPictureChanged(byte value)
     {
         OnPropertyChanged(nameof(StandbyBkPictureText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsStandbyBkPicturePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnShowLastCallOnLaunchChanged(byte value)
     {
         OnPropertyChanged(nameof(ShowLastCallOnLaunchText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsShowLastCallOnLaunchPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnSeparateDisplayChanged(byte value)
     {
         OnPropertyChanged(nameof(SeparateDisplayText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSeparateDisplayPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnChSwitchingKeepsCallerChanged(byte value)
     {
         OnPropertyChanged(nameof(ChSwitchingKeepsCallerText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsChSwitchingKeepsCallerPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnBacklightRxDelayChanged(byte value)
     {
         OnPropertyChanged(nameof(BacklightRxDelayText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsBacklightRxDelayPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnChannelNameColorAChanged(byte value)
     {
         OnPropertyChanged(nameof(ChannelNameColorAText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsChannelNameColorAPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnChannelNameColorBChanged(byte value)
     {
         OnPropertyChanged(nameof(ChannelNameColorBText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsChannelNameColorBPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnZoneNameColorAChanged(byte value)
     {
         OnPropertyChanged(nameof(ZoneNameColorAText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsZoneNameColorAPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnZoneNameColorBChanged(byte value)
     {
         OnPropertyChanged(nameof(ZoneNameColorBText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsZoneNameColorBPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnDateDisplayFormatChanged(byte value)
     {
         OnPropertyChanged(nameof(DateDisplayFormatText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsDateDisplayFormatPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnVolumeBarChanged(byte value)
     {
         OnPropertyChanged(nameof(VolumeBarText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsVolumeBarPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnNightModeChanged(byte value)
     {
         OnPropertyChanged(nameof(NightModeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsNightModePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
-    partial void OnDisplayChannelTypeChanged(bool value) => NotifyPendingRadioWriteProperties();
-    partial void OnDisplayTimeSlotChanged(bool value) => NotifyPendingRadioWriteProperties();
-    partial void OnDisplayColorCodeChanged(bool value) => NotifyPendingRadioWriteProperties();
+    partial void OnDisplayChannelTypeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsDisplayChannelTypePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
+    partial void OnDisplayTimeSlotChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsDisplayTimeSlotPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
+    partial void OnDisplayColorCodeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsDisplayColorCodePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
 
     partial void OnDisplayModeChanged(byte value)
     {
         OnPropertyChanged(nameof(DisplayModeText));
         OnPropertyChanged(nameof(IsVfMrEditable));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsDisplayModePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnMainChannelSetChanged(byte value)
     {
         OnPropertyChanged(nameof(MainChannelSetText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsMainChannelSetPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnSubChannelModeChanged(byte value)
     {
         OnPropertyChanged(nameof(SubChannelModeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSubChannelModePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
     partial void OnWorkingModeChanged(byte value)
     {
         OnPropertyChanged(nameof(WorkingModeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsWorkingModePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
-    partial void OnMemZoneAChanged(byte value) => NotifyPendingRadioWriteProperties();
-    partial void OnMemZoneBChanged(byte value) => NotifyPendingRadioWriteProperties();
+    partial void OnMemZoneAChanged(byte value)
+    {
+        OnPropertyChanged(nameof(IsMemZoneAPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
+    partial void OnMemZoneBChanged(byte value)
+    {
+        OnPropertyChanged(nameof(IsMemZoneBPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
 
     partial void OnVoxDelayChanged(byte value)
     {
         OnPropertyChanged(nameof(VoxDelayText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsVoxDelayPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnVoxDetectionChanged(byte value)
     {
         OnPropertyChanged(nameof(VoxDetectionText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsVoxDetectionPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnBtOnOffChanged(byte value) => OnPropertyChanged(nameof(BtOnOffText));
     partial void OnBtIntMicChanged(byte value) => OnPropertyChanged(nameof(BtIntMicText));
@@ -3179,277 +3290,358 @@ public partial class OptionalSettingsEntry : ObservableValidator
     partial void OnSteTypeOfCtcssChanged(byte value)
     {
         OnPropertyChanged(nameof(SteTypeOfCtcssText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSteTypeOfCtcssPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnSteWhenNoSignalChanged(byte value)
     {
         OnPropertyChanged(nameof(SteWhenNoSignalText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSteWhenNoSignalPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnSteTimeChanged(byte value)
     {
         OnPropertyChanged(nameof(SteTimeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSteTimePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAmFmFunctionChanged(byte value)
     {
         OnPropertyChanged(nameof(AmFmFunctionText));
         OnPropertyChanged(nameof(IsFmSectionEnabled));
         OnPropertyChanged(nameof(IsAmSectionEnabled));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAmFmFunctionPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnFmVfoMemChanged(byte value)
     {
         OnPropertyChanged(nameof(FmVfoMemText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsFmVfoMemPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
-    partial void OnFmWorkChannelChanged(byte value) => NotifyPendingRadioWriteProperties();
+    partial void OnFmWorkChannelChanged(byte value)
+    {
+        OnPropertyChanged(nameof(IsFmWorkChannelPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
     partial void OnFmMonitorChanged(byte value)
     {
         OnPropertyChanged(nameof(FmMonitorText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsFmMonitorPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAmVfoMemChanged(byte value)
     {
         OnPropertyChanged(nameof(AmVfoMemText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAmVfoMemPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAmOffsetChanged(byte value)
     {
         OnPropertyChanged(nameof(AmOffsetText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAmOffsetPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAmSqlLevelChanged(byte value)
     {
         OnPropertyChanged(nameof(AmSqlLevelText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAmSqlLevelPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnKeyLockChanged(byte value)
     {
         OnPropertyChanged(nameof(KeyLockText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsKeyLockPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnPf1ShortKeyChanged(byte value)
     {
         OnPropertyChanged(nameof(Pf1ShortKeyText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsPf1ShortKeyPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnPf2ShortKeyChanged(byte value)
     {
         OnPropertyChanged(nameof(Pf2ShortKeyText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsPf2ShortKeyPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnPf3ShortKeyChanged(byte value)
     {
         OnPropertyChanged(nameof(Pf3ShortKeyText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsPf3ShortKeyPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnP1ShortKeyChanged(byte value)
     {
         OnPropertyChanged(nameof(P1ShortKeyText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsP1ShortKeyPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnP2ShortKeyChanged(byte value)
     {
         OnPropertyChanged(nameof(P2ShortKeyText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsP2ShortKeyPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnPf1LongKeyChanged(byte value)
     {
         OnPropertyChanged(nameof(Pf1LongKeyText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsPf1LongKeyPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnPf2LongKeyChanged(byte value)
     {
         OnPropertyChanged(nameof(Pf2LongKeyText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsPf2LongKeyPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnPf3LongKeyChanged(byte value)
     {
         OnPropertyChanged(nameof(Pf3LongKeyText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsPf3LongKeyPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnP1LongKeyChanged(byte value)
     {
         OnPropertyChanged(nameof(P1LongKeyText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsP1LongKeyPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnP2LongKeyChanged(byte value)
     {
         OnPropertyChanged(nameof(P2LongKeyText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsP2LongKeyPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
-    partial void OnKnobLockChanged(bool value) => NotifyPendingRadioWriteProperties();
-    partial void OnKeyboardLockChanged(bool value) => NotifyPendingRadioWriteProperties();
-    partial void OnSideKeyLockChanged(bool value) => NotifyPendingRadioWriteProperties();
-    partial void OnForcedKeyLockChanged(bool value) => NotifyPendingRadioWriteProperties();
+    partial void OnKnobLockChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsKnobLockPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
+    partial void OnKeyboardLockChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsKeyboardLockPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
+    partial void OnSideKeyLockChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsSideKeyLockPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
+    partial void OnForcedKeyLockChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsForcedKeyLockPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
     partial void OnLongKeyTimeChanged(byte value)
     {
         OnPropertyChanged(nameof(LongKeyTimeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsLongKeyTimePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAddressBookSentWithCodeChanged(byte value)
     {
         OnPropertyChanged(nameof(AddressBookSentWithCodeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAddressBookSentWithCodePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnTotChanged(byte value)
     {
         OnPropertyChanged(nameof(TotText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsTotPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnFrequencyStepChanged(byte value)
     {
         OnPropertyChanged(nameof(FrequencyStepText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsFrequencyStepPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnGeneralFrequencyStepChanged(byte value)
     {
         OnPropertyChanged(nameof(GeneralFrequencyStepText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsGeneralFrequencyStepPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnSqlLevelAChanged(byte value)
     {
         OnPropertyChanged(nameof(SqlLevelAText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSqlLevelAPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnSqlLevelBChanged(byte value)
     {
         OnPropertyChanged(nameof(SqlLevelBText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSqlLevelBPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnTbstChanged(byte value)
     {
         OnPropertyChanged(nameof(TbstText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsTbstPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAnalogCallHoldTimeChanged(byte value)
     {
         OnPropertyChanged(nameof(AnalogCallHoldTimeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAnalogCallHoldTimePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnCallChannelMaintainedChanged(byte value)
     {
         OnPropertyChanged(nameof(CallChannelMaintainedText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsCallChannelMaintainedPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
-    partial void OnPriorityZoneAChanged(byte value) => NotifyPendingRadioWriteProperties();
-    partial void OnPriorityZoneBChanged(byte value) => NotifyPendingRadioWriteProperties();
+    partial void OnPriorityZoneAChanged(byte value)
+    {
+        OnPropertyChanged(nameof(IsPriorityZoneAPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
+    partial void OnPriorityZoneBChanged(byte value)
+    {
+        OnPropertyChanged(nameof(IsPriorityZoneBPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
     partial void OnMuteTimingChanged(byte value)
     {
         OnPropertyChanged(nameof(MuteTimingText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsMuteTimingPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnTotPredictChanged(byte value)
     {
         OnPropertyChanged(nameof(TotPredictText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsTotPredictPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnTxPowerAgcChanged(byte value)
     {
         OnPropertyChanged(nameof(TxPowerAgcText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsTxPowerAgcPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnNoaaMoniChanged(byte value)
     {
         OnPropertyChanged(nameof(NoaaMoniText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsNoaaMoniPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnNoaaScanChanged(byte value)
     {
         OnPropertyChanged(nameof(NoaaScanText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsNoaaScanPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnNoaaChanged(byte value)
     {
         OnPropertyChanged(nameof(NoaaText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsNoaaPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnGroupCallHoldTimeChanged(byte value)
     {
         OnPropertyChanged(nameof(GroupCallHoldTimeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsGroupCallHoldTimePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnPrivateCallHoldTimeChanged(byte value)
     {
         OnPropertyChanged(nameof(PrivateCallHoldTimeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsPrivateCallHoldTimePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnManualDialGroupCallHoldTimeChanged(byte value)
     {
         OnPropertyChanged(nameof(ManualDialGroupCallHoldTimeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsManualDialGroupCallHoldTimePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnManualDialPrivateCallHoldTimeChanged(byte value)
     {
         OnPropertyChanged(nameof(ManualDialPrivateCallHoldTimeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsManualDialPrivateCallHoldTimePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnVoiceHeaderRepetitionsChanged(byte value)
     {
         OnPropertyChanged(nameof(VoiceHeaderRepetitionsText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsVoiceHeaderRepetitionsPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnTxPreambleDurationChanged(byte value)
     {
         OnPropertyChanged(nameof(TxPreambleDurationText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsTxPreambleDurationPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnFilterOwnIdChanged(byte value)
     {
         OnPropertyChanged(nameof(FilterOwnIdText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsFilterOwnIdPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnDigitalRemoteKillChanged(byte value)
     {
         OnPropertyChanged(nameof(DigitalRemoteKillText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsDigitalRemoteKillPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnDigitalMonitorChanged(byte value)
     {
         OnPropertyChanged(nameof(DigitalMonitorText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsDigitalMonitorPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnDigitalMonitorCcChanged(byte value)
     {
         OnPropertyChanged(nameof(DigitalMonitorCcText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsDigitalMonitorCcPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnDigitalMonitorIdChanged(byte value)
     {
         OnPropertyChanged(nameof(DigitalMonitorIdText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsDigitalMonitorIdPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnMonitorSlotHoldChanged(byte value)
     {
         OnPropertyChanged(nameof(MonitorSlotHoldText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsMonitorSlotHoldPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRemoteMonitorChanged(byte value)
     {
         OnPropertyChanged(nameof(RemoteMonitorText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRemoteMonitorPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnSmsFormatChanged(byte value)
     {
         OnPropertyChanged(nameof(SmsFormatText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSmsFormatPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnResetDigitalProtocolChanged(byte value)
     {
         OnPropertyChanged(nameof(ResetDigitalProtocolText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsResetDigitalProtocolPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnGpsPowerChanged(byte value) => OnPropertyChanged(nameof(GpsPowerText));
     partial void OnGpsPositioningChanged(byte value)
     {
         OnPropertyChanged(nameof(GpsPositioningText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsGpsPositioningPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnTimeZoneChanged(byte value)
     {
         OnPropertyChanged(nameof(TimeZoneText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsTimeZonePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRangingIntervalChanged(byte value) => OnPropertyChanged(nameof(RangingIntervalText));
     partial void OnGpsTemplateInformationChanged(byte value) => OnPropertyChanged(nameof(GpsTemplateInformationText));
@@ -3457,275 +3649,331 @@ public partial class OptionalSettingsEntry : ObservableValidator
     partial void OnVfoScanTypeChanged(byte value)
     {
         OnPropertyChanged(nameof(VfoScanTypeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsVfoScanTypePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnVfoScanStartFreqUhfChanged(int value)
     {
         ValidateProperty(VfoScanStartFreqUhfText, nameof(VfoScanStartFreqUhfText));
         OnPropertyChanged(nameof(VfoScanStartFreqUhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsVfoScanStartFreqUhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnVfoScanEndFreqUhfChanged(int value)
     {
         ValidateProperty(VfoScanEndFreqUhfText, nameof(VfoScanEndFreqUhfText));
         OnPropertyChanged(nameof(VfoScanEndFreqUhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsVfoScanEndFreqUhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnVfoScanStartFreqVhfChanged(int value)
     {
         ValidateProperty(VfoScanStartFreqVhfText, nameof(VfoScanStartFreqVhfText));
         OnPropertyChanged(nameof(VfoScanStartFreqVhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsVfoScanStartFreqVhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnVfoScanEndFreqVhfChanged(int value)
     {
         ValidateProperty(VfoScanEndFreqVhfText, nameof(VfoScanEndFreqVhfText));
         OnPropertyChanged(nameof(VfoScanEndFreqVhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsVfoScanEndFreqVhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeaterAChanged(byte value)
     {
         OnPropertyChanged(nameof(AutoRepeaterAText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeaterAPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeaterBChanged(byte value)
     {
         OnPropertyChanged(nameof(AutoRepeaterBText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeaterBPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeater1UhfChanged(byte value)
     {
         OnPropertyChanged(nameof(AutoRepeater1UhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeater1UhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeater1VhfChanged(byte value)
     {
         OnPropertyChanged(nameof(AutoRepeater1VhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeater1VhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeater2UhfChanged(byte value)
     {
         OnPropertyChanged(nameof(AutoRepeater2UhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeater2UhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeater2VhfChanged(byte value)
     {
         OnPropertyChanged(nameof(AutoRepeater2VhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeater2VhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRepeaterCheckChanged(byte value)
     {
         OnPropertyChanged(nameof(RepeaterCheckText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRepeaterCheckPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRepeaterCheckIntervalChanged(byte value)
     {
         OnPropertyChanged(nameof(RepeaterCheckIntervalText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRepeaterCheckIntervalPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRepeaterCheckReconnectionsChanged(byte value)
     {
         OnPropertyChanged(nameof(RepeaterCheckReconnectionsText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRepeaterCheckReconnectionsPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRepeaterOutOfRangeNotifyChanged(byte value)
     {
         OnPropertyChanged(nameof(RepeaterOutOfRangeNotifyText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRepeaterOutOfRangeNotifyPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnOutOfRangeNotifyChanged(byte value)
     {
         OnPropertyChanged(nameof(OutOfRangeNotifyText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsOutOfRangeNotifyPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRoamingChanged(byte value)
     {
         OnPropertyChanged(nameof(AutoRoamingText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRoamingPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRoamingStartConditionChanged(byte value)
     {
         OnPropertyChanged(nameof(AutoRoamingStartConditionText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRoamingStartConditionPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRoamingFixedTimeChanged(byte value)
     {
         OnPropertyChanged(nameof(AutoRoamingFixedTimeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRoamingFixedTimePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRoamingEffectWaitTimeChanged(byte value)
     {
         OnPropertyChanged(nameof(RoamingEffectWaitTimeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRoamingEffectWaitTimePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeater1MinFreqVhfChanged(int value)
     {
         ValidateProperty(AutoRepeater1MinFreqVhfText, nameof(AutoRepeater1MinFreqVhfText));
         OnPropertyChanged(nameof(AutoRepeater1MinFreqVhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeater1MinFreqVhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeater1MaxFreqVhfChanged(int value)
     {
         ValidateProperty(AutoRepeater1MaxFreqVhfText, nameof(AutoRepeater1MaxFreqVhfText));
         OnPropertyChanged(nameof(AutoRepeater1MaxFreqVhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeater1MaxFreqVhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeater1MinFreqUhfChanged(int value)
     {
         ValidateProperty(AutoRepeater1MinFreqUhfText, nameof(AutoRepeater1MinFreqUhfText));
         OnPropertyChanged(nameof(AutoRepeater1MinFreqUhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeater1MinFreqUhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeater1MaxFreqUhfChanged(int value)
     {
         ValidateProperty(AutoRepeater1MaxFreqUhfText, nameof(AutoRepeater1MaxFreqUhfText));
         OnPropertyChanged(nameof(AutoRepeater1MaxFreqUhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeater1MaxFreqUhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeater2MinFreqVhfChanged(int value)
     {
         ValidateProperty(AutoRepeater2MinFreqVhfText, nameof(AutoRepeater2MinFreqVhfText));
         OnPropertyChanged(nameof(AutoRepeater2MinFreqVhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeater2MinFreqVhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeater2MaxFreqVhfChanged(int value)
     {
         ValidateProperty(AutoRepeater2MaxFreqVhfText, nameof(AutoRepeater2MaxFreqVhfText));
         OnPropertyChanged(nameof(AutoRepeater2MaxFreqVhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeater2MaxFreqVhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeater2MinFreqUhfChanged(int value)
     {
         ValidateProperty(AutoRepeater2MinFreqUhfText, nameof(AutoRepeater2MinFreqUhfText));
         OnPropertyChanged(nameof(AutoRepeater2MinFreqUhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeater2MinFreqUhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAutoRepeater2MaxFreqUhfChanged(int value)
     {
         ValidateProperty(AutoRepeater2MaxFreqUhfText, nameof(AutoRepeater2MaxFreqUhfText));
         OnPropertyChanged(nameof(AutoRepeater2MaxFreqUhfText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAutoRepeater2MaxFreqUhfPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRepeaterModeChanged(byte value)
     {
         OnPropertyChanged(nameof(RepeaterModeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRepeaterModePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRepCcLimitChanged(byte value)
     {
         OnPropertyChanged(nameof(RepCcLimitText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRepCcLimitPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRepSlotAChanged(byte value)
     {
         OnPropertyChanged(nameof(RepSlotAText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRepSlotAPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRepSlotBChanged(byte value)
     {
         OnPropertyChanged(nameof(RepSlotBText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRepSlotBPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRepeaterWhitelistChanged(byte value)
     {
         OnPropertyChanged(nameof(RepeaterWhitelistText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRepeaterWhitelistPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRecordFunctionChanged(byte value)
     {
         OnPropertyChanged(nameof(RecordFunctionText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRecordFunctionPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRecordDelayChanged(byte value)
     {
         OnPropertyChanged(nameof(RecordDelayText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRecordDelayPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnMaxVolumeChanged(byte value)
     {
         OnPropertyChanged(nameof(MaxVolumeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsMaxVolumePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnMaxHeadphoneVolumeChanged(byte value)
     {
         OnPropertyChanged(nameof(MaxHeadphoneVolumeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsMaxHeadphoneVolumePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnDigiMicGainChanged(byte value)
     {
         OnPropertyChanged(nameof(DigiMicGainText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsDigiMicGainPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnEnhancedSoundQualityChanged(byte value)
     {
         OnPropertyChanged(nameof(EnhancedSoundQualityText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsEnhancedSoundQualityPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnAnalogMicGainChanged(byte value)
     {
         OnPropertyChanged(nameof(AnalogMicGainText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsAnalogMicGainPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnPowerOnVolumeTypeChanged(byte value)
     {
         OnPropertyChanged(nameof(PowerOnVolumeTypeText));
         OnPropertyChanged(nameof(IsPowerOnVolumeEnabled));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsPowerOnVolumeTypePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnPowerOnVolumeChanged(byte value)
     {
         OnPropertyChanged(nameof(PowerOnVolumeText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsPowerOnVolumePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRxAgcChanged(byte value)
     {
         OnPropertyChanged(nameof(RxAgcText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRxAgcPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnNxMicGainChanged(byte value)
     {
         OnPropertyChanged(nameof(NxMicGainText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsNxMicGainPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnSubSpkInTxChanged(byte value)
     {
         OnPropertyChanged(nameof(SubSpkInTxText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSubSpkInTxPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnRxNoiseReductionChanged(byte value)
     {
         OnPropertyChanged(nameof(RxNoiseReductionText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsRxNoiseReductionPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnTxNoiseReductionChanged(byte value)
     {
         OnPropertyChanged(nameof(TxNoiseReductionText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsTxNoiseReductionPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnSatLocationChanged(byte value)
     {
         OnPropertyChanged(nameof(SatLocationText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSatLocationPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnSatTxPowerChanged(byte value)
     {
         OnPropertyChanged(nameof(SatTxPowerText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSatTxPowerPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnSatAnaSqlChanged(byte value)
     {
         OnPropertyChanged(nameof(SatAnaSqlText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSatAnaSqlPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
     partial void OnSatAosLimitChanged(byte value)
     {
         OnPropertyChanged(nameof(SatAosLimitText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsSatAosLimitPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
-    partial void OnRoamingZoneChanged(byte value) => NotifyPendingRadioWriteProperties();
+    partial void OnRoamingZoneChanged(byte value)
+    {
+        OnPropertyChanged(nameof(IsRoamingZonePendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
     partial void OnNoaaChannelChanged(byte value)
     {
         OnPropertyChanged(nameof(NoaaChannelText));
-        NotifyPendingRadioWriteProperties();
+        OnPropertyChanged(nameof(IsNoaaChannelPendingRadioWrite));
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 }

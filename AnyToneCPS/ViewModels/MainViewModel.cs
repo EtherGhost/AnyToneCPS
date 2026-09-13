@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -34,6 +35,17 @@ public partial class MainViewModel : ViewModelBase
     private bool _hasAttemptedAutoLoad;
     private bool _projectStructureDirty;
     private bool _suppressEditorRefresh;
+    // Set around a whole-collection bulk load (project open/auto-load) so
+    // OnChannelsChanged/OnZonesChanged/OnEncryptionKeysChanged skip their
+    // expensive per-add tail (RefreshValidationAndPreview above all -
+    // Validate() walks every entity collection from scratch). Without this,
+    // loading N channels one at a time via Channels.Add in a loop runs that
+    // full-project validation N times, back to back, on the UI thread - real
+    // multi-second freeze found live 2026-09-13 opening a well-populated
+    // project (same day as the ObservableValidator trimming freeze; this one
+    // is a separate, unrelated cause). RefreshAfterBulkEntityLoad() below
+    // replays exactly what each handler skipped, once, after the load.
+    private bool _suppressBulkEntityRefresh;
 
     public ObservableCollection<ChannelEntry> Channels { get; } = [];
     // The Channels ListBox's full multi-selection (Desktop: Ctrl/Shift-click,
@@ -1201,6 +1213,108 @@ public partial class MainViewModel : ViewModelBase
         MarkProjectClean();
         RefreshValidationAndPreview("Ready");
         _ = LoadAppSettingsAsync();
+        WarmUpValidatedModelTypes();
+    }
+
+    // Null (rather than a null-forgiving lookup that would throw straight
+    // out of this static field initializer, taking the whole app down with
+    // a TypeInitializationException on the very first MainViewModel access)
+    // if the reflection lookup ever fails - WarmUp below treats that as
+    // "can't warm up," not a crash. See TrimmerRoots.xml's own comment for
+    // why this lookup needs its own explicit root to keep working under
+    // NativeAOT.
+    private static readonly MethodInfo? ValidateAllPropertiesMethod =
+        typeof(ObservableValidator).GetMethod("ValidateAllProperties", BindingFlags.Instance | BindingFlags.NonPublic);
+
+    /// <summary>Warms up every Models type that calls ObservableValidator
+    /// .ValidateProperty/ValidateAllProperties (21 of them - grep
+    /// "ValidateProperty(" under Models). Each one's first validation call
+    /// builds a reflection-based DataAnnotations attribute cache (System
+    /// .ComponentModel.DataAnnotations' internal ValidationAttributeStore,
+    /// keyed per type) - cheap on Desktop's JIT, but measurably slow under
+    /// Android's NativeAOT (no JIT to speed up cold reflection). Real bug
+    /// found live 2026-09-13: the VOX startup warning's own checkbox didn't
+    /// respond for several seconds right after launch, since
+    /// OptionalSettingsEntry.RevalidateAll()'s first call (part of the
+    /// constructor's own RefreshValidationAndPreview) paid this cost on the
+    /// UI thread. (A separate, much bigger slowdown - loading a project
+    /// itself taking multiple seconds - turned out to be an unrelated O(n^2)
+    /// notification bug, not this one; see OptionalSettingsEntry
+    /// .NotifyPendingRadioWriteProperties' own doc comment.)
+    ///
+    /// Deliberately SYNCHRONOUS, called directly from the constructor, not
+    /// backgrounded - two real problems ruled out a background attempt
+    /// first: (1) project auto-load starts almost immediately too (see
+    /// SetStoragePicker), so a background task racing to finish first has no
+    /// reliable head start to win by - there's no idle window to hide this
+    /// cost in; (2) an actual attempt at backgrounding this made this test
+    /// project's own pre-existing rare flake in
+    /// DevForceModelToImageThenWriteSucceedsAgainstAVirtualRadio jump from
+    /// occasional to failing 3 of 4 runs - System.ComponentModel
+    /// .DataAnnotations' ValidationAttributeStore is a shared static cache,
+    /// and building it for overlapping types from two threads at once is a
+    /// genuine race, not test noise. Paying this cost here instead - once,
+    /// synchronously, before the window is even shown - means the delay
+    /// reads as ordinary app startup time rather than a freeze tied to
+    /// whatever the user just clicked, with no threading risk at all.
+    ///
+    /// This is a workaround for the cost, not a fix for it - replacing
+    /// these 21 types' DataAnnotations-attribute validation with plain
+    /// manual checks would remove the cost instead of relocating it, but
+    /// that's real surgery across 21 files, deliberately deferred rather
+    /// than folded in here.</summary>
+    private static void WarmUpValidatedModelTypes()
+    {
+        if (ValidateAllPropertiesMethod is null)
+        {
+            return;
+        }
+
+        WarmUp(() => new AmAirEntry());
+        WarmUp(() => new AprsDigitalReportEntry());
+        WarmUp(() => new AlertToneEntry());
+        WarmUp(() => new DigitalContactEntry());
+        WarmUp(() => new AlarmSettingsEntry());
+        WarmUp(() => new GpsRoamingEntry());
+        WarmUp(() => new DigitalContactWhitelistEntry());
+        WarmUp(() => new MasterIdEntry());
+        WarmUp(() => new TalkgroupWhitelistEntry());
+        WarmUp(() => new AprsFixLocationEntry());
+        WarmUp(() => new AutoRepeaterOffsetEntry());
+        WarmUp(() => new FmChannelEntry());
+        WarmUp(() => new EncryptionKeyEntry { Kind = EncryptionKeyKind.Basic });
+        WarmUp(() => new TalkgroupEntry());
+        WarmUp(() => new AprsSettingsEntry());
+        WarmUp(() => new RadioIdEntry());
+        WarmUp(() => new RoamingChannelEntry());
+        WarmUp(() => new TwoToneEncodeEntry());
+        WarmUp(() => new TwoToneDecodeEntry());
+        WarmUp(() => new ChannelEntry());
+        WarmUp(() => new OptionalSettingsEntry());
+
+        static void WarmUp<T>(Func<T> factory) where T : ObservableValidator
+        {
+            try
+            {
+                // ValidateAllProperties() is protected - callable directly
+                // from inside a subclass (OptionalSettingsEntry.RevalidateAll
+                // does exactly that), but not from here. Reflection is the
+                // only way in from outside without adding a public wrapper
+                // to all 21 model types just for this workaround. Already
+                // trimmer-safe: RevalidateAll's own direct call to this same
+                // inherited method elsewhere in this assembly is what keeps
+                // it (and its generated fast-path helper, see
+                // TrimmerRoots.xml) from being stripped in the first place.
+                ValidateAllPropertiesMethod!.Invoke(factory(), null);
+            }
+            catch
+            {
+                // Warm-up only - a validation failure or a misbehaving
+                // CustomValidation method on default field values is not
+                // this method's problem to report, and must not stop the
+                // remaining types from warming.
+            }
+        }
     }
 
     public async void SetStoragePicker(IStoragePickerService storagePicker)
@@ -1318,10 +1432,27 @@ public partial class MainViewModel : ViewModelBase
                 return;
             }
 
-            RadioProjectMapper.LoadInto(
-                data, Channels, Zones, EncryptionKeys, Arc4EncryptionKeys, AesEncryptionKeys,
-                RadioIds, Talkgroups, ScanLists, RoamingChannels, RoamingZones, ReceiveGroupLists, AutoRepeaterOffsets,
-                MasterId, TalkAliasSettings, AnalogAddresses, GpsRoamingEntries, TalkgroupWhitelist, PrefabricatedSmsMessages, AmAirChannels, AmZones, FmChannels, AlarmSettings, DigitalContactWhitelist, AprsSettings, AprsReceiveFilters, OptionalSettings, DigitalContacts);
+            // Suppressed across the whole bulk populate below - without this,
+            // Channels.Add/Zones.Add/EncryptionKeys.Add firing once per item
+            // each re-run full-project validation from scratch (Validate()
+            // walks every entity collection), turning an O(n) load into
+            // O(n^2). RefreshAfterBulkEntityLoad() below replays it all once
+            // the collections are actually done changing. Real multi-second
+            // freeze found live 2026-09-13 opening a well-populated project.
+            _suppressBulkEntityRefresh = true;
+            try
+            {
+                RadioProjectMapper.LoadInto(
+                    data, Channels, Zones, EncryptionKeys, Arc4EncryptionKeys, AesEncryptionKeys,
+                    RadioIds, Talkgroups, ScanLists, RoamingChannels, RoamingZones, ReceiveGroupLists, AutoRepeaterOffsets,
+                    MasterId, TalkAliasSettings, AnalogAddresses, GpsRoamingEntries, TalkgroupWhitelist, PrefabricatedSmsMessages, AmAirChannels, AmZones, FmChannels, AlarmSettings, DigitalContactWhitelist, AprsSettings, AprsReceiveFilters, OptionalSettings, DigitalContacts);
+            }
+            finally
+            {
+                _suppressBulkEntityRefresh = false;
+            }
+
+            RefreshAfterBulkEntityLoad();
             // RadioProjectMapper.ToEntry sets OffsetMHz via an object
             // initializer AFTER RxFrequencyMHz, which overwrites whatever
             // ChannelEntry's own OnRxFrequencyMHzChanged hook just corrected
@@ -1452,10 +1583,23 @@ public partial class MainViewModel : ViewModelBase
                 return;
             }
 
-            RadioProjectMapper.LoadInto(
-                data, Channels, Zones, EncryptionKeys, Arc4EncryptionKeys, AesEncryptionKeys,
-                RadioIds, Talkgroups, ScanLists, RoamingChannels, RoamingZones, ReceiveGroupLists, AutoRepeaterOffsets,
-                MasterId, TalkAliasSettings, AnalogAddresses, GpsRoamingEntries, TalkgroupWhitelist, PrefabricatedSmsMessages, AmAirChannels, AmZones, FmChannels, AlarmSettings, DigitalContactWhitelist, AprsSettings, AprsReceiveFilters, OptionalSettings, DigitalContacts);
+            // See LoadRememberedProjectAsync's identical comment - suppressed
+            // across the whole bulk populate below to avoid re-running full-
+            // project validation once per added item.
+            _suppressBulkEntityRefresh = true;
+            try
+            {
+                RadioProjectMapper.LoadInto(
+                    data, Channels, Zones, EncryptionKeys, Arc4EncryptionKeys, AesEncryptionKeys,
+                    RadioIds, Talkgroups, ScanLists, RoamingChannels, RoamingZones, ReceiveGroupLists, AutoRepeaterOffsets,
+                    MasterId, TalkAliasSettings, AnalogAddresses, GpsRoamingEntries, TalkgroupWhitelist, PrefabricatedSmsMessages, AmAirChannels, AmZones, FmChannels, AlarmSettings, DigitalContactWhitelist, AprsSettings, AprsReceiveFilters, OptionalSettings, DigitalContacts);
+            }
+            finally
+            {
+                _suppressBulkEntityRefresh = false;
+            }
+
+            RefreshAfterBulkEntityLoad();
             // RadioProjectMapper.ToEntry sets OffsetMHz via an object
             // initializer AFTER RxFrequencyMHz, which overwrites whatever
             // ChannelEntry's own OnRxFrequencyMHzChanged hook just corrected
@@ -3457,6 +3601,11 @@ public partial class MainViewModel : ViewModelBase
         AttachChannelHandlers(e.NewItems?.OfType<ChannelEntry>());
         DetachChannelHandlers(e.OldItems?.OfType<ChannelEntry>());
         _projectStructureDirty = true;
+        if (_suppressBulkEntityRefresh)
+        {
+            return;
+        }
+
         OnPropertyChanged(nameof(ChannelCount));
         RefreshAvailableZoneChannels();
         RefreshAvailableScanListChannels();
@@ -3474,6 +3623,11 @@ public partial class MainViewModel : ViewModelBase
         AttachZoneHandlers(e.NewItems?.OfType<ZoneEntry>());
         DetachZoneHandlers(e.OldItems?.OfType<ZoneEntry>());
         _projectStructureDirty = true;
+        if (_suppressBulkEntityRefresh)
+        {
+            return;
+        }
+
         OnPropertyChanged(nameof(ZoneCount));
         OnPropertyChanged(nameof(OptionalSettingsZoneOptions));
         OnPropertyChanged(nameof(OptionalSettingsRoamingZoneOptions));
@@ -3555,6 +3709,11 @@ public partial class MainViewModel : ViewModelBase
         AttachEncryptionKeyHandlers(e.NewItems?.OfType<EncryptionKeyEntry>());
         DetachEncryptionKeyHandlers(e.OldItems?.OfType<EncryptionKeyEntry>());
         _projectStructureDirty = true;
+        if (_suppressBulkEntityRefresh)
+        {
+            return;
+        }
+
         OnPropertyChanged(nameof(DigitalEncryptionKeyOptions));
         OnPropertyChanged(nameof(AesEncryptionKeyOptions));
         OnPropertyChanged(nameof(Arc4EncryptionKeyOptions));
@@ -3917,6 +4076,29 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(Qdc1200IdCount));
         OnPropertyChanged(nameof(QdcAddressCount));
         OnPropertyChanged(nameof(FiveToneIdCount));
+    }
+
+    /// <summary>Replays whatever OnChannelsChanged/OnZonesChanged/
+    /// OnEncryptionKeysChanged skip while <see cref="_suppressBulkEntityRefresh"/>
+    /// is set - call once, right after a whole-collection bulk load finishes,
+    /// before the caller's own NotifyAllEntityCounts()/RefreshValidationAndPreview()
+    /// (those two are already called unconditionally by every bulk-load site,
+    /// so they're not repeated here).</summary>
+    private void RefreshAfterBulkEntityLoad()
+    {
+        RefreshAvailableZoneChannels();
+        RefreshAvailableScanListChannels();
+        OnPropertyChanged(nameof(AlarmSettingsAnalogEmergencyChannelOptions));
+        OnPropertyChanged(nameof(AlarmSettingsAnalogEmergencyChannelSelection));
+        OnPropertyChanged(nameof(AlarmSettingsDigitalEmergencyChannelOptions));
+        OnPropertyChanged(nameof(AlarmSettingsDigitalEmergencyChannelSelection));
+        OnPropertyChanged(nameof(RoamingChannelFastSelectOptions));
+        OnPropertyChanged(nameof(OptionalSettingsZoneOptions));
+        OnPropertyChanged(nameof(OptionalSettingsRoamingZoneOptions));
+        NotifyOptionalSettingsStartupNamesChanged();
+        OnPropertyChanged(nameof(DigitalEncryptionKeyOptions));
+        OnPropertyChanged(nameof(AesEncryptionKeyOptions));
+        OnPropertyChanged(nameof(Arc4EncryptionKeyOptions));
     }
 
     private void RefreshValidationAndPreview(string? status = null)
