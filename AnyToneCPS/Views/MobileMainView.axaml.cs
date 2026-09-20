@@ -243,6 +243,16 @@ public partial class MobileMainView : UserControl
         NavigationButton.Flyout?.Hide();
     }
 
+    // Settings' Report an Issue/Releases and About's Source, all opened in
+    // the device's own browser - see UrlLauncher's own doc comment.
+    private void LinkButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { Tag: string url } control)
+        {
+            UrlLauncher.Open(url, control);
+        }
+    }
+
     // 2026-08-01: same "chevron alone is too small a target" fix as
     // Desktop's MainView.axaml.cs - the category header TextBlock (only
     // ever visible for HasChildren nodes, see the DataTemplate below) now

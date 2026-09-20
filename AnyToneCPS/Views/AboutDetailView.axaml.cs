@@ -1,5 +1,6 @@
 using System;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
@@ -11,6 +12,14 @@ public partial class AboutDetailView : UserControl
     {
         InitializeComponent();
         SetLogoImage();
+    }
+
+    private void LinkButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { Tag: string url } control)
+        {
+            UrlLauncher.Open(url, control);
+        }
     }
 
     private void SetLogoImage()

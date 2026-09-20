@@ -822,6 +822,7 @@ public partial class MainViewModel : ViewModelBase
     public string ValidationSummary => ValidationMessages.Count == 0
         ? "OK"
         : $"{ValidationMessages.Count} issue(s)";
+    public bool HasValidationMessages => ValidationMessages.Count > 0;
 
     /// <summary>Messages prefixed "Warning:" are informational (e.g. a zone's
     /// A/B channel not currently being a member - reflects live front-panel
@@ -833,7 +834,13 @@ public partial class MainViewModel : ViewModelBase
     public bool IsDirty => _projectStructureDirty
         || Channels.Any(channel => channel.IsDirty)
         || Zones.Any(zone => zone.IsDirty)
-        || ScanLists.Any(scanList => scanList.IsDirty);
+        || ScanLists.Any(scanList => scanList.IsDirty)
+        || AmZones.Any(amZone => amZone.IsDirty)
+        || AmAirChannels.Any(amAir => amAir.IsDirty)
+        || FmChannels.Any(fmChannel => fmChannel.IsDirty)
+        || PrefabricatedSmsMessages.Any(sms => sms.IsDirty)
+        || AnalogAddresses.Any(analogAddress => analogAddress.IsDirty)
+        || AutoRepeaterOffsets.Any(autoRepeaterOffset => autoRepeaterOffset.IsDirty);
     public string DirtyIndicator => IsDirty ? "Unsaved changes" : "Saved";
     public string BuildDescription { get; } = GetBuildDescription();
     public string AppVersion { get; } = GetAppVersion();
@@ -973,6 +980,21 @@ public partial class MainViewModel : ViewModelBase
             if (SelectedZone is not null)
             {
                 SelectedZone.BChannel = value;
+            }
+        }
+    }
+
+    /// <summary>Same purpose as <see cref="SelectedZoneAChannel"/>, for AM
+    /// Zone's single A Channel - see <see cref="OnSelectedAmZoneChanged"/>'s
+    /// doc comment.</summary>
+    public AmAirEntry? SelectedAmZoneAChannel
+    {
+        get => SelectedAmZone?.AChannel;
+        set
+        {
+            if (SelectedAmZone is not null)
+            {
+                SelectedAmZone.AChannel = value;
             }
         }
     }
@@ -1172,6 +1194,12 @@ public partial class MainViewModel : ViewModelBase
         _navigationTree = BuildNavigationTree(showDevOptions: false);
         Channels.CollectionChanged += OnChannelsChanged;
         Zones.CollectionChanged += OnZonesChanged;
+        AmZones.CollectionChanged += OnAmZonesChanged;
+        AmAirChannels.CollectionChanged += OnAmAirChannelsChanged;
+        FmChannels.CollectionChanged += OnFmChannelsChanged;
+        PrefabricatedSmsMessages.CollectionChanged += OnPrefabricatedSmsMessagesChanged;
+        AnalogAddresses.CollectionChanged += OnAnalogAddressesChanged;
+        AutoRepeaterOffsets.CollectionChanged += OnAutoRepeaterOffsetsChanged;
         ScanLists.CollectionChanged += OnScanListsChanged;
         EncryptionKeys.CollectionChanged += OnEncryptionKeysChanged;
         Arc4EncryptionKeys.CollectionChanged += OnEncryptionKeysChanged;
@@ -1544,6 +1572,11 @@ public partial class MainViewModel : ViewModelBase
             foreach (var autoRepeaterOffset in AutoRepeaterOffsets)
             {
                 autoRepeaterOffset.MarkClean();
+            }
+
+            foreach (var analogAddress in AnalogAddresses)
+            {
+                analogAddress.MarkClean();
             }
         }
         finally
@@ -2723,6 +2756,7 @@ public partial class MainViewModel : ViewModelBase
             }
 
             OnPropertyChanged(nameof(ValidationSummary));
+            OnPropertyChanged(nameof(HasValidationMessages));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FormatException)
         {
@@ -2760,6 +2794,7 @@ public partial class MainViewModel : ViewModelBase
             }
 
             OnPropertyChanged(nameof(ValidationSummary));
+            OnPropertyChanged(nameof(HasValidationMessages));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FormatException)
         {
@@ -3860,6 +3895,58 @@ public partial class MainViewModel : ViewModelBase
         DetachEditorHandlers(e.OldItems);
     }
 
+    // Was missing entirely until the AM Zone A Channel notification fix -
+    // without this, AmZoneEntry's own PropertyChanged (Name, AChannel via
+    // ReassignAmZoneChannel) never reached OnEditorPropertyChanged at all,
+    // so SelectedAmZoneAChannel could go stale after a member add/remove
+    // reassigned AChannel while the same AM Zone stayed selected. No
+    // Members.CollectionChanged wiring needed here (unlike AttachZoneHandlers)
+    // - AM Zone has no member reorder command, and AddAmZoneMembers/
+    // RemoveAmZoneMembers already refresh what they need directly.
+    private void OnAmZonesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        AttachEditorHandlers(e.NewItems);
+        DetachEditorHandlers(e.OldItems);
+    }
+
+    // Same gap as OnAmZonesChanged, for AmAirEntry - was missing entirely,
+    // so editing an AM Air channel's own fields never reached
+    // NotifyDirtyStateChanged/RefreshValidation either.
+    private void OnAmAirChannelsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        AttachEditorHandlers(e.NewItems);
+        DetachEditorHandlers(e.OldItems);
+    }
+
+    // Same gap as OnAmZonesChanged/OnAmAirChannelsChanged -
+    // FmChannelEntry/PrefabricatedSmsEntry/AnalogAddressEntry/
+    // AutoRepeaterOffsetEntry were never wired into OnEditorPropertyChanged
+    // either, so editing any of their own fields never reached
+    // NotifyDirtyStateChanged/RefreshValidation.
+    private void OnFmChannelsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        AttachEditorHandlers(e.NewItems);
+        DetachEditorHandlers(e.OldItems);
+    }
+
+    private void OnPrefabricatedSmsMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        AttachEditorHandlers(e.NewItems);
+        DetachEditorHandlers(e.OldItems);
+    }
+
+    private void OnAnalogAddressesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        AttachEditorHandlers(e.NewItems);
+        DetachEditorHandlers(e.OldItems);
+    }
+
+    private void OnAutoRepeaterOffsetsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        AttachEditorHandlers(e.NewItems);
+        DetachEditorHandlers(e.OldItems);
+    }
+
     /// <summary>Generic version of AttachChannelHandlers/AttachZoneHandlers/
     /// AttachScanListHandlers below, for entities that don't need any extra
     /// per-item wiring beyond OnEditorPropertyChanged itself (no nested
@@ -4017,15 +4104,24 @@ public partial class MainViewModel : ViewModelBase
         // Keeps SelectedZoneAChannel/BChannel in sync when AChannel/BChannel
         // change through some path OTHER than their own proxy setter (e.g.
         // ReassignZoneChannels reassigning A/B as a side effect of
-        // membership changing) - see those proxies' own doc comment.
-        if (e.PropertyName == nameof(ZoneEntry.AChannel))
+        // membership changing) - see those proxies' own doc comment. Guarded
+        // by sender type because ZoneEntry and AmZoneEntry both have an
+        // "AChannel" property of the same name.
+        if (sender is ZoneEntry && e.PropertyName == nameof(ZoneEntry.AChannel))
         {
             OnPropertyChanged(nameof(SelectedZoneAChannel));
         }
 
-        if (e.PropertyName == nameof(ZoneEntry.BChannel))
+        if (sender is ZoneEntry && e.PropertyName == nameof(ZoneEntry.BChannel))
         {
             OnPropertyChanged(nameof(SelectedZoneBChannel));
+        }
+
+        // Same reasoning, for AM Zone's AChannel (e.g. ReassignAmZoneChannel
+        // reassigning it as a side effect of membership changing).
+        if (sender is AmZoneEntry && e.PropertyName == nameof(AmZoneEntry.AChannel))
+        {
+            OnPropertyChanged(nameof(SelectedAmZoneAChannel));
         }
     }
 
@@ -4240,6 +4336,7 @@ public partial class MainViewModel : ViewModelBase
         ValidateFiveTone();
         ValidateTwoTone();
         OnPropertyChanged(nameof(ValidationSummary));
+        OnPropertyChanged(nameof(HasValidationMessages));
         OnPropertyChanged(nameof(HasBlockingValidationErrors));
         SaveProjectCommand.NotifyCanExecuteChanged();
         SaveProjectAsCommand.NotifyCanExecuteChanged();

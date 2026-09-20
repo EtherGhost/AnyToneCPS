@@ -1235,11 +1235,25 @@ public partial class MainViewModel
     partial void OnSelectedAmAirChanged(AmAirEntry? value) => RemoveAmAirCommand.NotifyCanExecuteChanged();
     partial void OnSelectedAmZoneChanged(AmZoneEntry? value)
     {
+        // Same "swap the ComboBox's ItemsSource mid-selection" bug class as
+        // OnSelectedZoneChanged - capture the new AM zone's own AChannel
+        // before the ItemsSource re-notify below, then restore it right
+        // after, so a two-way-bound ComboBox can't null it out as a side
+        // effect of that notification.
+        var correctAChannel = value?.AChannel;
+
         RemoveAmZoneCommand.NotifyCanExecuteChanged();
         SetSelectedAvailableAmZoneChannels([]);
         SetSelectedAmZoneMembers([]);
         RefreshAvailableAmZoneChannels();
         OnPropertyChanged(nameof(SelectedAmZoneMemberOptions));
+
+        if (value is not null)
+        {
+            value.AChannel = correctAChannel;
+        }
+
+        OnPropertyChanged(nameof(SelectedAmZoneAChannel));
         AddAmZoneMembersCommand.NotifyCanExecuteChanged();
         RemoveAmZoneMembersCommand.NotifyCanExecuteChanged();
         SetSelectedAvailableAmZoneScanChannels([]);

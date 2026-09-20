@@ -44,9 +44,22 @@
                            TextWrapping="Wrap" />
 
                 <TextBlock Text="Source" FontWeight="SemiBold" />
-                <SelectableTextBlock Text="https://github.com/EtherGhost/AnyToneCPS"
-                                     Foreground="{DynamicResource AppMutedTextBrush}"
-                                     TextWrapping="Wrap" />
+                <Button Classes="LinkButton"
+                        Content="https://github.com/EtherGhost/AnyToneCPS"
+                        Tag="https://github.com/EtherGhost/AnyToneCPS"
+                        Click="LinkButton_OnClick" />
+
+                <TextBlock Text="Report an Issue" FontWeight="SemiBold" />
+                <Button Classes="LinkButton"
+                        Content="github.com/EtherGhost/AnyToneCPS/issues"
+                        Tag="https://github.com/EtherGhost/AnyToneCPS/issues"
+                        Click="LinkButton_OnClick" />
+
+                <TextBlock Text="Releases" FontWeight="SemiBold" />
+                <Button Classes="LinkButton"
+                        Content="github.com/EtherGhost/AnyToneCPS/releases"
+                        Tag="https://github.com/EtherGhost/AnyToneCPS/releases"
+                        Click="LinkButton_OnClick" />
 
                 <TextBlock Text="Disclaimer" FontWeight="SemiBold" />
                 <TextBlock Text="AnyToneCPS is not affiliated with, endorsed by, or sponsored by AnyTone Tech Co., Ltd. or the AnyTone brand. AnyTone is a trademark of its respective owner. This project was built by reverse-engineering the radio's own USB protocol against real hardware."

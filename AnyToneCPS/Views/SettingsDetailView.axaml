@@ -17,7 +17,7 @@
 
     <Grid>
         <Border Classes="Panel">
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                   RowSpacing="18">
                 <TextBlock Classes="SectionTitle" Text="Settings" />
 
@@ -45,15 +45,25 @@
                 <Grid Grid.Row="2"
                       ColumnDefinitions="*,*"
                       ColumnSpacing="18">
-                    <HeaderedContentControl Header="Version">
-                        <TextBlock Text="{Binding AppVersion}" />
+                    <HeaderedContentControl Header="Project File">
+                        <TextBlock Text="{Binding CurrentProjectLocation}"
+                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                   TextWrapping="Wrap" />
                     </HeaderedContentControl>
-                    <HeaderedContentControl Grid.Column="1" Header="NativeAOT">
-                        <TextBlock Text="{Binding NativeAotDescription}" />
+                    <HeaderedContentControl Grid.Column="1" Header="Settings File">
+                        <TextBlock Text="{Binding SettingsFileLocation}"
+                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                   TextWrapping="Wrap" />
                     </HeaderedContentControl>
                 </Grid>
 
-                <HeaderedContentControl Grid.Row="3" Header="Show Developer Options">
+                <HeaderedContentControl Grid.Row="3" Header="Appdata">
+                    <TextBlock Text="{Binding AppDataLocation}"
+                               Foreground="{DynamicResource AppMutedTextBrush}"
+                               TextWrapping="Wrap" />
+                </HeaderedContentControl>
+
+                <HeaderedContentControl Grid.Row="4" Header="Show Developer Options">
                     <ToggleSwitch IsChecked="{Binding ShowDevOptions}" />
                 </HeaderedContentControl>
             </Grid>

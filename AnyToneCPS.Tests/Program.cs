@@ -54,6 +54,8 @@ public static class Program
         Run("Am zone codec decodes scan channel bitmask not index list", AmZoneCodecDecodesScanChannelBitmaskNotIndexList);
         Run("Single member zone only sets A channel", SingleMemberZoneOnlySetsAChannel);
         Run("Tracks unsaved field changes", TracksUnsavedFieldChanges);
+        Run("Editing an AM zone or AM air channel name marks the project dirty", EditingAnAmZoneOrAmAirChannelNameMarksTheProjectDirty);
+        Run("Editing an FM channel prefabricated sms analog address or auto repeater offset marks the project dirty", EditingAnFmChannelPrefabricatedSmsAnalogAddressOrAutoRepeaterOffsetMarksTheProjectDirty);
         Run("Mark radio synced on singleton settings does not dirty the project file", MarkRadioSyncedOnSingletonSettingsDoesNotDirtyTheProjectFile);
         Run("Refresh filtered digital contacts combines friends only with text filter", RefreshFilteredDigitalContactsCombinesFriendsOnlyWithTextFilter);
         Run("Tracks unsaved zone membership changes", TracksUnsavedZoneMembershipChanges);
@@ -66,6 +68,7 @@ public static class Program
         Run("Selecting multiple channels hides the single channel editor", SelectingMultipleChannelsHidesTheSingleChannelEditor);
         Run("Switching away from a zone and back keeps its A and B channel selection", SwitchingAwayFromAZoneAndBackKeepsItsAAndBChannelSelection);
         Run("Setting A and B channel on a second zone does not affect the first zone", SettingAAndBChannelOnASecondZoneDoesNotAffectTheFirstZone);
+        Run("Switching away from an AM zone and back keeps its A channel selection", SwitchingAwayFromAnAmZoneAndBackKeepsItsAChannelSelection);
         Run("Reorder lists by number sorts channels ascending and keeps selection", ReorderListsByNumberSortsChannelsAscendingAndKeepsSelection);
         Run("Setting startup zone A name updates the underlying zone index and round trips", SettingStartupZoneANameUpdatesTheUnderlyingZoneIndexAndRoundTrips);
         Run("Navigating to About raises PropertyChanged for IsAboutViewSelected", NavigatingToAboutRaisesPropertyChangedForIsAboutViewSelected);
@@ -1182,6 +1185,75 @@ public static class Program
         AssertEqual("Normal", viewModel.SelectedChannel.NameFontWeight);
     }
 
+    // Found while fixing the AM Zone A Channel notification bug: MainViewModel.
+    // IsDirty's OR-chain only ever checked Channels/Zones/ScanLists, never
+    // AmZones or AmAirChannels, so editing either entity's own fields left
+    // Save disabled even though the entity itself correctly tracked IsDirty.
+    private static void EditingAnAmZoneOrAmAirChannelNameMarksTheProjectDirty()
+    {
+        var viewModel = new MainViewModel();
+
+        var amAir = new AmAirEntry { Number = 1, Name = "AM 1" };
+        viewModel.AmAirChannels.Add(amAir);
+
+        var amZone = new AmZoneEntry { Number = 1, Name = "Test AM Zone" };
+        amZone.Members.Add(amAir);
+        amZone.AChannel = amAir;
+        viewModel.AmZones.Add(amZone);
+
+        viewModel.MarkProjectClean();
+        AssertTrue(!viewModel.IsDirty, "a freshly marked-clean view model with an AM zone and AM air channel should start clean");
+
+        amZone.Name = "Renamed AM Zone";
+        AssertTrue(viewModel.IsDirty, "editing an AM zone's name should mark the project dirty");
+
+        viewModel.MarkProjectClean();
+        AssertTrue(!viewModel.IsDirty, "mark clean should reset AM zone dirty state");
+
+        amAir.Name = "Renamed AM Air";
+        AssertTrue(viewModel.IsDirty, "editing an AM air channel's name should mark the project dirty");
+    }
+
+    // The exact same IsDirty/OnEditorPropertyChanged gap fixed for AM Zone/
+    // AM Air above also existed for 4 more entity types. AnalogAddressEntry
+    // had an even smaller extra gap - MarkProjectClean
+    // never marked it clean at all, unlike the other three.
+    private static void EditingAnFmChannelPrefabricatedSmsAnalogAddressOrAutoRepeaterOffsetMarksTheProjectDirty()
+    {
+        var viewModel = new MainViewModel();
+
+        var fmChannel = new FmChannelEntry { Number = 1, Name = "FM 1", FrequencyMhz = 100.0 };
+        viewModel.FmChannels.Add(fmChannel);
+
+        var sms = new PrefabricatedSmsEntry { Number = 1, Text = "Hello" };
+        viewModel.PrefabricatedSmsMessages.Add(sms);
+
+        var analogAddress = new AnalogAddressEntry { Number = 1, Name = "Analog 1", AddressNumber = 100 };
+        viewModel.AnalogAddresses.Add(analogAddress);
+
+        var autoRepeaterOffset = new AutoRepeaterOffsetEntry { Number = 1, OffsetFrequencyMhz = 0.6 };
+        viewModel.AutoRepeaterOffsets.Add(autoRepeaterOffset);
+
+        viewModel.MarkProjectClean();
+        AssertTrue(!viewModel.IsDirty, "a freshly marked-clean view model with these 4 entities should start clean");
+
+        fmChannel.Name = "Renamed FM";
+        AssertTrue(viewModel.IsDirty, "editing an FM channel's name should mark the project dirty");
+        viewModel.MarkProjectClean();
+
+        sms.Text = "Renamed SMS";
+        AssertTrue(viewModel.IsDirty, "editing a prefabricated sms message should mark the project dirty");
+        viewModel.MarkProjectClean();
+
+        analogAddress.Name = "Renamed Analog";
+        AssertTrue(viewModel.IsDirty, "editing an analog address's name should mark the project dirty");
+        viewModel.MarkProjectClean();
+        AssertTrue(!analogAddress.IsDirty, "mark clean should reset analog address dirty state too, not just the other 3");
+
+        autoRepeaterOffset.OffsetFrequencyMhz = 0.7;
+        AssertTrue(viewModel.IsDirty, "editing an auto repeater offset should mark the project dirty");
+    }
+
     /// <summary>Regression test for a real live bug found 2026-08-29: after
     /// loading a project (Save disabled - clean) and writing to the radio
     /// with no edits at all, Save became enabled. Root cause: MasterId (and
@@ -1647,6 +1719,53 @@ public static class Program
         AssertSame(zoneBChannel, zoneA.BChannel);
         AssertSame(zoneBAChannel, zoneB.AChannel);
         AssertSame(zoneBBChannel, zoneB.BChannel);
+    }
+
+    private static void SwitchingAwayFromAnAmZoneAndBackKeepsItsAChannelSelection()
+    {
+        var viewModel = new MainViewModel();
+
+        var amAir1 = new AmAirEntry { Number = 1, Name = "AM 1" };
+        var amAir2 = new AmAirEntry { Number = 2, Name = "AM 2" };
+        viewModel.AmAirChannels.Add(amAir1);
+        viewModel.AmAirChannels.Add(amAir2);
+
+        var amZoneA = new AmZoneEntry { Number = 1, Name = "Test AM Zone A" };
+        amZoneA.Members.Add(amAir1);
+        amZoneA.Members.Add(amAir2);
+        amZoneA.MarkClean();
+
+        var amZoneB = new AmZoneEntry { Number = 2, Name = "Test AM Zone B" };
+        amZoneB.Members.Add(amAir1);
+        amZoneB.MarkClean();
+
+        viewModel.AmZones.Add(amZoneA);
+        viewModel.AmZones.Add(amZoneB);
+
+        viewModel.SelectedAmZone = amZoneA;
+        var intendedAChannel = amZoneA.Members[1];
+        viewModel.SelectedAmZoneAChannel = intendedAChannel;
+
+        AssertSame(intendedAChannel, amZoneA.AChannel);
+
+        var aChannelRaised = false;
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.SelectedAmZoneAChannel))
+            {
+                aChannelRaised = true;
+            }
+        };
+
+        // Switch away, then back - this is exactly the sequence that lost
+        // the selection for regular Zones before that fix, and AM Zone's A
+        // Channel binds the same shape.
+        viewModel.SelectedAmZone = amZoneB;
+        viewModel.SelectedAmZone = amZoneA;
+
+        AssertTrue(aChannelRaised, "switching back to an AM zone should raise PropertyChanged for SelectedAmZoneAChannel");
+        AssertSame(intendedAChannel, amZoneA.AChannel);
+        AssertSame(intendedAChannel, viewModel.SelectedAmZoneAChannel);
     }
 
     // Hand-editing a channel's "No" field (or duplicating one that lands a

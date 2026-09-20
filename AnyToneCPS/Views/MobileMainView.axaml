@@ -58,6 +58,29 @@
             <Setter Property="Foreground" Value="{DynamicResource AppSubtleTextBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AppDisabledBorderBrush}" />
         </Style>
+        <!-- Same "looks like a hyperlink" style as MainView.axaml's own
+             Button.LinkButton - see that copy's doc comment for why it has
+             no underline. Kept as a separate copy rather than shared,
+             matching how every other Button style here already has its own
+             Mobile-sized copy instead of reusing MainView.axaml's. -->
+        <Style Selector="Button.LinkButton">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource AppInputFocusBorderBrush}" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.LinkButton:pointerover">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource AppInputFocusBorderBrush}" />
+        </Style>
+        <Style Selector="Button.LinkButton:pressed">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource AppInputFocusBorderBrush}" />
+        </Style>
         <Style Selector="Button.ClusterButton">
             <Setter Property="Width" Value="56" />
             <Setter Property="MinWidth" Value="56" />
@@ -262,7 +285,11 @@
                             <Border Classes="Panel" Padding="8" MaxWidth="320">
                                 <StackPanel Spacing="8">
                                     <TextBlock Classes="SectionTitle" Text="Validation" />
-                                    <ListBox MaxHeight="360" ItemsSource="{Binding ValidationMessages}">
+                                    <TextBlock Text="No validation errors"
+                                               IsVisible="{Binding !HasValidationMessages}"
+                                               Foreground="{DynamicResource AppMutedTextBrush}"
+                                               Margin="8,5" />
+                                    <ListBox MaxHeight="360" ItemsSource="{Binding ValidationMessages}" IsVisible="{Binding HasValidationMessages}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
                                                 <TextBlock Text="{Binding}" Margin="8,5" Foreground="{DynamicResource AppErrorBrush}" TextWrapping="Wrap" />
@@ -2486,7 +2513,7 @@
                                     </HeaderedContentControl>
                                     <HeaderedContentControl Header="A Channel">
                                         <ComboBox ItemsSource="{Binding SelectedAmZoneMemberOptions}"
-                                                  SelectedItem="{Binding SelectedAmZone.AChannel}"
+                                                  SelectedItem="{Binding SelectedAmZoneAChannel}"
                                                   FontWeight="{Binding SelectedAmZone.AChannelFontWeight}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate x:DataType="models:AmAirEntry">
@@ -5039,11 +5066,14 @@
                                     <TextBlock Text="{Binding ExportDirectory}" Foreground="{DynamicResource AppMutedTextBrush}" TextWrapping="Wrap" />
                                 </HeaderedContentControl>
                                 <Button Command="{Binding ChooseExportDirectoryCommand}" Content="Choose export folder" />
-                                <HeaderedContentControl Header="Version">
-                                    <TextBlock Text="{Binding AppVersion}" />
+                                <HeaderedContentControl Header="Project File">
+                                    <TextBlock Text="{Binding CurrentProjectLocation}" Foreground="{DynamicResource AppMutedTextBrush}" TextWrapping="Wrap" />
                                 </HeaderedContentControl>
-                                <HeaderedContentControl Header="NativeAOT">
-                                    <TextBlock Text="{Binding NativeAotDescription}" />
+                                <HeaderedContentControl Header="Settings File">
+                                    <TextBlock Text="{Binding SettingsFileLocation}" Foreground="{DynamicResource AppMutedTextBrush}" TextWrapping="Wrap" />
+                                </HeaderedContentControl>
+                                <HeaderedContentControl Header="Appdata">
+                                    <TextBlock Text="{Binding AppDataLocation}" Foreground="{DynamicResource AppMutedTextBrush}" TextWrapping="Wrap" />
                                 </HeaderedContentControl>
                                 <HeaderedContentControl Header="Show Developer Options">
                                     <ToggleSwitch IsChecked="{Binding ShowDevOptions}" />
@@ -5114,9 +5144,20 @@
                                            Foreground="{DynamicResource AppMutedTextBrush}"
                                            TextWrapping="Wrap" />
                                 <TextBlock Text="Source" FontWeight="SemiBold" />
-                                <SelectableTextBlock Text="https://github.com/EtherGhost/AnyToneCPS"
-                                                     Foreground="{DynamicResource AppMutedTextBrush}"
-                                                     TextWrapping="Wrap" />
+                                <Button Classes="LinkButton"
+                                        Content="https://github.com/EtherGhost/AnyToneCPS"
+                                        Tag="https://github.com/EtherGhost/AnyToneCPS"
+                                        Click="LinkButton_OnClick" />
+                                <TextBlock Text="Report an Issue" FontWeight="SemiBold" />
+                                <Button Classes="LinkButton"
+                                        Content="github.com/EtherGhost/AnyToneCPS/issues"
+                                        Tag="https://github.com/EtherGhost/AnyToneCPS/issues"
+                                        Click="LinkButton_OnClick" />
+                                <TextBlock Text="Releases" FontWeight="SemiBold" />
+                                <Button Classes="LinkButton"
+                                        Content="github.com/EtherGhost/AnyToneCPS/releases"
+                                        Tag="https://github.com/EtherGhost/AnyToneCPS/releases"
+                                        Click="LinkButton_OnClick" />
                                 <TextBlock Text="Disclaimer" FontWeight="SemiBold" />
                                 <TextBlock Text="AnyToneCPS is not affiliated with, endorsed by, or sponsored by AnyTone Tech Co., Ltd. or the AnyTone brand. AnyTone is a trademark of its respective owner. This project was built by reverse-engineering the radio's own USB protocol against real hardware."
                                            Foreground="{DynamicResource AppMutedTextBrush}"

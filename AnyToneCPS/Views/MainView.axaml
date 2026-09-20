@@ -98,6 +98,32 @@
             <Setter Property="Padding" Value="10,0" />
             <Setter Property="Margin" Value="0,0,8,8" />
         </Style>
+        <!-- Looks like a hyperlink, not a button - used for "open this in a
+             browser" rows (About's Source, Settings' Report an Issue/
+             Releases). No underline: Button's default template renders
+             Content through a plain ContentPresenter, so there's no single
+             TextBlock to attach TextDecorations to without a full template
+             override - the accent color plus hand cursor already reads as
+             a link on its own. -->
+        <Style Selector="Button.LinkButton">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource AppInputFocusBorderBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.LinkButton:pointerover">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource AppInputFocusBorderBrush}" />
+        </Style>
+        <Style Selector="Button.LinkButton:pressed">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource AppInputFocusBorderBrush}" />
+        </Style>
         <Style Selector="Button.ClusterButton">
             <Setter Property="Width" Value="64" />
             <Setter Property="MinWidth" Value="64" />
@@ -331,7 +357,11 @@
                                 <Border Classes="Panel" Padding="8" MaxWidth="320">
                                     <StackPanel Spacing="8">
                                         <TextBlock Classes="SectionTitle" Text="Validation" />
-                                        <ListBox MaxHeight="360" ItemsSource="{Binding ValidationMessages}">
+                                        <TextBlock Text="No validation errors"
+                                                   IsVisible="{Binding !HasValidationMessages}"
+                                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                                   Margin="8,5" />
+                                        <ListBox MaxHeight="360" ItemsSource="{Binding ValidationMessages}" IsVisible="{Binding HasValidationMessages}">
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock Text="{Binding}" Margin="8,5" Foreground="{DynamicResource AppErrorBrush}" TextWrapping="Wrap" />
