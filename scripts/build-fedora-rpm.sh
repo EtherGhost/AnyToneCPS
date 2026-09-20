@@ -29,6 +29,14 @@ Summary: AnyTone CPS codeplug editor
 License: MIT
 URL: https://github.com/EtherGhost/AnyToneCPS
 BuildArch: x86_64
+# .NET loads ICU via dlopen at runtime, not a normal ELF NEEDED link, so
+# RPM's automatic dependency scanner never picks it up on its own -
+# confirmed missing 2026-09-20 by installing this RPM cold in a fresh
+# Fedora 44 container: the app crashed on launch with .NET's own
+# "Couldn't find a valid ICU package" error. libicu is the package that
+# actually provides it on Fedora 44 (confirmed via rpm -qf against
+# /lib64/libicuuc.so.77), not the older icu-libs name.
+Requires: libicu
 
 %global _publish_dir $publish_dir
 %global _repo_dir $repo_root

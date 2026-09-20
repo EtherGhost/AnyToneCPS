@@ -4,10 +4,10 @@
         <TargetFramework>net10.0-android</TargetFramework>
         <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
         <Nullable>enable</Nullable>
-        <Version>0.3.0</Version>
+        <Version>0.4.0</Version>
         <ApplicationId>se.cloudsite.anytonecps</ApplicationId>
-        <ApplicationVersion>10</ApplicationVersion>
-        <ApplicationDisplayVersion>0.3.0</ApplicationDisplayVersion>
+        <ApplicationVersion>11</ApplicationVersion>
+        <ApplicationDisplayVersion>0.4.0</ApplicationDisplayVersion>
         <AndroidPackageFormat>aab</AndroidPackageFormat>
         <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
         <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">android-arm64</RuntimeIdentifier>
