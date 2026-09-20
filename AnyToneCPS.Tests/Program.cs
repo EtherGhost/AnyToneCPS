@@ -459,6 +459,7 @@ public static class Program
         Run("Capturing multiple FM channels coalesces them into one region", CapturingMultipleFmChannelsCoalescesThemIntoOneRegion);
         Run("Capturing multiple AM Air channels coalesces them into one region", CapturingMultipleAmAirChannelsCoalescesThemIntoOneRegion);
         Run("Capturing an AM Zone coalesces its records and merges with the AM Air cluster", CapturingAnAmZoneCoalescesItsRecordsAndMergesWithTheAmAirCluster);
+        Run("Capture keeps AM Air data and the AM Zone cluster together even when only a few AM Air slots are populated", CaptureKeepsAmAirDataAndTheAmZoneClusterTogetherEvenWhenOnlyAFewAmAirSlotsArePopulated);
         Run("Capturing multiple analog addresses coalesces them into one region", CapturingMultipleAnalogAddressesCoalescesThemIntoOneRegion);
         Run("Capture keeps Radio IDs and Master ID together even when only a few slots are populated", CaptureKeepsRadioIdsAndMasterIdTogetherEvenWhenOnlyAFewSlotsArePopulated);
         Run("Assert no fragmented tables passes for a real capture and rejects an artificially split zone table", AssertNoFragmentedTablesPassesForARealCaptureAndRejectsAnArtificiallySplitZoneTable);
@@ -7535,6 +7536,54 @@ public static class Program
         var amAirVfoRegion = snapshot.FindRegionContaining(D890UvMemoryMap.AmAirVfo)!;
         var amZoneAChannelRegion = snapshot.FindRegionContaining(D890UvMemoryMap.AmZoneAChannel)!;
         AssertTrue(ReferenceEquals(amAirVfoRegion, amZoneAChannelRegion), "AM Air VFO and AM Zone AChannel should have merged into the same region");
+    }
+
+    /// <summary>Regression test for the real live write failure on
+    /// 2026-09-20: 10 of 256 AM Air slots populated (a project written for
+    /// the first time to a radio with no AM Air data yet), leaving a
+    /// 0x3D80-byte gap from AmAirData's own coalesced region to AmAirVfo -
+    /// well over the 0x1000 "same page" merge threshold. The sibling test
+    /// above only exercises a single populated AM Air channel merging via
+    /// AmZoneAChannel's own always-captured anchor; it never checks whether
+    /// AmAirData itself reaches that anchor, and its own comment says so.
+    /// The real write verification failed with every byte of the 10-record
+    /// AmAirData region mismatching after a separate write elsewhere in the
+    /// same cluster (an AM Zone edit) - same bug class as Radio ID/Master
+    /// ID, just not yet fixed for this cluster. Asserts AM Air data and the
+    /// always-captured AmAirVfo/AmZoneScan neighbors end up in the same
+    /// region regardless of how few AM Air slots are populated.</summary>
+    private static void CaptureKeepsAmAirDataAndTheAmZoneClusterTogetherEvenWhenOnlyAFewAmAirSlotsArePopulated()
+    {
+        var connection = new FakeRadioConnection();
+
+        var amAirBitmap = new byte[0x20];
+        amAirBitmap[0] = 0xFF; // AM Air 0-7 populated
+        amAirBitmap[1] = 0x03; // AM Air 8-9 populated - 10 populated channels total
+        connection.WriteMemory(D890UvMemoryMap.AmAirSet, amAirBitmap);
+
+        for (var idx = 0; idx < 10; idx++)
+        {
+            var data = new byte[D890UvMemoryMap.AmAirDataLength];
+            data[0] = (byte)(0x41 + idx);
+            connection.WriteMemory(RadioCodeplugPatcher.AmAirAddress(idx), data);
+        }
+
+        var snapshot = RadioCodeplugRawSnapshotReader.Capture(connection, "FAKE");
+
+        var amAirRegion = snapshot.FindRegionContaining(RadioCodeplugPatcher.AmAirAddress(0))!;
+        var amAirVfoRegion = snapshot.FindRegionContaining(D890UvMemoryMap.AmAirVfo)!;
+        var amZoneScanRegion = snapshot.FindRegionContaining(D890UvMemoryMap.AmZoneScan)!;
+        AssertTrue(ReferenceEquals(amAirRegion, amAirVfoRegion), "AM Air data (only 10 of 256 slots populated) should still merge with the always-captured AM Air VFO record");
+        AssertTrue(ReferenceEquals(amAirRegion, amZoneScanRegion), "AM Air data should still merge with the AM Zone scan cluster even with only 10 AM Air slots populated");
+
+        for (var idx = 0; idx < 10; idx++)
+        {
+            var region = snapshot.FindRegionContaining(RadioCodeplugPatcher.AmAirAddress(idx))!;
+            var offset = RadioCodeplugPatcher.AmAirAddress(idx) - region.Address;
+            AssertEqual((byte)(0x41 + idx), region.Data[offset]);
+        }
+
+        RadioCodeplugRawSnapshotReader.AssertNoFragmentedTables(snapshot);
     }
 
     /// <summary>Same bug/fix as FM Channels above, for the Analog Address

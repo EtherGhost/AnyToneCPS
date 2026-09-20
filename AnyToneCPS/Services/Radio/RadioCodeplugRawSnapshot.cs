@@ -320,12 +320,21 @@ public static class RadioCodeplugRawSnapshotReader
             CaptureIndexedRecordsCoalesced(CaptureRegion, amZoneIndices, D890UvMemoryMap.AmZoneScan, D890UvMemoryMap.AmZoneScanStride, D890UvMemoryMap.AmZoneScanLength);
 
             // AmAirData/AmAirVfo/AmAirSet/AmZoneSet/AmZoneAChannel/AmZoneScan
-            // all sit within MaxCoalesceGapBytes of each other in a row -
+            // are always captured together as one fixed span, not just
+            // whatever falls within MaxCoalesceGapBytes of AmZoneAChannel.
+            // Found live 2026-09-20, same bug class as Master ID: a project
+            // with only 10 of 256 AM Air slots populated left a 0x3D80-byte
+            // gap between AmAirData's own coalesced region and AmAirVfo -
+            // well over the usual threshold - and the real radio failed to
+            // verify the AmAirData write after a separate write elsewhere in
+            // this cluster (an AM Zone edit) earlier the same session.
             // AmZoneData is the one exception, far enough away (0x3700+
-            // bytes) not to need merging with this cluster. Anchor on
-            // AmZoneAChannel (already captured, roughly in the middle of the
-            // chain) and let the neighbor absorption walk both directions.
-            CaptureRegionMergedWithNeighbors(regions, CaptureRegion, D890UvMemoryMap.AmZoneAChannel, D890UvMemoryMap.AmZoneCount * 2);
+            // bytes) not to need merging with this cluster. Rather than
+            // guess at a bigger threshold, this cluster gets the same
+            // conservative treatment as Radio ID/Master ID - one combined
+            // read over the whole fixed span, regardless of gap or how many
+            // slots are populated. Cheap - the whole span is only ~18KB.
+            CaptureRegion(D890UvMemoryMap.AmAirData, D890UvMemoryMap.AmZoneScan + D890UvMemoryMap.AmZoneCount * D890UvMemoryMap.AmZoneScanStride - D890UvMemoryMap.AmAirData);
 
             // --- FM Channels ---
             // Same bug as AM Air above - raw per-index loop, no coalescing.
