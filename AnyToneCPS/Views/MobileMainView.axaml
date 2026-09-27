@@ -177,6 +177,45 @@
         <Style Selector="TreeView Button:pointerover">
             <Setter Property="Background" Value="{DynamicResource AppSelectionBackgroundBrush}" />
         </Style>
+        <!-- Mobile copy of AboutDetailView.axaml's Expander.SectionExpander,
+             with this view's tighter 10px section spacing. -->
+        <Style Selector="Expander.SectionExpander">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <ControlTemplate TargetType="Expander">
+                    <StackPanel Spacing="10">
+                        <ToggleButton HorizontalAlignment="Left"
+                                      Cursor="Hand"
+                                      IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border Background="Transparent">
+                                        <ContentPresenter Content="{TemplateBinding Content}" />
+                                    </Border>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <ContentPresenter Content="{TemplateBinding Header}"
+                                                  FontWeight="SemiBold"
+                                                  VerticalAlignment="Center" />
+                                <Path x:Name="Chevron"
+                                      Data="M 0 0 L 5 5 L 10 0"
+                                      Stroke="{DynamicResource AppMutedTextBrush}"
+                                      StrokeThickness="1.5"
+                                      Width="10" Height="5"
+                                      VerticalAlignment="Center" />
+                            </StackPanel>
+                        </ToggleButton>
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          IsVisible="{TemplateBinding IsExpanded}" />
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Expander.SectionExpander:expanded /template/ Path#Chevron">
+            <Setter Property="RenderTransform" Value="rotate(180deg)" />
+        </Style>
     </UserControl.Styles>
 
     <Grid TopLevel.AutoSafeAreaPadding="True">
@@ -5143,6 +5182,20 @@
                                 <TextBlock Text="Copyright (c) 2026 Etherghost"
                                            Foreground="{DynamicResource AppMutedTextBrush}"
                                            TextWrapping="Wrap" />
+                                <Expander Classes="SectionExpander"
+                                          Header="Third-Party Notices">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Text="Portions of AnyToneCPS are derived from anytone-cps by xbenkozx, used under the MIT License below."
+                                                   TextWrapping="Wrap" />
+                                        <Button Classes="LinkButton"
+                                                Content="github.com/xbenkozx/anytone-cps"
+                                                Tag="https://github.com/xbenkozx/anytone-cps"
+                                                Click="LinkButton_OnClick" />
+                                        <TextBlock Text="MIT License&#10;&#10;Copyright (c) 2026 Ben Kozlowski&#10;&#10;Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &quot;Software&quot;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:&#10;&#10;The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.&#10;&#10;THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."
+                                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Expander>
                                 <TextBlock Text="Source" FontWeight="SemiBold" />
                                 <Button Classes="LinkButton"
                                         Content="https://github.com/EtherGhost/AnyToneCPS"
@@ -5159,7 +5212,7 @@
                                         Tag="https://github.com/EtherGhost/AnyToneCPS/releases"
                                         Click="LinkButton_OnClick" />
                                 <TextBlock Text="Disclaimer" FontWeight="SemiBold" />
-                                <TextBlock Text="AnyToneCPS is not affiliated with, endorsed by, or sponsored by AnyTone Tech Co., Ltd. or the AnyTone brand. AnyTone is a trademark of its respective owner. This project was built by reverse-engineering the radio's own USB protocol against real hardware."
+                                <TextBlock Text="AnyToneCPS is an independent project and is not affiliated with, endorsed by, or sponsored by the manufacturer of AnyTone radios. AnyTone and D890UV are trademarks of their respective owner and are used here only to identify the compatible radio. This project was built by reverse-engineering the radio's own USB protocol against real hardware."
                                            Foreground="{DynamicResource AppMutedTextBrush}"
                                            TextWrapping="Wrap" />
                             </StackPanel>

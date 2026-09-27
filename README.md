@@ -60,11 +60,15 @@ official or supported product.
   and no promise any given one gets fixed - I'll get to things if and when I
   decide to. The source is here to be read and forked, not to gather
   contributors.
-- **Not affiliated with, endorsed by, or supported by AnyTone** in any way.
-  All protocol and codeplug details here come from independent reverse
+- **Independent project, not affiliated with, endorsed by, or sponsored by
+  the manufacturer of AnyTone radios.** AnyTone and D890UV are trademarks of
+  their respective owner and are used here only to identify the compatible
+  radio. All protocol and codeplug details come from independent reverse
   engineering against real hardware, not from AnyTone documentation.
 - Provided under the MIT license (see [`LICENSE`](LICENSE)): no warranty of
-  any kind, used entirely at your own risk.
+  any kind, used entirely at your own risk. Portions are derived from
+  third-party MIT-licensed work - see
+  [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
 
 ## Platforms
 
@@ -142,4 +146,5 @@ and export support solidify.
 
 ## License
 
-MIT - see [`LICENSE`](LICENSE).
+MIT - see [`LICENSE`](LICENSE). Third-party notices: see
+[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
