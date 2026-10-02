@@ -88,7 +88,8 @@ official or supported product.
 Download the latest build from the
 [Releases](https://github.com/EtherGhost/AnyToneCPS/releases) page.
 
-**Android**: coming to Google Play Store soon.
+**Android**: available on
+[Google Play](https://play.google.com/store/apps/details?id=se.cloudsite.anytonecps).
 
 **Linux desktop** - pick one:
 
