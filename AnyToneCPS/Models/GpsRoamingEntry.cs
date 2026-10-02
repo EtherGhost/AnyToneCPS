@@ -169,12 +169,31 @@ public partial class GpsRoamingEntry : ObservableValidator
     /// (display-only).</summary>
     private GpsRoamingSnapshot? _radioSyncSnapshot;
 
+    /// <summary>Separate baseline from <see cref="_radioSyncSnapshot"/> -
+    /// same "unsaved to the project file" vs "not yet written to the
+    /// radio" split every other write-capable entity uses. Was missing
+    /// entirely until found live 2026-10-02 - notably worse here than for
+    /// most other entities, since this class's own 32 slots are never
+    /// added/removed after initial seeding (see this class's own doc
+    /// comment), so there was no "add/remove marks the project dirty"
+    /// fallback at all - editing a GPS Roaming slot's fields never marked
+    /// the project dirty by any path.</summary>
+    private GpsRoamingSnapshot? _cleanSnapshot;
+
     public bool HasAnyPendingRadioWrite => _radioSyncSnapshot is null || CreateRadioSnapshot() != _radioSyncSnapshot;
+
+    public bool IsDirty => _cleanSnapshot is null || CreateRadioSnapshot() != _cleanSnapshot;
 
     public void MarkRadioSynced()
     {
         _radioSyncSnapshot = CreateRadioSnapshot();
         OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
+
+    public void MarkClean()
+    {
+        _cleanSnapshot = CreateRadioSnapshot();
+        OnPropertyChanged(nameof(IsDirty));
     }
 
     private GpsRoamingSnapshot CreateRadioSnapshot() => new(
@@ -185,51 +204,57 @@ public partial class GpsRoamingEntry : ObservableValidator
         bool Enabled, int ZoneIndex, int LatDegree, int LatMinute, int LatMinuteDecimal, int NorthSouth,
         int LongDegree, int LongMinute, int LongMinuteDecimal, int EastWest, int Radius);
 
-    partial void OnEnabledChanged(bool value) => OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
-    partial void OnZoneIndexChanged(int value) => OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
-    partial void OnLatDegreeChanged(int value) => OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    partial void OnEnabledChanged(bool value) => NotifyDirtyProperties();
+    partial void OnZoneIndexChanged(int value) => NotifyDirtyProperties();
+    partial void OnLatDegreeChanged(int value) => NotifyDirtyProperties();
 
     partial void OnLatMinuteChanged(int value)
     {
         OnPropertyChanged(nameof(LatMinuteText));
-        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        NotifyDirtyProperties();
     }
 
     partial void OnLatMinuteDecimalChanged(int value)
     {
         OnPropertyChanged(nameof(LatMinuteText));
-        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        NotifyDirtyProperties();
     }
 
     partial void OnNorthSouthChanged(int value)
     {
         OnPropertyChanged(nameof(NorthSouthText));
-        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        NotifyDirtyProperties();
     }
 
-    partial void OnLongDegreeChanged(int value) => OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    partial void OnLongDegreeChanged(int value) => NotifyDirtyProperties();
 
     partial void OnLongMinuteChanged(int value)
     {
         OnPropertyChanged(nameof(LongMinuteText));
-        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        NotifyDirtyProperties();
     }
 
     partial void OnLongMinuteDecimalChanged(int value)
     {
         OnPropertyChanged(nameof(LongMinuteText));
-        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        NotifyDirtyProperties();
     }
 
     partial void OnEastWestChanged(int value)
     {
         OnPropertyChanged(nameof(EastWestText));
-        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        NotifyDirtyProperties();
     }
 
     partial void OnRadiusChanged(int value)
     {
         OnPropertyChanged(nameof(RadiusText));
+        NotifyDirtyProperties();
+    }
+
+    private void NotifyDirtyProperties()
+    {
         OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        OnPropertyChanged(nameof(IsDirty));
     }
 }

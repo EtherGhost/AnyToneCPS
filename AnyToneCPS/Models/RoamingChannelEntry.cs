@@ -97,22 +97,39 @@ public partial class RoamingChannelEntry : ObservableValidator
     {
         OnPropertyChanged(nameof(RxFrequencyMhzText));
         OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        OnPropertyChanged(nameof(IsDirty));
     }
 
     partial void OnTxFrequencyMhzChanged(double value)
     {
         OnPropertyChanged(nameof(TxFrequencyMhzText));
         OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        OnPropertyChanged(nameof(IsDirty));
     }
 
     private RoamingChannelSnapshot? _radioSyncSnapshot;
 
+    /// <summary>Separate baseline from <see cref="_radioSyncSnapshot"/> -
+    /// same "unsaved to the project file" vs "not yet written to the
+    /// radio" split as AutoRepeaterOffsetEntry's own pair. Was missing
+    /// entirely until found live 2026-10-02, same gap as
+    /// ReceiveGroupListEntry's own identical fix.</summary>
+    private RoamingChannelSnapshot? _cleanSnapshot;
+
     public bool HasAnyPendingRadioWrite => _radioSyncSnapshot is null || CreateRadioSnapshot() != _radioSyncSnapshot;
+
+    public bool IsDirty => _cleanSnapshot is null || CreateRadioSnapshot() != _cleanSnapshot;
 
     public void MarkRadioSynced()
     {
         _radioSyncSnapshot = CreateRadioSnapshot();
         OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    }
+
+    public void MarkClean()
+    {
+        _cleanSnapshot = CreateRadioSnapshot();
+        OnPropertyChanged(nameof(IsDirty));
     }
 
     private RoamingChannelSnapshot CreateRadioSnapshot() => new(RxFrequencyMhz, TxFrequencyMhz, ColorCode, Slot, Name);
@@ -123,13 +140,19 @@ public partial class RoamingChannelEntry : ObservableValidator
     {
         OnPropertyChanged(nameof(ColorCodeSelection));
         OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        OnPropertyChanged(nameof(IsDirty));
     }
 
     partial void OnSlotChanged(int value)
     {
         OnPropertyChanged(nameof(SlotSelection));
         OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        OnPropertyChanged(nameof(IsDirty));
     }
 
-    partial void OnNameChanged(string value) => OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    partial void OnNameChanged(string value)
+    {
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        OnPropertyChanged(nameof(IsDirty));
+    }
 }

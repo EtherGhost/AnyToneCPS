@@ -20,9 +20,20 @@ public partial class ReceiveGroupListEntry : ObservableObject
     /// comment for the split rationale. Deliberately excludes Number.</summary>
     private ReceiveGroupListSnapshot? _radioSyncSnapshot;
 
+    /// <summary>Separate baseline from <see cref="_radioSyncSnapshot"/> -
+    /// same "unsaved to the project file" vs "not yet written to the
+    /// radio" split as AutoRepeaterOffsetEntry's own pair. Was missing
+    /// entirely until found live 2026-10-02 (renaming a Receive Group List
+    /// never enabled Save) - only set by <see cref="MarkClean"/>.</summary>
+    private ReceiveGroupListSnapshot? _cleanSnapshot;
+
     public bool HasAnyPendingRadioWrite => _radioSyncSnapshot is null
         || Name != _radioSyncSnapshot.Name
         || !TalkgroupIndexes.SequenceEqual(_radioSyncSnapshot.TalkgroupIndexes);
+
+    public bool IsDirty => _cleanSnapshot is null
+        || Name != _cleanSnapshot.Name
+        || !TalkgroupIndexes.SequenceEqual(_cleanSnapshot.TalkgroupIndexes);
 
     public ReceiveGroupListEntry()
     {
@@ -35,11 +46,25 @@ public partial class ReceiveGroupListEntry : ObservableObject
         OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
     }
 
+    public void MarkClean()
+    {
+        _cleanSnapshot = CreateRadioSnapshot();
+        OnPropertyChanged(nameof(IsDirty));
+    }
+
     private ReceiveGroupListSnapshot CreateRadioSnapshot() => new(Name, TalkgroupIndexes.ToArray());
 
-    private void OnTalkgroupIndexesChanged(object? sender, NotifyCollectionChangedEventArgs e) => OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    private void OnTalkgroupIndexesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        OnPropertyChanged(nameof(IsDirty));
+    }
 
-    partial void OnNameChanged(string value) => OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+    partial void OnNameChanged(string value)
+    {
+        OnPropertyChanged(nameof(HasAnyPendingRadioWrite));
+        OnPropertyChanged(nameof(IsDirty));
+    }
 
     private sealed record ReceiveGroupListSnapshot(string Name, long[] TalkgroupIndexes);
 }

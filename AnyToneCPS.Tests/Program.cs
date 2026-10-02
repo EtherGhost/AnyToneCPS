@@ -56,6 +56,7 @@ public static class Program
         Run("Tracks unsaved field changes", TracksUnsavedFieldChanges);
         Run("Editing an AM zone or AM air channel name marks the project dirty", EditingAnAmZoneOrAmAirChannelNameMarksTheProjectDirty);
         Run("Editing an FM channel prefabricated sms analog address or auto repeater offset marks the project dirty", EditingAnFmChannelPrefabricatedSmsAnalogAddressOrAutoRepeaterOffsetMarksTheProjectDirty);
+        Run("Editing a receive group list roaming channel roaming zone gps roaming entry or aprs receive filter marks the project dirty", EditingAReceiveGroupListRoamingChannelRoamingZoneGpsRoamingEntryOrAprsReceiveFilterMarksTheProjectDirty);
         Run("Mark radio synced on singleton settings does not dirty the project file", MarkRadioSyncedOnSingletonSettingsDoesNotDirtyTheProjectFile);
         Run("Refresh filtered digital contacts combines friends only with text filter", RefreshFilteredDigitalContactsCombinesFriendsOnlyWithTextFilter);
         Run("Tracks unsaved zone membership changes", TracksUnsavedZoneMembershipChanges);
@@ -1253,6 +1254,55 @@ public static class Program
 
         autoRepeaterOffset.OffsetFrequencyMhz = 0.7;
         AssertTrue(viewModel.IsDirty, "editing an auto repeater offset should mark the project dirty");
+    }
+
+    // Same gap as the two tests above, found live 2026-10-02 for 5 more
+    // entity types: each one already had radio-write dirty tracking
+    // (HasAnyPendingRadioWrite/MarkRadioSynced) but no project-file dirty
+    // tracking at all - no IsDirty, no MarkClean, and MainViewModel never
+    // wired their PropertyChanged into OnEditorPropertyChanged or checked
+    // them in its own IsDirty getter.
+    private static void EditingAReceiveGroupListRoamingChannelRoamingZoneGpsRoamingEntryOrAprsReceiveFilterMarksTheProjectDirty()
+    {
+        var viewModel = new MainViewModel();
+
+        var receiveGroupList = new ReceiveGroupListEntry { Number = 1, Name = "Group 1" };
+        viewModel.ReceiveGroupLists.Add(receiveGroupList);
+
+        var roamingChannel = new RoamingChannelEntry { Number = 1, Name = "Roam 1", RxFrequencyMhz = 145.0, TxFrequencyMhz = 145.0 };
+        viewModel.RoamingChannels.Add(roamingChannel);
+
+        var roamingZone = new RoamingZoneEntry { Number = 1, Name = "Roam Zone 1" };
+        viewModel.RoamingZones.Add(roamingZone);
+
+        var gpsRoaming = new GpsRoamingEntry { Number = 1 };
+        viewModel.GpsRoamingEntries.Add(gpsRoaming);
+
+        var aprsFilter = new AprsReceiveFilterEntry { Number = 1 };
+        viewModel.AprsReceiveFilters.Add(aprsFilter);
+
+        viewModel.MarkProjectClean();
+        AssertTrue(!viewModel.IsDirty, "a freshly marked-clean view model with these 5 entities should start clean");
+
+        receiveGroupList.Name = "Renamed Group";
+        AssertTrue(viewModel.IsDirty, "editing a receive group list's name should mark the project dirty");
+        viewModel.MarkProjectClean();
+        AssertTrue(!receiveGroupList.IsDirty, "mark clean should reset receive group list dirty state");
+
+        roamingChannel.Name = "Renamed Roam";
+        AssertTrue(viewModel.IsDirty, "editing a roaming channel's name should mark the project dirty");
+        viewModel.MarkProjectClean();
+
+        roamingZone.Name = "Renamed Roam Zone";
+        AssertTrue(viewModel.IsDirty, "editing a roaming zone's name should mark the project dirty");
+        viewModel.MarkProjectClean();
+
+        gpsRoaming.Radius = 500;
+        AssertTrue(viewModel.IsDirty, "editing a gps roaming entry's radius should mark the project dirty");
+        viewModel.MarkProjectClean();
+
+        aprsFilter.Callsign = "N0CALL";
+        AssertTrue(viewModel.IsDirty, "editing an aprs receive filter's callsign should mark the project dirty");
     }
 
     /// <summary>Regression test for a real live bug found 2026-08-29: after

@@ -840,7 +840,12 @@ public partial class MainViewModel : ViewModelBase
         || FmChannels.Any(fmChannel => fmChannel.IsDirty)
         || PrefabricatedSmsMessages.Any(sms => sms.IsDirty)
         || AnalogAddresses.Any(analogAddress => analogAddress.IsDirty)
-        || AutoRepeaterOffsets.Any(autoRepeaterOffset => autoRepeaterOffset.IsDirty);
+        || AutoRepeaterOffsets.Any(autoRepeaterOffset => autoRepeaterOffset.IsDirty)
+        || ReceiveGroupLists.Any(receiveGroupList => receiveGroupList.IsDirty)
+        || RoamingChannels.Any(roamingChannel => roamingChannel.IsDirty)
+        || RoamingZones.Any(roamingZone => roamingZone.IsDirty)
+        || GpsRoamingEntries.Any(gpsRoaming => gpsRoaming.IsDirty)
+        || AprsReceiveFilters.Any(aprsFilter => aprsFilter.IsDirty);
     public string DirtyIndicator => IsDirty ? "Unsaved changes" : "Saved";
     public string BuildDescription { get; } = GetBuildDescription();
     public string AppVersion { get; } = GetAppVersion();
@@ -1200,6 +1205,16 @@ public partial class MainViewModel : ViewModelBase
         PrefabricatedSmsMessages.CollectionChanged += OnPrefabricatedSmsMessagesChanged;
         AnalogAddresses.CollectionChanged += OnAnalogAddressesChanged;
         AutoRepeaterOffsets.CollectionChanged += OnAutoRepeaterOffsetsChanged;
+        // Same gap as AmZones/AmAirChannels/FmChannels/PrefabricatedSms/
+        // AnalogAddresses/AutoRepeaterOffsets above, found live 2026-10-02 -
+        // these 5 were never wired into OnEditorPropertyChanged either, so
+        // editing any of their own fields never reached
+        // NotifyDirtyStateChanged/RefreshValidation.
+        ReceiveGroupLists.CollectionChanged += OnReceiveGroupListsChanged;
+        RoamingChannels.CollectionChanged += OnRoamingChannelsChanged;
+        RoamingZones.CollectionChanged += OnRoamingZonesChanged;
+        GpsRoamingEntries.CollectionChanged += OnGpsRoamingEntriesChanged;
+        AprsReceiveFilters.CollectionChanged += OnAprsReceiveFiltersChanged;
         ScanLists.CollectionChanged += OnScanListsChanged;
         EncryptionKeys.CollectionChanged += OnEncryptionKeysChanged;
         Arc4EncryptionKeys.CollectionChanged += OnEncryptionKeysChanged;
@@ -1577,6 +1592,31 @@ public partial class MainViewModel : ViewModelBase
             foreach (var analogAddress in AnalogAddresses)
             {
                 analogAddress.MarkClean();
+            }
+
+            foreach (var receiveGroupList in ReceiveGroupLists)
+            {
+                receiveGroupList.MarkClean();
+            }
+
+            foreach (var roamingChannel in RoamingChannels)
+            {
+                roamingChannel.MarkClean();
+            }
+
+            foreach (var roamingZone in RoamingZones)
+            {
+                roamingZone.MarkClean();
+            }
+
+            foreach (var gpsRoaming in GpsRoamingEntries)
+            {
+                gpsRoaming.MarkClean();
+            }
+
+            foreach (var aprsFilter in AprsReceiveFilters)
+            {
+                aprsFilter.MarkClean();
             }
         }
         finally
@@ -3942,6 +3982,36 @@ public partial class MainViewModel : ViewModelBase
     }
 
     private void OnAutoRepeaterOffsetsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        AttachEditorHandlers(e.NewItems);
+        DetachEditorHandlers(e.OldItems);
+    }
+
+    private void OnReceiveGroupListsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        AttachEditorHandlers(e.NewItems);
+        DetachEditorHandlers(e.OldItems);
+    }
+
+    private void OnRoamingChannelsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        AttachEditorHandlers(e.NewItems);
+        DetachEditorHandlers(e.OldItems);
+    }
+
+    private void OnRoamingZonesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        AttachEditorHandlers(e.NewItems);
+        DetachEditorHandlers(e.OldItems);
+    }
+
+    private void OnGpsRoamingEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        AttachEditorHandlers(e.NewItems);
+        DetachEditorHandlers(e.OldItems);
+    }
+
+    private void OnAprsReceiveFiltersChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         AttachEditorHandlers(e.NewItems);
         DetachEditorHandlers(e.OldItems);
